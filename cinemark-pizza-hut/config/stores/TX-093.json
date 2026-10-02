@@ -1,0 +1,68 @@
+{
+  "store_id": "TX-093",
+  "theatre_no": 93,
+  "theatre_name": "Movies 17 (folder: McAllen Hollywood - VERIFY name)",
+  "slug": "093-MCALLEN",
+  "address": "100 W. Nolana Loop, McAllen, TX 78504",
+  "state": "TX",
+  "manager": "Edgar Martinez",
+  "drive_folder": "CINEMARK/PIZZA HUT/TX 093 MCALLEN HOLLYWOOD",
+  "layout_dxf": "TX 093 MCALLEN HOLLYWOOD.dxf",
+  "survey_date": "VERIFY",
+  "space": "VERIFY from survey",
+  "ceiling_ft": 10,
+  "electrical_service": {
+    "available_phase": "VERIFY",
+    "panel": "VERIFY",
+    "new_subpanel": true,
+    "feeder_lf": 60
+  },
+  "plumbing": {
+    "hot_water_source": "VERIFY",
+    "new_water_heater": false,
+    "floor_sinks": 2,
+    "grease_interceptor": true,
+    "underslab_lf": 30
+  },
+  "hvac": {
+    "existing_registers": 2,
+    "minisplit_override_tons": null,
+    "lineset_extra_lf": 25,
+    "exhaust_fan": true,
+    "roof_penetrations": 2
+  },
+  "finishes": {
+    "floor": "quarry",
+    "frp": true,
+    "ceiling": "act_washable",
+    "new_partition_lf": "from_dxf",
+    "doors": "from_dxf"
+  },
+  "demo": {
+    "equipment_count": "from_dxf",
+    "partition_lf": "from_dxf",
+    "ceiling_sf": "room",
+    "flooring_sf": "room",
+    "casework_lf": 0,
+    "make_safe": "from_dxf"
+  },
+  "travel": {
+    "mode": "fly",
+    "one_way_miles": 1150
+  },
+  "schedule": {
+    "work_window": "day",
+    "permit_weeks": 4,
+    "equipment_lead_weeks": 6
+  },
+  "overrides": {},
+  "notes": [
+    "AEQ holds a TX electrical license; NO TX mechanical license yet (HELM 9/2) - obtain before mini-split work or sub the HVAC."
+  ],
+  "package": "from_dxf",
+  "customer_verify": [
+    "available electrical service phase and panel capacity",
+    "hot water source capacity",
+    "ceiling cavity depth for ducted indoor units and condenser location"
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "program": {
+    "name": "PH / Cinemark Retrofit",
+    "proposal_ref": "SSG-2026-CNK-PH01",
+    "tier": "Tier 2: Full Design & Rough-In Package",
+    "quote_prefix": "SSG-2026-CNK-PH",
+    "validity_days": 60
+  },
+  "customer": {
+    "name": "Cinemark USA, Inc.",
+    "address": "3900 Dallas Parkway, Plano, TX 75093",
+    "attn": "Juan Cardenas, Director of Culinary \u00b7 David Haywood, Senior VP of Food & Beverage",
+    "cc": "Natalie Ingram"
+  },
+  "contractor": {
+    "entity": "Spirit Services Group, LLC",
+    "masthead": "SPIRIT SERVICES GROUP",
+    "address": "147 Old Hermitage Avenue, Nashville, Tennessee 37210",
+    "contact": "Edgar Pendley, Managing Member",
+    "phone": "615.622.5501",
+    "email": "edgar@aaroneq.com",
+    "licenses": "TN78453 | MCN153292 | VC1243 | AL53577",
+    "_note": "Entity by work type (HELM standard): Cinemark construction/electrical runs under Spirit Services Group. Never write 'Edgar Aaron'."
+  },
+  "units": {
+    "default_insunits": "inches",
+    "_note": "DXF $INSUNITS overrides. All internal geometry is in inches."
+  },
+  "rough_in_defaults": {
+    "_note": "Inches AFF, used until '0 Sync Family Data' pulls connector heights from the family. AEQ program defaults - confirm against each spec sheet.",
+    "receptacle_cord_under_counter": 18,
+    "receptacle_cord_countertop": 48,
+    "receptacle_cord_floor_unit": 24,
+    "direct_connect_jbox": 24,
+    "cw_hw_supply_sink": 20,
+    "cw_hw_supply_hand_sink": 22,
+    "waste_wall_sink": 18,
+    "floor_sink": 0,
+    "point_of_connection_ft": 5
+  },
+  "routing": {
+    "_note": "Home-run length = (|dx|+|dy| from panel or plumbing source) * factor + vertical allowance. Manhattan distance mimics ceiling runs.",
+    "electrical_factor": 1.25,
+    "electrical_vertical_ft": 14,
+    "plumbing_factor": 1.2,
+    "plumbing_vertical_ft": 10,
+    "default_ceiling_ft": 10
+  },
+  "heat_load": {
+    "_method": "ASHRAE Fundamentals Ch.18, unhooded equipment, peak-hour nameplate x duty factor (same basis as SSG-2026-CNK-PH01-263-M1).",
+    "btu_per_kw": 3412,
+    "occupant_sensible": 275,
+    "occupant_latent": 475,
+    "default_staff": 3,
+    "design_margin": 1.1,
+    "btu_per_ton": 12000,
+    "mini_split_ton_step": 2.5,
+    "existing_register_cfm_each": 175,
+    "supply_dt_f": 20
+  },
+  "rates": {
+    "_source": "HELM_CONTEXT pricing bases on file (09-2026). INTERNAL - never on customer documents.",
+    "labor_billed_hr": 95.0,
+    "labor_true_cost_hr": 42.0,
+    "material_markup": 0.3,
+    "sub_markup": 0.2,
+    "equipment_markup": 0.1,
+    "travel_markup": 0.0,
+    "lodging_per_room_night": 135.0,
+    "per_diem_per_person_day": 64.0,
+    "truck_fuel_per_trip_mile": 0.95,
+    "airfare_per_person_rt": 550.0,
+    "rental_car_per_day": 85.0,
+    "crew_size_default": 3,
+    "hours_per_day": 10,
+    "contingency_pct": 0.07,
+    "after_hours_premium": 0.5,
+    "_rule": "Weekend or after-hours work offered or required: always bill for it (after_hours_premium on affected labor).",
+    "crew_per_room": 1,
+    "drive_home_weekends_max_mi": 450
+  }
+}

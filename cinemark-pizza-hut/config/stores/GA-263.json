@@ -1,0 +1,139 @@
+{
+  "store_id": "GA-263",
+  "theatre_no": 263,
+  "theatre_name": "Tinseltown USA",
+  "slug": "263-FAYETTEVILLE-TINSELTOWN",
+  "address": "134 Pavilion Parkway, Fayetteville, GA 30214",
+  "state": "GA",
+  "manager": "Adam Friedman",
+  "drive_folder": "CINEMARK/PIZZA HUT/GA 263 FAYETTEVILLE TINSELTOWN",
+  "layout_dxf": "263 GA FAYETTEVILLE TINSELTOWN.dxf",
+  "survey_date": "2026-09-21",
+  "existing_docs": [
+    "263 GA FAYETTEVILLE TINSELTOWN-QF101-R1.pdf",
+    "Heat-Load Assessment SSG-2026-CNK-PH01-263-M1 (09/22/2026)"
+  ],
+  "space": "Vacant back-of-house room adjacent to concessions, converted to Pizza Hut kitchen",
+  "ceiling_ft": 10,
+  "electrical_service": {
+    "available_phase": "VERIFY",
+    "panel": "VERIFY at survey photos",
+    "new_subpanel": true,
+    "feeder_lf": 60
+  },
+  "plumbing": {
+    "hot_water_source": "VERIFY",
+    "new_water_heater": false,
+    "floor_sinks": 2,
+    "grease_interceptor": true,
+    "underslab_lf": 30
+  },
+  "hvac": {
+    "existing_registers": 2,
+    "minisplit_override_tons": 5.0,
+    "lineset_extra_lf": 25,
+    "exhaust_fan": true,
+    "roof_penetrations": 2
+  },
+  "finishes": {
+    "floor": "quarry",
+    "frp": true,
+    "ceiling": "act_washable",
+    "new_partition_lf": 0,
+    "doors": 0
+  },
+  "demo": {
+    "equipment_count": 0,
+    "partition_lf": 0,
+    "ceiling_sf": "room",
+    "flooring_sf": "room",
+    "casework_lf": 0,
+    "make_safe": 2
+  },
+  "travel": {
+    "mode": "drive",
+    "one_way_miles": 270
+  },
+  "schedule": {
+    "work_window": "day",
+    "permit_weeks": 3,
+    "equipment_lead_weeks": 6
+  },
+  "overrides": {},
+  "notes": [
+    "GA is the calibration store: QF101-R1 + heat load already issued. The pipeline's heat load must reproduce 61,106 Btu/h design for this package."
+  ],
+  "package": [
+    {
+      "item": 1,
+      "key": "TABCO_FC3",
+      "qty": 1,
+      "note": "GA used FC-3-2030-24RL"
+    },
+    {
+      "item": 2,
+      "key": "TABCO_WS12108",
+      "qty": 1
+    },
+    {
+      "item": 5,
+      "key": "ADVANCE_7PS65",
+      "qty": 1
+    },
+    {
+      "item": 6,
+      "key": "ACP_MXP22TLT",
+      "qty": 1
+    },
+    {
+      "item": 7,
+      "key": "OVENTION_C2000",
+      "qty": 1
+    },
+    {
+      "item": 8,
+      "key": "BEVAIR_DP60HC",
+      "qty": 1
+    },
+    {
+      "item": 9,
+      "key": "BEVAIR_WTF60AHC",
+      "qty": 1
+    },
+    {
+      "item": 10,
+      "key": "TABCO_KLG365",
+      "qty": 1
+    },
+    {
+      "item": 11,
+      "key": "TRUE_STR1R",
+      "qty": 1
+    },
+    {
+      "item": 12,
+      "key": "TRUE_STR2F",
+      "qty": 2
+    },
+    {
+      "item": 13,
+      "key": "HOBART_LXNR",
+      "qty": 1
+    },
+    {
+      "item": 14,
+      "key": "TRUE_STA1HRI",
+      "qty": 1
+    },
+    {
+      "item": 15,
+      "key": "MTI_AUTOFRY5",
+      "qty": 1
+    }
+  ],
+  "customer_verify": [
+    "available electrical service phase and panel capacity",
+    "hot water source capacity",
+    "ceiling cavity depth for ducted indoor units and condenser location"
+  ]
+}

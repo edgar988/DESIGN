@@ -1,0 +1,541 @@
+{
+  "_about": [
+    "INTERNAL. Unit assemblies for the store construction quote. Never printed on customer documents.",
+    "Each assembly: hrs = field labor hours per unit; mat = material cost per unit (true cost); sub = subcontract/pass-through cost per unit; eqp = furnished equipment cost per unit.",
+    "Sell per unit = hrs*labor_billed_hr + mat*(1+material_markup) + sub*(1+sub_markup) + eqp*(1+equipment_markup). True cost = hrs*labor_true_cost_hr + mat + sub + eqp.",
+    "basis = 'HELM:<anchor>' when calibrated to a pricing basis on file (sell matches the anchor to the dollar), else 'AEQ est - review'.",
+    "section groups lines on the quote. Edgar rounds/overrides final numbers (overrides go in the store file, not here)."
+  ],
+  "assemblies": {
+    "gc_mobilize": {
+      "unit": "trip",
+      "hrs": 4,
+      "mat": 0,
+      "sub": 0,
+      "eqp": 0,
+      "section": "GENERAL CONDITIONS",
+      "desc": "Mobilize / demobilize crew, tools and materials",
+      "basis": "AEQ est - review"
+    },
+    "gc_protection": {
+      "unit": "LS",
+      "hrs": 6,
+      "mat": 350,
+      "sub": 0,
+      "eqp": 0,
+      "section": "GENERAL CONDITIONS",
+      "desc": "Protection of adjacent theatre areas, dust barriers, walk-off mats",
+      "basis": "AEQ est - review"
+    },
+    "gc_dumpster": {
+      "unit": "pull",
+      "hrs": 0,
+      "mat": 0,
+      "sub": 650,
+      "eqp": 0,
+      "section": "GENERAL CONDITIONS",
+      "desc": "Dumpster and debris haul",
+      "basis": "AEQ est - review"
+    },
+    "gc_permit_allow": {
+      "unit": "allow",
+      "hrs": 6,
+      "mat": 0,
+      "sub": 1500,
+      "eqp": 0,
+      "section": "GENERAL CONDITIONS",
+      "desc": "Building / electrical / plumbing permits and inspections - allowance",
+      "basis": "AEQ est - review"
+    },
+    "gc_final_clean": {
+      "unit": "SF",
+      "hrs": 0.012,
+      "mat": 0.06,
+      "sub": 0,
+      "eqp": 0,
+      "section": "GENERAL CONDITIONS",
+      "desc": "Final construction clean",
+      "basis": "AEQ est - review"
+    },
+    "demo_equipment": {
+      "unit": "ea",
+      "hrs": 1.0,
+      "mat": 42.31,
+      "sub": 0,
+      "eqp": 0,
+      "section": "DEMOLITION",
+      "desc": "Disconnect, remove and dispose of existing equipment",
+      "basis": "HELM:removal/disposal $150/machine"
+    },
+    "demo_partition": {
+      "unit": "LF",
+      "hrs": 0.35,
+      "mat": 3.0,
+      "sub": 0,
+      "eqp": 0,
+      "section": "DEMOLITION",
+      "desc": "Remove existing partition",
+      "basis": "AEQ est - review"
+    },
+    "demo_ceiling": {
+      "unit": "SF",
+      "hrs": 0.02,
+      "mat": 0.25,
+      "sub": 0,
+      "eqp": 0,
+      "section": "DEMOLITION",
+      "desc": "Remove existing ceiling",
+      "basis": "AEQ est - review"
+    },
+    "demo_flooring": {
+      "unit": "SF",
+      "hrs": 0.04,
+      "mat": 0.4,
+      "sub": 0,
+      "eqp": 0,
+      "section": "DEMOLITION",
+      "desc": "Remove existing floor finish to substrate",
+      "basis": "AEQ est - review"
+    },
+    "demo_casework": {
+      "unit": "LF",
+      "hrs": 0.5,
+      "mat": 2.0,
+      "sub": 0,
+      "eqp": 0,
+      "section": "DEMOLITION",
+      "desc": "Remove existing casework / counters",
+      "basis": "AEQ est - review"
+    },
+    "demo_make_safe": {
+      "unit": "ea",
+      "hrs": 1.5,
+      "mat": 35,
+      "sub": 0,
+      "eqp": 0,
+      "section": "DEMOLITION",
+      "desc": "Cap / make safe existing utility (elec, water, waste)",
+      "basis": "AEQ est - review"
+    },
+    "con_partition": {
+      "unit": "LF",
+      "hrs": 1.8,
+      "mat": 62,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "Metal stud partition, 5/8 in. Type X both sides, to structure",
+      "basis": "AEQ est - review"
+    },
+    "con_blocking": {
+      "unit": "LF",
+      "hrs": 0.15,
+      "mat": 2.5,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "In-wall blocking for wall-hung sinks, shelving, equipment",
+      "basis": "AEQ est - review"
+    },
+    "con_frp": {
+      "unit": "SF",
+      "hrs": 0.06,
+      "mat": 2.1,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "FRP wall panels with trims",
+      "basis": "AEQ est - review"
+    },
+    "con_act_washable": {
+      "unit": "SF",
+      "hrs": 0.05,
+      "mat": 3.4,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "Washable lay-in kitchen ceiling (vinyl-faced)",
+      "basis": "AEQ est - review"
+    },
+    "con_floor_quarry": {
+      "unit": "SF",
+      "hrs": 0.22,
+      "mat": 8.5,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "Quarry tile floor, epoxy grout",
+      "basis": "AEQ est - review"
+    },
+    "con_floor_epoxy": {
+      "unit": "SF",
+      "hrs": 0.08,
+      "mat": 4.2,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "Seamless epoxy floor system with integral cove",
+      "basis": "AEQ est - review"
+    },
+    "con_cove_base": {
+      "unit": "LF",
+      "hrs": 0.12,
+      "mat": 4.5,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "Sanitary cove base",
+      "basis": "AEQ est - review"
+    },
+    "con_door": {
+      "unit": "ea",
+      "hrs": 8,
+      "mat": 1150,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "Door, HM frame and hardware",
+      "basis": "AEQ est - review"
+    },
+    "con_patch_paint": {
+      "unit": "SF",
+      "hrs": 0.015,
+      "mat": 0.35,
+      "sub": 0,
+      "eqp": 0,
+      "section": "CONSTRUCTION & FINISHES",
+      "desc": "Patch and paint (non-FRP surfaces)",
+      "basis": "AEQ est - review"
+    },
+    "el_branch_lf": {
+      "unit": "LF",
+      "hrs": 0.15,
+      "mat": 8.25,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Branch circuit, EMT and wire",
+      "basis": "HELM:Cinemark branch circuits $25/lf combined"
+    },
+    "el_brk_1p20": {
+      "unit": "ea",
+      "hrs": 0.4,
+      "mat": 43.85,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Breaker, 1-pole 20A (QOB120)",
+      "basis": "HELM:QOB120 $95"
+    },
+    "el_brk_2p": {
+      "unit": "ea",
+      "hrs": 0.6,
+      "mat": 123.5,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Breaker, 2-pole (QOB2xx)",
+      "basis": "HELM:QOB250 $217.50"
+    },
+    "el_brk_3p": {
+      "unit": "ea",
+      "hrs": 0.8,
+      "mat": 260,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Breaker, 3-pole (QOB3xx)",
+      "basis": "AEQ est - review"
+    },
+    "el_rcpt_5_20": {
+      "unit": "ea",
+      "hrs": 0.75,
+      "mat": 41.0,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Receptacle 5-20R, GFCI where required",
+      "basis": "HELM:5-20R $125"
+    },
+    "el_rcpt_1ph_208": {
+      "unit": "ea",
+      "hrs": 1.5,
+      "mat": 99.0,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Receptacle 208V 1-ph (6-xxR / 14-50R class)",
+      "basis": "HELM:14-50R $271.25"
+    },
+    "el_rcpt_3ph": {
+      "unit": "ea",
+      "hrs": 1.75,
+      "mat": 145.0,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Receptacle 208V 3-ph (15-xxR / L21 class)",
+      "basis": "AEQ est - review"
+    },
+    "el_direct_conn": {
+      "unit": "ea",
+      "hrs": 2.5,
+      "mat": 180,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Direct connection: j-box, flex whip, disconnect where required",
+      "basis": "AEQ est - review"
+    },
+    "el_subpanel": {
+      "unit": "ea",
+      "hrs": 16,
+      "mat": 1450,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Kitchen sub-panel, 208Y/120V 3-ph, 42-circuit, with feeder breaker",
+      "basis": "AEQ est - review"
+    },
+    "el_feeder_lf": {
+      "unit": "LF",
+      "hrs": 0.25,
+      "mat": 18,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Feeder to kitchen sub-panel",
+      "basis": "AEQ est - review"
+    },
+    "el_lighting_sf": {
+      "unit": "SF",
+      "hrs": 0.03,
+      "mat": 3.2,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "LED lay-in lighting, gasketed at prep/dish, with switching",
+      "basis": "AEQ est - review"
+    },
+    "el_hvac_circuit": {
+      "unit": "ea",
+      "hrs": 3,
+      "mat": 210,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "HVAC circuit and disconnect (mini-split outdoor unit / exhaust fan)",
+      "basis": "AEQ est - review"
+    },
+    "pl_supply_conn": {
+      "unit": "ea",
+      "hrs": 3,
+      "mat": 110,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Hot or cold water connection with shutoff",
+      "basis": "AEQ est - review"
+    },
+    "pl_supply_lf": {
+      "unit": "LF",
+      "hrs": 0.18,
+      "mat": 9,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Domestic water piping, insulated",
+      "basis": "AEQ est - review"
+    },
+    "pl_waste_conn": {
+      "unit": "ea",
+      "hrs": 4,
+      "mat": 140,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Direct waste connection, trap and vent tie-in",
+      "basis": "AEQ est - review"
+    },
+    "pl_indirect": {
+      "unit": "ea",
+      "hrs": 2,
+      "mat": 60,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Indirect waste to floor sink with air gap",
+      "basis": "AEQ est - review"
+    },
+    "pl_floor_sink": {
+      "unit": "ea",
+      "hrs": 10,
+      "mat": 420,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Floor sink incl. saw-cut, trench, tie-in and slab patch",
+      "basis": "AEQ est - review"
+    },
+    "pl_underslab_lf": {
+      "unit": "LF",
+      "hrs": 1.2,
+      "mat": 28,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Saw-cut, trench, underslab waste piping, backfill and patch",
+      "basis": "AEQ est - review"
+    },
+    "pl_grease_interceptor": {
+      "unit": "ea",
+      "hrs": 6,
+      "mat": 780,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Point-of-use grease interceptor (size per AHJ)",
+      "basis": "AEQ est - review"
+    },
+    "pl_mixing_valve": {
+      "unit": "ea",
+      "hrs": 1.5,
+      "mat": 185,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Thermostatic mixing valve at hand sink",
+      "basis": "AEQ est - review"
+    },
+    "pl_backflow": {
+      "unit": "ea",
+      "hrs": 2,
+      "mat": 260,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Backflow preventer",
+      "basis": "AEQ est - review"
+    },
+    "pl_water_heater": {
+      "unit": "ea",
+      "hrs": 8,
+      "mat": 2100,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Electric water heater, commercial, with expansion tank",
+      "basis": "AEQ est - review"
+    },
+    "pl_make_safe": {
+      "unit": "ea",
+      "hrs": 1.5,
+      "mat": 45,
+      "sub": 0,
+      "eqp": 0,
+      "section": "PLUMBING",
+      "desc": "Cap existing water / waste at removed fixture",
+      "basis": "AEQ est - review"
+    },
+    "hv_minisplit_2_5t": {
+      "unit": "ea",
+      "hrs": 20,
+      "mat": 650,
+      "sub": 0,
+      "eqp": 3900,
+      "section": "HVAC",
+      "desc": "2.5-ton inverter mini-split, concealed-duct indoor unit, wired controller, start-up",
+      "basis": "AEQ est - calibrated so a 2-system install lands inside the GA 263 M1 budget ($16k-$22k installed)"
+    },
+    "hv_duct_diffuser": {
+      "unit": "ea",
+      "hrs": 3,
+      "mat": 180,
+      "sub": 0,
+      "eqp": 0,
+      "section": "HVAC",
+      "desc": "Supply diffuser / filtered return grille with insulated duct",
+      "basis": "AEQ est - review"
+    },
+    "hv_lineset_lf": {
+      "unit": "LF",
+      "hrs": 0.2,
+      "mat": 14,
+      "sub": 0,
+      "eqp": 0,
+      "section": "HVAC",
+      "desc": "Refrigerant line set, insulated, beyond 25 ft",
+      "basis": "AEQ est - review"
+    },
+    "hv_condensate": {
+      "unit": "ea",
+      "hrs": 1.5,
+      "mat": 120,
+      "sub": 0,
+      "eqp": 0,
+      "section": "HVAC",
+      "desc": "Condensate pump and drain (not to dish drain)",
+      "basis": "AEQ est - review"
+    },
+    "hv_exhaust_fan": {
+      "unit": "ea",
+      "hrs": 8,
+      "mat": 650,
+      "sub": 0,
+      "eqp": 0,
+      "section": "HVAC",
+      "desc": "Inline general exhaust fan ~250 cfm, interlocked w/ conveyor oven",
+      "basis": "AEQ est - review"
+    },
+    "hv_roof_pen": {
+      "unit": "ea",
+      "hrs": 3,
+      "mat": 150,
+      "sub": 0,
+      "eqp": 0,
+      "section": "HVAC",
+      "desc": "Curbless condenser stand / wall or roof penetration, sealed; roof flashing by roofer of record if required",
+      "basis": "AEQ est - review"
+    },
+    "eq_set_plug": {
+      "unit": "ea",
+      "hrs": 6,
+      "mat": 138.46,
+      "sub": 0,
+      "eqp": 0,
+      "section": "EQUIPMENT SET & START-UP",
+      "desc": "Receive, set, level and commission plug-in equipment",
+      "basis": "HELM:set & commission $750 plug-in"
+    },
+    "eq_set_plumbed": {
+      "unit": "ea",
+      "hrs": 7,
+      "mat": 161.54,
+      "sub": 0,
+      "eqp": 0,
+      "section": "EQUIPMENT SET & START-UP",
+      "desc": "Receive, set, level, connect and commission plumbed / hard-wired equipment",
+      "basis": "HELM:set & commission $875 plumbed"
+    },
+    "eq_set_nonutility": {
+      "unit": "ea",
+      "hrs": 1.5,
+      "mat": 15,
+      "sub": 0,
+      "eqp": 0,
+      "section": "EQUIPMENT SET & START-UP",
+      "desc": "Uncrate, assemble and set non-utility item (tables, racks, shelving)",
+      "basis": "AEQ est - review"
+    },
+    "eq_receive_store": {
+      "unit": "LS",
+      "hrs": 8,
+      "mat": 0,
+      "sub": 0,
+      "eqp": 0,
+      "section": "EQUIPMENT SET & START-UP",
+      "desc": "Receiving, inspection and staging of owner-furnished equipment at site",
+      "basis": "AEQ est - review"
+    }
+  }
+}

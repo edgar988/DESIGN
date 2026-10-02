@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# per-store outputs (layouts, takeoffs, quotes, INTERNAL workbooks) live in Drive, not git
+cinemark-pizza-hut/stores/
+# Revit / CAD binaries come from Drive CAD TEMPLATES
+*.rvt
+*.rfa
+*.rte
+*.dwg
+*.bak
+*.dwl
+*.dwl2

@@ -1,0 +1,675 @@
+{
+  "_about": [
+    "Equipment catalog for the PH / Cinemark retrofit program. One entry per equipment type.",
+    "rfa = file name in the Revit family library (Drive: CINEMARK/PIZZA HUT/CAD TEMPLATES).",
+    "block_aliases = case-insensitive regexes matched against DXF block names AND block attribute values (MODEL/MFR/ITEM tags).",
+    "Utilities: verified=true only when the value came from a manufacturer source named in 'source'.",
+    "verified=false entries are filled by the Revit button '0 Sync Family Data', which reads the KCL parameters out of each loaded .rfa and writes them back here. Never price or issue rough-ins off an unverified entry.",
+    "heat: sensible/latent Btu/h to the room at peak service (ASHRAE Fundamentals Ch.18 duty-factor method, same as report SSG-2026-CNK-PH01-263-M1). If 'heat.method' is 'duty', btu = kw * 3412 * duty, split by latent_frac.",
+    "rough_in heights are inches AFF to the connection; 'std' means the AEQ program default in config/program.json until the family connector is synced."
+  ],
+  "items": {
+    "OVENTION_C2000": {
+      "description": "Conveyor Oven, Electric (ventless, catalytic)",
+      "mfr": "Ovention",
+      "model": "C2000-SB",
+      "rfa": "QF_OVENTION_CONVEYOR_C2000_cat$2025$C2000_208_60_1.rfa",
+      "block_aliases": [
+        "C2000",
+        "OVENTION"
+      ],
+      "category": "cooking",
+      "install": "plug",
+      "elec": {
+        "volts": 208,
+        "phase": 3,
+        "amps": 34.0,
+        "kw": 16.3,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "duty",
+        "kw": 16.3,
+        "duty": 0.45,
+        "latent_frac": 0.1
+      },
+      "verified": true,
+      "source": "Ovention C2000 spec via heat-load report SSG-2026-CNK-PH01-263-M1 (16.3 kW max, 208-240/3, 34 A)",
+      "flags": [
+        "Family type is C2000_208_60_1 (single phase) but the GA spec is 208-240/3, 34 A. Confirm the phase available at each store and pick the matching type before rough-in."
+      ]
+    },
+    "ACP_MXP22TLT": {
+      "description": "Microwave Convection Oven, high-speed (ventless)",
+      "mfr": "ACP",
+      "model": "MXP22TLT",
+      "rfa": "QF_ACP_MXP22TLT$2025.rfa",
+      "block_aliases": [
+        "MXP22",
+        "ACP"
+      ],
+      "category": "cooking",
+      "install": "plug",
+      "elec": {
+        "volts": 208,
+        "phase": 1,
+        "amps": 27.4,
+        "kw": 5.7,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "duty",
+        "kw": 5.7,
+        "duty": 0.3,
+        "latent_frac": 0.1
+      },
+      "verified": true,
+      "source": "ACP MXP22TLT (5,700 W, 208-240/1, 27.4 A) via SSG-2026-CNK-PH01-263-M1"
+    },
+    "HOBART_LXNR": {
+      "description": "Dishwasher, Undercounter, high-temp w/ energy recovery",
+      "mfr": "Hobart",
+      "model": "LXnR",
+      "rfa": "QF_Hobart_LXnR-ADV_cat$2026$208_60_1.rfa",
+      "block_aliases": [
+        "LXNR",
+        "LXN-?R",
+        "HOBART"
+      ],
+      "category": "warewash",
+      "install": "plumbed",
+      "elec": {
+        "volts": 208,
+        "phase": 3,
+        "amps": 24.9,
+        "kw": 6.7,
+        "conn": "direct",
+        "nema": null
+      },
+      "plumb": {
+        "hw": "VERIFY",
+        "cw": null,
+        "waste": "VERIFY",
+        "indirect": true
+      },
+      "gas": null,
+      "heat": {
+        "method": "fixed",
+        "sensible": 2000,
+        "latent": 1100
+      },
+      "verified": true,
+      "source": "Hobart LXnR spec 00-563661 via SSG-2026-CNK-PH01-263-M1 (208-240/3, 24.9 A; 2,000 sens / 1,100 lat Btu/h)",
+      "flags": [
+        "Family type is 208_60_1 but the GA spec is 208-240/3. Confirm the phase per store.",
+        "Hobart rule: AEQ sets/connects; start-up by local Hobart office (warranty)."
+      ]
+    },
+    "TABCO_FC3": {
+      "description": "Three (3) Compartment Sink",
+      "mfr": "Advance Tabco",
+      "model": "FC-3-2030-20RL",
+      "rfa": "QF_ADVANCE_TABCO_FC_SERIES_3COMP_cat$2026$FC-3-2030-20RL.rfa",
+      "block_aliases": [
+        "FC-?3-?2030",
+        "3 ?COMP"
+      ],
+      "category": "sink",
+      "install": "plumbed",
+      "elec": null,
+      "plumb": {
+        "hw": "1/2",
+        "cw": "1/2",
+        "waste": "VERIFY",
+        "indirect": true,
+        "faucet": "T&S B-0133 pre-rinse (by owner)"
+      },
+      "gas": null,
+      "heat": null,
+      "verified": false,
+      "source": "Sizes typical for FC series; confirm from family connectors / spec sheet",
+      "flags": [
+        "GA package used FC-3-2030-24RL; template family is -20RL. Confirm drainboard length per store."
+      ]
+    },
+    "ADVANCE_7PS65": {
+      "description": "Hand Sink, wall mount",
+      "mfr": "Advance Tabco",
+      "model": "7-PS-65",
+      "rfa": "QF_Advance_7-PS-65$2026.rfa",
+      "block_aliases": [
+        "7-?PS-?65",
+        "HAND ?SINK"
+      ],
+      "category": "sink",
+      "install": "plumbed",
+      "elec": null,
+      "plumb": {
+        "hw": "1/2",
+        "cw": "1/2",
+        "waste": "1-1/2",
+        "indirect": false
+      },
+      "gas": null,
+      "heat": null,
+      "verified": false,
+      "source": "Typical; confirm from family connectors"
+    },
+    "HOSHIZAKI_UR48B": {
+      "description": "Undercounter Refrigerator, 48 in.",
+      "mfr": "Hoshizaki",
+      "model": "UR48B",
+      "rfa": "QF_Hoshizaki_UR48B$2026.rfa",
+      "block_aliases": [
+        "UR48"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": null,
+        "kw": null,
+        "conn": "cord",
+        "nema": "5-15P"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": null,
+        "run": 0.75
+      },
+      "verified": false,
+      "source": "Sync from family"
+    },
+    "TRAULSEN_G10011": {
+      "description": "Reach-In Refrigerator, 1-door",
+      "mfr": "Traulsen",
+      "model": "G10011",
+      "rfa": "QF_Refg_Traulsen_Refrg_1Door_G-Series$2026$G10011.rfa",
+      "block_aliases": [
+        "G10011"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": null,
+        "kw": null,
+        "conn": "cord",
+        "nema": "5-15P"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": null,
+        "run": 0.75
+      },
+      "verified": false,
+      "source": "Sync from family"
+    },
+    "TRAULSEN_G22010": {
+      "description": "Reach-In Freezer, 2-door",
+      "mfr": "Traulsen",
+      "model": "G22010",
+      "rfa": "QF_Refg_Traulsen_Frz_2Door_G-Series$2026$G22010.rfa",
+      "block_aliases": [
+        "G22010"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": null,
+        "kw": null,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": null,
+        "run": 0.75
+      },
+      "verified": false,
+      "source": "Sync from family"
+    },
+    "PERFECTFRY_PFA570": {
+      "description": "Ventless Fryer, automatic",
+      "mfr": "Perfect Fry Company",
+      "model": "PFA570",
+      "rfa": "QF_PerfectFryCompany_Fryer_PFAseries$2025$PFA570-208V.rfa",
+      "block_aliases": [
+        "PFA ?570",
+        "PERFECT ?FRY"
+      ],
+      "category": "cooking",
+      "install": "plug",
+      "elec": {
+        "volts": 208,
+        "phase": null,
+        "amps": null,
+        "kw": null,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "duty",
+        "kw": null,
+        "duty": 0.4,
+        "latent_frac": 0.2
+      },
+      "verified": false,
+      "source": "Sync from family"
+    },
+    "HOSHIZAKI_EF1A": {
+      "description": "Reach-In Freezer, 1-section",
+      "mfr": "Hoshizaki",
+      "model": "F1A-FS",
+      "rfa": "QF_Hoshizaki_ER-FXA-FS_cat$2026$EF1A-FS 115V_60Hz_1Ph.rfa",
+      "block_aliases": [
+        "F1A-?FS",
+        "EF1A"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": null,
+        "kw": null,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": null,
+        "run": 0.75
+      },
+      "verified": false,
+      "source": "Sync from family"
+    },
+    "HOSHIZAKI_F2A": {
+      "description": "Reach-In Freezer, 2-section",
+      "mfr": "Hoshizaki",
+      "model": "F2A-FS",
+      "rfa": "QF_Hoshizaki_RXA-FXA_cat$2026$F2A-FS  115V_60Hz_1Ph.rfa",
+      "block_aliases": [
+        "F2A-?FS"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": null,
+        "kw": null,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": null,
+        "run": 0.75
+      },
+      "verified": false,
+      "source": "Sync from family"
+    },
+    "FOLLETT_SG1650": {
+      "description": "Ice Storage Bin",
+      "mfr": "Follett",
+      "model": "SG1650S-60",
+      "rfa": "QF_IceBin_Follett_SG_Sngl_cat$2026$SG1650S-60.rfa",
+      "block_aliases": [
+        "SG1650"
+      ],
+      "category": "ice",
+      "install": "plumbed",
+      "elec": null,
+      "plumb": {
+        "hw": null,
+        "cw": null,
+        "waste": "VERIFY",
+        "indirect": true
+      },
+      "gas": null,
+      "heat": null,
+      "verified": false,
+      "source": "Bin only: drain to floor sink. Ice machine on top (if any) adds water + power - confirm head model."
+    },
+    "STS_R_RACK": {
+      "description": "Rack / Shelving",
+      "mfr": "STS",
+      "model": "R Rack",
+      "rfa": "QF_STS_R_Rack$2026.rfa",
+      "block_aliases": [
+        "R_?RACK",
+        "STS"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities"
+    },
+    "ADVANCE_FSS_30x96": {
+      "description": "Work Table, stainless top, 30x96",
+      "mfr": "Advance Tabco",
+      "model": "FSS-308",
+      "rfa": "QF_Advance_FSS-FLG_cat$2026$FSS 30x96.rfa",
+      "block_aliases": [
+        "FSS-?30[8x]",
+        "FSS 30X96"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities"
+    },
+    "ADVANCE_TFSS_30x48": {
+      "description": "Work Table, stainless top, 30x48",
+      "mfr": "Advance Tabco",
+      "model": "TFSS-304",
+      "rfa": "QF_Advance_TFSS-TFLG_cat$2026$TFSS 30x48.rfa",
+      "block_aliases": [
+        "TFSS"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities"
+    },
+    "ADVANCE_ELAG_24x72": {
+      "description": "Work Table, 24x72",
+      "mfr": "Advance Tabco",
+      "model": "ELAG-246",
+      "rfa": "QF_Advance_ELAG-X_cat$2026$ELAG 24x72.rfa",
+      "block_aliases": [
+        "ELAG"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities"
+    },
+    "BEVAIR_DP60HC": {
+      "description": "Pizza Preparation Refrigerator, 60 in.",
+      "mfr": "Beverage-Air",
+      "model": "DP60HC",
+      "rfa": null,
+      "block_aliases": [
+        "DP60"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": 4.5,
+        "kw": 0.518,
+        "conn": "cord",
+        "nema": "5-15P"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": 518,
+        "run": 0.75
+      },
+      "verified": true,
+      "source": "Beverage-Air spec via SSG-2026-CNK-PH01-263-M1 (518 W, 115/1, 4.5 A)",
+      "flags": [
+        "No .rfa in CAD TEMPLATES - add family or substitute."
+      ],
+      "used_in": [
+        "GA-263"
+      ]
+    },
+    "BEVAIR_WTF60AHC": {
+      "description": "Worktop Freezer, 60 in.",
+      "mfr": "Beverage-Air",
+      "model": "WTF60AHC",
+      "rfa": null,
+      "block_aliases": [
+        "WTF60"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": 7.0,
+        "kw": 0.805,
+        "conn": "cord",
+        "nema": "5-15P"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": 805,
+        "run": 0.75
+      },
+      "verified": true,
+      "source": "Beverage-Air spec via SSG-2026-CNK-PH01-263-M1 (805 W, 115/1, 7.0 A)",
+      "flags": [
+        "No .rfa in CAD TEMPLATES."
+      ],
+      "used_in": [
+        "GA-263"
+      ]
+    },
+    "TRUE_STR1R": {
+      "description": "Reach-In Refrigerator, 1-section",
+      "mfr": "True",
+      "model": "STR1R-1S-HC",
+      "rfa": null,
+      "block_aliases": [
+        "STR1R"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": 3.8,
+        "kw": 0.437,
+        "conn": "cord",
+        "nema": "5-15P"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": 437,
+        "run": 0.75
+      },
+      "verified": true,
+      "source": "True spec via SSG-2026-CNK-PH01-263-M1 (437 W, 115/1, 3.8 A)",
+      "flags": [
+        "No .rfa in CAD TEMPLATES."
+      ],
+      "used_in": [
+        "GA-263"
+      ]
+    },
+    "TRUE_STR2F": {
+      "description": "Reach-In Freezer, 2-section",
+      "mfr": "True",
+      "model": "STR2F-2S-HC",
+      "rfa": null,
+      "block_aliases": [
+        "STR2F"
+      ],
+      "category": "refrigeration",
+      "install": "plug",
+      "elec": {
+        "volts": 115,
+        "phase": 1,
+        "amps": 9.4,
+        "kw": 1.081,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "refrig",
+        "input_w": 1081,
+        "run": 0.75
+      },
+      "verified": true,
+      "source": "True spec via SSG-2026-CNK-PH01-263-M1 (1,081 W, 115/1, 9.4 A)",
+      "flags": [
+        "No .rfa in CAD TEMPLATES."
+      ],
+      "used_in": [
+        "GA-263"
+      ]
+    },
+    "TRUE_STA1HRI": {
+      "description": "Roll-in Heated Cabinet",
+      "mfr": "True",
+      "model": "STA1HRI-1S",
+      "rfa": null,
+      "block_aliases": [
+        "STA1HRI"
+      ],
+      "category": "cooking",
+      "install": "plug",
+      "elec": {
+        "volts": 208,
+        "phase": 1,
+        "amps": null,
+        "kw": 2.0,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "duty",
+        "kw": 2.0,
+        "duty": 0.4,
+        "latent_frac": 0.05
+      },
+      "verified": true,
+      "source": "True STA1HRI-1S (2 x 1,000 W) via SSG-2026-CNK-PH01-263-M1; spec lists 115/208-230/1 - confirm voltage",
+      "flags": [
+        "No .rfa in CAD TEMPLATES."
+      ],
+      "used_in": [
+        "GA-263"
+      ]
+    },
+    "MTI_AUTOFRY5": {
+      "description": "Ventless Fryer, enclosed",
+      "mfr": "MTI",
+      "model": "AutoFry MTI-5",
+      "rfa": null,
+      "block_aliases": [
+        "AUTOFRY",
+        "MTI-?5"
+      ],
+      "category": "cooking",
+      "install": "plug",
+      "elec": {
+        "volts": 208,
+        "phase": 1,
+        "amps": 20.0,
+        "kw": 4.8,
+        "conn": "cord",
+        "nema": "VERIFY"
+      },
+      "plumb": null,
+      "gas": null,
+      "heat": {
+        "method": "duty",
+        "kw": 4.8,
+        "duty": 0.4,
+        "latent_frac": 0.2
+      },
+      "verified": true,
+      "source": "MTI AutoFry MTI-5 (4.8 kW, 208-240/1, 20 A) via SSG-2026-CNK-PH01-263-M1",
+      "flags": [
+        "No .rfa in CAD TEMPLATES."
+      ],
+      "used_in": [
+        "GA-263"
+      ]
+    },
+    "TABCO_KLG365": {
+      "description": "Work Table, stainless top",
+      "mfr": "Advance Tabco",
+      "model": "KLG-365",
+      "rfa": null,
+      "block_aliases": [
+        "KLG-?365"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities",
+      "used_in": [
+        "GA-263"
+      ]
+    },
+    "TABCO_WS12108": {
+      "description": "Shelving, Wall Mounted",
+      "mfr": "Advance Tabco",
+      "model": "WS-12-108",
+      "rfa": null,
+      "block_aliases": [
+        "WS-?12-?108"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities; needs in-wall blocking",
+      "used_in": [
+        "GA-263"
+      ]
+    }
+  }
+}
