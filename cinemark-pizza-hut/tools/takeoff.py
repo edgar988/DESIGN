@@ -25,6 +25,41 @@ def load(path):
         return json.load(f)
 
 
+def load_catalog(path=None):
+    path = path or os.path.join(ROOT, "config", "families.json")
+    cat = load(path)
+    sp = os.path.join(os.path.dirname(path), "families_synced.json")
+    return overlay_synced(cat, load(sp) if os.path.isfile(sp) else None)
+
+
+def overlay_synced(catalog, synced):
+    """Fill gaps in unverified catalog entries from config/families_synced.json (written by the
+    Revit button '4 Place Equipment' from the KCL family parameters). Verified manufacturer data
+    always wins; synced values only fill nulls / VERIFY placeholders."""
+    if not synced:
+        return catalog
+    items = catalog["items"]
+    for key, sy in synced.items():
+        it = items.get(key)
+        if not it or it.get("verified") is True:
+            continue
+        e = it.get("elec")
+        se = sy.get("elec") or {}
+        if e is not None and se:
+            for k in ("volts", "phase", "amps", "kw", "nema"):
+                if e.get(k) in (None, "VERIFY") and se.get(k) not in (None, ""):
+                    e[k] = se[k]
+        pipes = [c for c in sy.get("connectors", []) if "Piping" in c.get("domain", "")]
+        if pipes:
+            it["connectors"] = pipes
+        filled = (e is None or all(e.get(k) not in (None, "VERIFY") for k in ("volts", "amps")))
+        if filled:
+            it["verified"] = "family"
+            it["source"] = "KCL family parameters %s/%s (synced %s)" % (
+                sy.get("revit_family"), sy.get("revit_type"), sy.get("synced_at"))
+    return catalog
+
+
 def kw_of(elec):
     if not elec:
         return 0.0
@@ -142,7 +177,7 @@ def build(store, catalog, program, layout=None):
             continue
         qty = r.get("qty", 1)
         e, p = it.get("elec"), it.get("plumb")
-        if not it.get("verified"):
+        if it.get("verified") is False or it.get("verified") is None:
             unverified.append(r["key"])
         counts[it.get("install", "set")] = counts.get(it.get("install", "set"), 0) + qty
         s, l_, hw = heat_of(it, qty, hl)
@@ -271,7 +306,8 @@ def main(argv=None):
     ap.add_argument("--catalog", default=os.path.join(ROOT, "config", "families.json"))
     ap.add_argument("--program", default=os.path.join(ROOT, "config", "program.json"))
     a = ap.parse_args(argv)
-    t = build(load(a.store), load(a.catalog), load(a.program), load(a.layout) if a.layout else None)
+    cat = load_catalog(a.catalog)
+    t = build(load(a.store), cat, load(a.program), load(a.layout) if a.layout else None)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(t, f, indent=1)

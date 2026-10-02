@@ -78,3 +78,17 @@ def test_customer_outputs_carry_no_internal_numbers(tmp_path):
     for banned in ("true cost", "margin", "INTERNAL", "$95", "$42", "per diem %d" % 0, "Edgar Aaron"):
         assert banned.lower() not in text.lower(), banned
     assert "${:,.2f}".format(e["total"]) in text
+
+
+def test_synced_family_data_fills_only_gaps():
+    import copy
+    cat = copy.deepcopy(CAT)
+    synced = {"TRAULSEN_G10011": {"revit_family": "QF_Refg_Traulsen", "revit_type": "G10011",
+                                  "synced_at": "2026-10-02T09:00:00",
+                                  "elec": {"volts": 115, "phase": 1, "amps": 6.4, "nema": "5-15P"},
+                                  "connectors": []},
+              "OVENTION_C2000": {"elec": {"volts": 240, "amps": 99}}}
+    tk.overlay_synced(cat, synced)
+    g = cat["items"]["TRAULSEN_G10011"]
+    assert g["elec"]["amps"] == 6.4 and g["verified"] == "family"
+    assert cat["items"]["OVENTION_C2000"]["elec"]["amps"] == 34.0     # verified mfr data never overwritten

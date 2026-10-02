@@ -63,7 +63,9 @@ def _qty(q, unit):
         return ""
     q = int(round(q)) if q >= 10 else round(q, 1)
     q = int(q) if float(q).is_integer() else q
-    unit = {"ea": "", "LF": " LF", "SF": " SF", "pull": " pull", "trip": " trip", "hr": " hr"}.get(unit, " " + unit)
+    plural = "s" if q != 1 else ""
+    unit = {"ea": "", "LF": " LF", "SF": " SF", "pull": " pull" + plural, "trip": " trip" + plural,
+            "hr": " hr"}.get(unit, " " + unit)
     return " (%s%s)" % (format(q, ","), unit)
 
 

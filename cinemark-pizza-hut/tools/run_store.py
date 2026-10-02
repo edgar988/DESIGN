@@ -38,7 +38,7 @@ def _json_default(o):
 def run(store_id, dxf=None, rev="R0", ntp=None, outdir=None, today=None):
     store = load(os.path.join(ROOT, "config", "stores", store_id + ".json"))
     program = load(os.path.join(ROOT, "config", "program.json"))
-    catalog = load(os.path.join(ROOT, "config", "families.json"))
+    catalog = tk.load_catalog()
     out = outdir or os.path.join(ROOT, "stores", store_id)
     os.makedirs(out, exist_ok=True)
 
