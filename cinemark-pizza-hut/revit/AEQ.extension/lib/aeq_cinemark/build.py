@@ -27,7 +27,7 @@ from Autodesk.Revit.DB import (BuiltInCategory, BuiltInParameter, BoundingBoxXYZ
                                ViewOrientation3D, ViewPlan, ViewSchedule, ViewSheet, Viewport, Wall, WallFunction,
                                WallKind,
                                WallType, XYZ, ExportRange, FitDirectionType, ZoomFitType, IFamilyLoadOptions,
-                               FamilySource, FamilyInstance)
+                               FamilySource, FamilyInstance, LeaderAtachement)
 from Autodesk.Revit.DB.Structure import StructuralType
 from System.Collections.Generic import List
 
@@ -499,66 +499,96 @@ def _text_type(doc, want):
     return (hit or types[0]).Id
 
 
-def _note(doc, view, at, target, text, tn_type):
-    n = TextNote.Create(doc, view.Id, at, text, TextNoteOptions(tn_type))
-    if target is not None:
-        ld = n.AddLeader(TextNoteLeaderTypes.TNLT_STRAIGHT_R)
-        ld.End = XYZ(target.X, target.Y, 0)
-    return n
+def _spread(items, gap):
+    """1-D label layout. items: [(ideal, lo, hi)] sorted by ideal: where a label's leader anchor wants to
+    be and how far the label reaches either side of it. Overlapping labels are pushed apart evenly, only as
+    far as needed, so a label leaves its ideal spot only when a neighbour is in the way."""
+    pos = [it[0] for it in items]
+    for _ in range(500):
+        moved = False
+        for i in range(len(items) - 1):
+            over = (pos[i] + items[i][2] + gap) - (pos[i + 1] - items[i + 1][1])
+            if over > 1e-6:
+                pos[i] -= over / 2.0
+                pos[i + 1] += over / 2.0
+                moved = True
+        if not moved:
+            break
+    return pos
 
 
 class _Callouts(object):
-    """Notes in one view, each just outside the room past the wall its rough-in is on. Notes are laid out
-    in wall order (N/S walls left to right, E/W top to bottom) so leaders don't cross; one that would
-    collide slides along the wall, and one that would leave the frame starts a new row further out.
-    Boxes are estimated (model ft, top-left insertion) from the text type's size and the view scale."""
+    """Tags in one view, one clean row per wall side just outside the room. Each tag sits square to its
+    rough-in so its leader runs straight to the wall; only tags that would overlap (stacked or close-set
+    equipment) are spread apart, as little as needed, and get an angled leader."""
 
     def __init__(self, doc, view, tn_type, frame, gap_ft=1.5):
         self.doc, self.view, self.tn, self.frame = doc, view, tn_type, frame    # frame: x0, y0, x1, y1 ft
-        self.g = gap_ft                                 # ft from the wall point to the note
+        self.g = gap_ft                                 # ft from the wall to the row of tags
         p = doc.GetElement(tn_type).get_Parameter(BuiltInParameter.TEXT_SIZE)
-        k = (p.AsDouble() if p else 3.0 / 32.0 / 12.0) * view.Scale
-        self.cw, self.lh = 0.75 * k, 1.7 * k            # char width / line height on paper -> model
-        self.boxes, self.queue = [], []
+        self.lh = 1.7 * (p.AsDouble() if p else 3.0 / 32.0 / 12.0) * view.Scale   # a line of text, model ft
+        self.queue = []
 
     def add(self, target, text, side):
         self.queue.append((target, text, side))
 
     def place(self):
-        """Create the queued notes; returns the extent of notes and leader targets (ft) or None."""
-        along = {"N": lambda t: t.X, "S": lambda t: t.X, "E": lambda t: -t.Y, "W": lambda t: -t.Y}
-        for target, text, side in sorted(self.queue, key=lambda q: (q[2], along[q[2]](q[0]))):
-            self._put(target, text, side)
-        if not self.boxes:
+        """Create the queued tags; returns the extent of tags and leader targets (ft) or None. Each tag is
+        measured once created (text outline, and where its leader attaches, which depends on the text
+        type), the row is spread from those real sizes, then each tag is moved into place."""
+        doc, made = self.doc, []
+        for target, text, side in self.queue:
+            n = TextNote.Create(doc, self.view.Id, XYZ(target.X, target.Y, 0), text, TextNoteOptions(self.tn))
+            n.LeaderLeftAttachment = LeaderAtachement.Midpoint      # E/W leaders leave the middle of the tag
+            n.LeaderRightAttachment = LeaderAtachement.Midpoint
+            made.append([n, target, side])
+        if not made:
             return None
-        pts = self.boxes + [(t.X, t.Y, t.X, t.Y) for t, _, _ in self.queue]
-        return (min(b[0] for b in pts), min(b[1] for b in pts), max(b[2] for b in pts), max(b[3] for b in pts))
-
-    def _put(self, target, text, side):
-        lines = text.split("\n")
-        w, h = self.cw * max(len(l) for l in lines), self.lh * len(lines)
-        g, gap = self.g, 2 * self.cw                    # ft from the wall point; between notes
-        x0, y0, x1, y1 = self.frame
-        along_x = side in ("N", "S")
-        x, y = {"N": (target.X - w / 2.0, target.Y + g + h), "S": (target.X - w / 2.0, target.Y - g),
-                "E": (target.X + g, target.Y + h / 2.0), "W": (target.X - g - w, target.Y + h / 2.0)}[side]
-        if along_x:
-            x = max(x0, min(x, x1 - w))
-        for _ in range(200):
-            if along_x and x + w > x1 or not along_x and y - h < y0:      # off the frame: next row out
-                if along_x:
-                    x, y = max(x0, min(target.X - w / 2.0, x1 - w)), y + (h + gap if side == "N" else -h - gap)
-                else:
-                    x, y = x + (w + gap if side == "E" else -w - gap), target.Y + h / 2.0
-            elif any(x < b[2] and x + w > b[0] and y - h < b[3] and y > b[1] for b in self.boxes):
-                if along_x:
-                    x += w + gap
-                else:
-                    y -= h + 0.5 * self.lh
-            else:
-                break
-        self.boxes.append((x, y - h, x + w, y))
-        return _note(self.doc, self.view, XYZ(x, y, 0), target, text, self.tn)
+        doc.Regenerate()
+        for m in made:
+            bb = m[0].get_BoundingBox(self.view)             # text only: no leader yet
+            lt = TextNoteLeaderTypes.TNLT_STRAIGHT_R if m[2] == "W" else TextNoteLeaderTypes.TNLT_STRAIGHT_L
+            m[0].AddLeader(lt).End = XYZ(m[1].X, m[1].Y, 0)
+            m.append(bb)
+        doc.Regenerate()
+        boxes, wanted = [], []
+        for side in ("N", "S", "E", "W"):
+            group = [m for m in made if m[2] == side]
+            if not group:
+                continue
+            ax = side in ("N", "S")                         # tags run along X (N/S walls) or Y (E/W)
+            group.sort(key=lambda m: m[1].X if ax else m[1].Y)
+            items, anchors = [], []
+            for n, target, _, bb in group:
+                # where the leader meets the tag: measured along X; mid-height for E/W (Midpoint attachment)
+                a = list(n.GetLeaders())[0].Anchor if ax else XYZ(0, (bb.Min.Y + bb.Max.Y) / 2.0, 0)
+                anchors.append(a)
+                lo, hi = (a.X - bb.Min.X, bb.Max.X - a.X) if ax else (a.Y - bb.Min.Y, bb.Max.Y - a.Y)
+                items.append((target.X if ax else target.Y, lo, hi))
+            h = max(bb.Max.Y - bb.Min.Y for _, _, _, bb in group)
+            pos = _spread(items, 0.6 * h)
+            row = {"N": max(m[1].Y for m in group) + self.g, "S": min(m[1].Y for m in group) - self.g,
+                   "E": max(m[1].X for m in group) + self.g, "W": min(m[1].X for m in group) - self.g}[side]
+            for (n, target, _, bb), a, p in zip(group, anchors, pos):
+                # along the wall: anchor to its spot; across: the text's near edge on the row
+                across = {"N": row - bb.Min.Y, "S": row - bb.Max.Y, "E": row - bb.Min.X, "W": row - bb.Max.X}[side]
+                d = XYZ(p - a.X, across, 0) if ax else XYZ(across, p - a.Y, 0)
+                n.Coord = n.Coord + d
+                boxes.append((bb.Min.X + d.X, bb.Min.Y + d.Y, bb.Max.X + d.X, bb.Max.Y + d.Y))
+                if ax:
+                    wanted.append((n, p))
+        doc.Regenerate()
+        for n, p in wanted:                 # the attach point can shift as a tag moves: square it up once more
+            r = p - list(n.GetLeaders())[0].Anchor.X
+            if abs(r) > 1e-4:
+                n.Coord = n.Coord + XYZ(r, 0, 0)
+        doc.Regenerate()
+        for n, target, _, _ in made:
+            for ld in n.GetLeaders():
+                ld.End = XYZ(target.X, target.Y, 0)
+        pts = boxes + [(m[1].X, m[1].Y, m[1].X, m[1].Y) for m in made]
+        return (min(b[0] for b in pts) - self.lh, min(b[1] for b in pts) - self.lh,
+                max(b[2] for b in pts) + self.lh, max(b[3] for b in pts) + self.lh)
 
 
 def _grow_crop(view, bbox_in, ext_ft, pad_ft=1.0):
@@ -701,7 +731,18 @@ def utility_markers(doc, rows, lvl, phase):
     return True
 
 
-_AEQ_TAG = re.compile(r"^[EP]\d+(/[EP]\d+)*$")
+_AEQ_TAG = re.compile(r"^[EP]\d+([/-][EP]\d+)*$")
+
+
+def _tag_text(names):
+    """Tags at one rough-in: runs of 3+ become a range ("P7-P11"), others join with "/" ("E1/E2")."""
+    runs = []
+    for nm in names:
+        if runs and nm[0] == runs[-1][-1][0] and int(nm[1:]) == int(runs[-1][-1][1:]) + 1:
+            runs[-1].append(nm)
+        else:
+            runs.append([nm])
+    return "/".join("%s-%s" % (r[0], r[-1]) if len(r) > 2 else "/".join(r) for r in runs)
 
 
 def _clear_aeq_notes(doc, view):
@@ -746,7 +787,7 @@ def roughin_views(doc, layout, takeoff, s):
                     at.setdefault(key, (r["point"], []))[1].append(r["tag"])
             tags = _Callouts(doc, view, tn, frame, gap_ft=0.75)
             for p, names in at.values():
-                tags.add(p, "/".join(names), _side(p, room))
+                tags.add(p, _tag_text(names), _side(p, room))
             _grow_crop(view, bbox, tags.place())
     return [views[n] for n, _ in QF_PLANS]
 

@@ -46,6 +46,10 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
   catalog. Priced from the DXF as drawn: $181,600, design heat 89,053 Btu/h (the package-list path still
   reproduces the issued 61,106). No panel / water / waste source points or room boundary on the drawing.
 - Stores are reviewed one at a time with Edgar (AutoQuotes is on the desktop to correct the drawings).
+- Master equipment list DRAFT (Edgar reviewing, may add items): Drive `CINEMARK\PIZZA HUT\PH MASTER EQUIPMENT
+  LIST - DRAFT.xlsx`. Fixed ITEM # per product (1-16 = GA-263 issued set, 17+ proposed), PROVIDED BY = AEQ /
+  OWNER / EXISTING. Not wired into the pipeline yet: once reviewed, check drawings against it, put PROVIDED BY
+  on QF102 and use it for quote scope.
 - 7-PS-65 hand sink lands on the floor in Revit (level-based family); needs a mounting height.
 
 ## Where things go

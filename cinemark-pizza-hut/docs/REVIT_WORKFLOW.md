@@ -43,8 +43,9 @@ Runs clean end to end: model, 13 walls, 4 families placed, KCL data synced, 17-s
 - [x] Orientation follows the drawing's walls: an item backs onto the wall behind it and faces into the room
       (`revit_rotation` from dxf_extract); free-standing items keep the drawn rotation (corrected for AQ
       blocks drawn front-to-+X). Block axis conventions differ between AQ and KCL, the wall does not.
-- [x] Rough-ins: numbered tags only on the plans (E1/E2, P1/P2/P3 at one fixture), outside the room in wall
-      order; details in the QF103 schedule. Items without a family still get rough-ins.
+- [x] Rough-ins: numbered tags only on the plans (E1/E2, P7-P11 at one fixture), one clean row per wall just
+      outside the room, leaders square to the wall; only tags for close-set or stacked equipment spread
+      apart and angle. Details are in the QF103 schedule. Items without a family still get rough-ins.
 - [ ] Elevation tags: the utility markers show at their A.F.F. in QF403 but carry no tag text yet.
 - [ ] REMARKS on QF102 shows the catalog key (the build keeps the key in instance Comments).
 - [ ] The "photoreal render" is a realistic-style 3D export. Revit's API cannot drive the renderer; for a
