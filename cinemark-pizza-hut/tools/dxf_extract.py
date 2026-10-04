@@ -13,11 +13,14 @@ anything it cannot classify is listed under "unmatched" / "warnings" instead of
 guessed, so the report tells Edgar what to fix in the drawing or catalog.
 """
 import argparse
+import base64
 import json
 import math
 import os
 import re
 import sys
+import zlib
+import xml.etree.ElementTree as ET
 
 import ezdxf
 from ezdxf.math import Vec2
@@ -86,6 +89,84 @@ def match_equipment(block_name, attribs, compiled, block_map):
     return None
 
 
+# ---- AutoQuotes drawings --------------------------------------------------------------------
+# AQ keeps its project inside the drawing: root-dictionary XRECORDs whose binary chunks are raw
+# DEFLATE of base64 of an XML dictionary keyed by block handle (decimal). AQXBLOCKDATA is the product
+# (manufacturer, model, spec, width, depth: the hover text in AutoCAD); AQXPROJECTDATA carries the AQ
+# line item number that the drawing's item tags show.
+
+def _aq_record(doc, name):
+    xr = doc.rootdict.get(name)
+    if xr is None or xr.dxftype() != "XRECORD":
+        return {}
+    raw = b"".join(t.value for t in xr.tags if isinstance(t.value, bytes))
+    try:
+        xml = base64.b64decode(zlib.decompress(raw, -15)).decode("utf-8")
+    except (zlib.error, ValueError):
+        return {}
+    if xml.startswith("<?xml"):                  # declares utf-16; the payload is plain text
+        xml = xml[xml.index("?>") + 2:]
+    out = {}
+    d = ET.fromstring(xml).find("__dictionary")
+    for it in (d if d is not None else []):
+        val = it.find("value")[0]
+        out[it.find("key")[0].text] = {c.tag: c.text if len(c) == 0 else [g.text for g in c] for c in val}
+    return out
+
+
+def _float(x):
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def aq_products(doc):
+    """Block handle (hex, as the DXF writes it) -> AQ item number, manufacturer, model, spec, width,
+    depth. Empty for a drawing that did not come from AutoQuotes."""
+    blocks, proj = _aq_record(doc, "AQSL-AQXBLOCKDATA"), _aq_record(doc, "AQSL-AQXPROJECTDATA")
+    out = {}
+    for h, b in blocks.items():
+        p = proj.get(h, {})
+        if "true" in (b.get("IsDeleted"), p.get("IsDeleted")):
+            continue
+        out["%X" % int(h)] = {"item": p.get("LineItemNumber"), "mfr": b.get("Manufacturer"),
+                              "model": b.get("Model"), "spec": b.get("Spec"), "width": _float(b.get("Width")),
+                              "depth": _float(b.get("Depth")), "accessory": p.get("IsAccessory") == "true"}
+    return out
+
+
+def _front_offset(doc, block_name, prod):
+    """Degrees to add to a block's rotation so a Revit family (front toward -Y, like KCL blocks) faces the
+    same way. Many AQ blocks are drawn with their width along local Y and the front toward +X: that is
+    +90. Decided from AQ's width against the block's unrotated outline; 0 when that can't tell. Only for
+    free-standing items: an item against a wall faces away from it (see wall_behind)."""
+    w = (prod or {}).get("width")
+    if not w:
+        return 0.0
+    try:
+        from ezdxf import bbox as _bb
+        ext = _bb.extents(doc.blocks[block_name])
+    except Exception:
+        return 0.0
+    if not ext.has_data:
+        return 0.0
+    dx, dy = abs(ext.size.x - w), abs(ext.size.y - w)
+    if dy <= 2.0 < dx:
+        return 90.0
+    return 0.0
+
+
+def _true_name(doc, name):
+    """*U123 (an anonymous reference to a dynamic block) -> the dynamic block's own name."""
+    br = doc.block_records.get(name)
+    if br is not None and br.has_xdata("AcDbBlockRepBTag"):
+        for code, val in br.get_xdata("AcDbBlockRepBTag"):
+            if code == 1005 and val in doc.entitydb:
+                return doc.entitydb[val].dxf.name
+    return name
+
+
 def _segments(entity, scale):
     t = entity.dxftype()
     if t == "LINE":
@@ -146,6 +227,103 @@ def pair_walls(segs, status):
     return walls
 
 
+ROUGHIN_REACH = 18.0    # in: an item whose outline is within this of a wall face roughs in on that wall
+
+
+def _pt_rect(p, b):
+    return math.hypot(max(b[0] - p.x, 0.0, p.x - b[2]), max(b[1] - p.y, 0.0, p.y - b[3]))
+
+
+def _pt_seg(p, a, e):
+    d = e - a
+    t = max(0.0, min(1.0, (p - a).dot(d) / d.dot(d))) if d.dot(d) else 0.0
+    return (p - (a + d * t)).magnitude
+
+
+def wall_behind(q, walls):
+    """The wall an item backs onto, as (rough-in point, unit normal from the wall into the room), inches.
+    Rough-ins are ~90% of the time on that wall (Edgar): the item's centre projected onto its room face.
+    The wall behind runs along the item's width (AutoQuotes width says which way that is); without AQ
+    data, the nearest wall in reach. None when no wall is within reach (island / floor items)."""
+    b = q.get("bbox") or [q["x"], q["y"], q["x"], q["y"]]
+    c = Vec2((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0)
+    along = None
+    aq = q.get("aq") or {}
+    if aq.get("width"):
+        # the outline includes door swings, which only add depth: the side that matches AQ's width is it
+        dx, dy = abs(b[2] - b[0] - aq["width"]), abs(b[3] - b[1] - aq["width"])
+        if abs(dx - dy) >= 1:
+            along = Vec2(1, 0) if dx < dy else Vec2(0, 1)
+    corners = [Vec2(b[0], b[1]), Vec2(b[2], b[1]), Vec2(b[2], b[3]), Vec2(b[0], b[3])]
+    best = None
+    for w in walls:
+        a, e = Vec2(w["start"]), Vec2(w["end"])
+        if (e - a).magnitude < 1:
+            continue
+        gap = min([_pt_rect(a, b), _pt_rect(e, b)] + [_pt_seg(k, a, e) for k in corners]) - w["thickness"] / 2.0
+        if gap > ROUGHIN_REACH:
+            continue
+        u = (e - a).normalize()
+        score = (along is not None and abs(u.dot(along)) < 0.9, _pt_seg(c, a, e))
+        if best is None or score < best[0]:
+            best = (score, a, e, w["thickness"])
+    if best is None:
+        return None
+    _, a, e, thk = best
+    u = (e - a).normalize()
+    foot = a + u * max(0.0, min((e - a).magnitude, (c - a).dot(u)))
+    n = c - foot
+    if n.magnitude < 1e-6:
+        return None
+    n = n.normalize()
+    p = foot + n * (thk / 2.0)
+    return [round(p.x, 2), round(p.y, 2)], [round(n.x, 4), round(n.y, 4)]
+
+
+def _label(q):
+    aq = q.get("aq") or {}
+    return ("%s %s" % (aq.get("mfr") or "", aq.get("model") or "")).strip() or q["block"]
+
+
+def _item_order(n):
+    m = re.match(r"\d+", str(n))
+    return (int(m.group()) if m else 10 ** 6, str(n))
+
+
+def item_table(out):
+    """One row per item number on the drawing (for review): label, catalog key, count."""
+    rows = {}
+    for q in out["equipment"]:
+        if q["status"] == "demo" or not q.get("item"):
+            continue
+        r = rows.setdefault(str(q["item"]), {"item": str(q["item"]), "label": _label(q), "key": q["key"], "count": 0})
+        r["count"] += 1
+    return [rows[n] for n in sorted(rows, key=_item_order)]
+
+
+def check_package(out, store):
+    """Drawing vs the store's package list by item number: missing and extra items, quantities, and a
+    different product under the same number. Only when the drawing carries item numbers."""
+    pkg = (store or {}).get("package")
+    table = out["items"]
+    if not isinstance(pkg, list) or not table:
+        return
+    drawn = dict((r["item"], r) for r in table)
+    for p in pkg:
+        n = str(p["item"])
+        r = drawn.get(n)
+        if r is None:
+            out["warnings"].append("Package item %s %s is not on the drawing." % (n, p["key"]))
+            continue
+        if r["key"] != p["key"]:
+            out["warnings"].append("Item %s: drawing has %s (%s), package says %s."
+                                   % (n, r["label"], r["key"] or "no catalog match", p["key"]))
+        if r["count"] != p.get("qty", 1):
+            out["warnings"].append("Item %s %s: drawn %d, package qty %d." % (n, p["key"], r["count"], p.get("qty", 1)))
+    for n in sorted(set(drawn) - set(str(p["item"]) for p in pkg), key=_item_order):
+        out["warnings"].append("Drawing item %s %s is not in the package." % (n, drawn[n]["label"]))
+
+
 def polygon_area_perim(pts):
     a = 0.0
     p = 0.0
@@ -161,6 +339,7 @@ def extract(path, store=None, catalog_path=None):
     units = doc.header.get("$INSUNITS", 1)
     scale = UNIT_TO_IN.get(units, 1.0)
     items, compiled = load_catalog(catalog_path)
+    aq = aq_products(doc)
     block_map = (store or {}).get("block_map", {})
     # store layer_map: drawing layer -> standard layer it stands for, e.g. AutoQuotes "Layer1" -> "A-WALL"
     layer_map = {k.upper(): v for k, v in (store or {}).get("layer_map", {}).items()}
@@ -179,9 +358,10 @@ def extract(path, store=None, catalog_path=None):
             t = e.dxftype()
             if t == "INSERT":
                 bname = e.dxf.name
-                if bname.startswith("*"):          # anonymous (dynamic/xref) block
-                    bname = e.block().name if e.block() else bname
+                if bname.startswith("*"):          # anonymous (dynamic) block
+                    bname = _true_name(doc, bname)
                 attribs = {a.dxf.tag.upper(): a.dxf.text for a in e.attribs} if e.attribs else {}
+                prod = aq.get(e.dxf.handle)
                 ins = Vec2(e.dxf.insert) * scale
                 rot = e.dxf.get("rotation", 0.0)
                 status = layer_status(std, default="new")
@@ -197,7 +377,10 @@ def extract(path, store=None, catalog_path=None):
                                          "status": layer_status(std, default="exist"),
                                          "layer": layer})
                     continue
-                key = match_equipment(bname, attribs, compiled, block_map)
+                # AQ model joins the match (not the manufacturer: brand aliases like HOBART would catch
+                # every product of that brand)
+                hay = dict(attribs, AQ_MODEL=prod["model"]) if prod and prod.get("model") else attribs
+                key = match_equipment(bname, hay, compiled, block_map)
                 if key is None and (WALL_LAYER.search(up) or "ANNO" in up or "TITLE" in up):
                     continue
                 bbox = None
@@ -210,10 +393,14 @@ def extract(path, store=None, catalog_path=None):
                 except Exception:
                     pass
                 rec = {"handle": e.dxf.handle, "block": bname, "layer": layer, "key": key,
-                       "item": attribs.get("ITEM") or attribs.get("ITEMNO") or attribs.get("TAG"),
+                       "item": ((prod or {}).get("item") or attribs.get("ITEM") or attribs.get("ITEMNO")
+                                or attribs.get("TAG")),
                        "x": round(ins.x, 3), "y": round(ins.y, 3), "rotation": round(rot, 3),
                        "xscale": e.dxf.get("xscale", 1.0), "status": status,
                        "attribs": attribs, "bbox": bbox}
+                if prod:
+                    rec["aq"] = prod
+                rec["revit_rotation"] = round(rot + _front_offset(doc, e.dxf.name, prod), 3)
                 if key is None:
                     out["unmatched"].setdefault(bname, 0)
                     out["unmatched"][bname] += 1
@@ -245,6 +432,24 @@ def extract(path, store=None, catalog_path=None):
 
     _tag_items_from_text(out)
 
+    live = [w for w in out["walls"] if w["status"] != "demo"]
+    for q in out["equipment"]:
+        if q["key"] and q["status"] != "demo":
+            hit = wall_behind(q, live)
+            q["roughin"] = hit[0] if hit else None
+            if hit:     # back to its wall, front into the room: how the drawing has it, whatever the block's axes
+                q["revit_rotation"] = round((math.degrees(math.atan2(hit[1][1], hit[1][0])) + 90.0) % 360.0, 3)
+    out["items"] = item_table(out)
+    check_package(out, store)
+    stacked = {}
+    for q in out["equipment"]:
+        stacked.setdefault((q["block"], round(q["x"], 1), round(q["y"], 1), q["rotation"]), []).append(q)
+    for qs in stacked.values():
+        if len(qs) > 1:
+            out["warnings"].append("%d identical %s blocks at (%.0f, %.0f)%s: duplicate in the drawing? Both are counted."
+                                   % (len(qs), _label(qs[0]), qs[0]["x"], qs[0]["y"],
+                                      " (item %s)" % qs[0]["item"] if qs[0].get("item") else ""))
+
     if not out["rooms"]:
         allpts = [w["start"] for w in out["walls"] if w["status"] != "demo"] + \
                  [w["end"] for w in out["walls"] if w["status"] != "demo"]
@@ -273,6 +478,8 @@ def extract(path, store=None, catalog_path=None):
         "equipment_demo": sum(1 for q in out["equipment"] if q["status"] == "demo"),
         "unmatched": sum(out["unmatched"].values()),
         "room_sf": round(sum(r["area_sf"] for r in out["rooms"]), 1),
+        "roughin_on_wall": sum(1 for q in out["equipment"] if q.get("roughin")),
+        "autoquotes": bool(aq),
     }
     return out
 

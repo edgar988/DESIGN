@@ -15,8 +15,9 @@ import datetime
 
 import clr
 clr.AddReference("RevitAPI")
-from Autodesk.Revit.DB import (BuiltInCategory, BuiltInParameter, BoundingBoxXYZ, Color, DisplayStyle,
-                               DWGImportOptions, Element, ElementId, ElementTransformUtils, ElevationMarker,
+from Autodesk.Revit.DB import (BuiltInCategory, BuiltInParameter, BoundingBoxXYZ, Color, Curve, CurveLoop,
+                               DirectShape, DisplayStyle, DWGImportOptions, Element, ElementId,
+                               GeometryCreationUtilities, GeometryObject, ElementTransformUtils, ElevationMarker,
                                FamilySymbol, FilteredElementCollector, GroupType, ImageExportOptions, ImageFileType,
                                ImageResolution, ImportPlacement, ImportUnit, Level, Line, OverrideGraphicSettings,
                                PDFExportOptions, Phase, SaveAsOptions, ScheduleFilter, ScheduleFilterType,
@@ -292,9 +293,10 @@ def place_equipment(doc, layout, catalog, s):
                 except Exception as ex:
                     skipped.append((q["key"], "placement failed: %s" % ex))
                     continue
-            if abs(q.get("rotation", 0)) > 0.01:
+            rot = q.get("revit_rotation", q.get("rotation", 0)) % 360.0   # block rotation, front-corrected
+            if rot > 0.01:
                 ElementTransformUtils.RotateElement(doc, inst.Id, Line.CreateBound(p, p + XYZ.BasisZ),
-                                                    math.radians(q["rotation"]))
+                                                    math.radians(rot))
             doc.Regenerate()
             # KCL insertion points rarely match CAD block base points: align plan bbox centres
             if q.get("bbox"):
@@ -471,17 +473,24 @@ def _halftone_equipment(doc, view):
             pass
 
 
-def _equip_by_mark(doc):
+def _roughin_targets(layout):
+    """(key, item) -> [(rough-in point in feet, on a wall?)] in drawing order. dxf_extract puts rough-ins
+    on the wall behind the item, so tags point where the trades rough in, family or not."""
     out = {}
-    for inst in FilteredElementCollector(doc).OfClass(FamilyInstance):
-        c = inst.get_Parameter(BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)
-        m = inst.get_Parameter(BuiltInParameter.ALL_MODEL_MARK)
-        if c and c.AsString():
-            bb = inst.get_BoundingBox(None)
-            if bb:
-                mark = (m.AsString() if m else None) or ""
-                out.setdefault((c.AsString(), mark), []).append((bb.Min + bb.Max) * 0.5)
+    for q in layout["equipment"]:
+        if q["status"] == "demo" or not q["key"]:
+            continue
+        b = q.get("bbox")
+        p = q.get("roughin") or ([(b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0] if b else [q["x"], q["y"]])
+        out.setdefault((q["key"], str(q.get("item") or "")), []).append((_pt(p), bool(q.get("roughin"))))
     return out
+
+
+def _side(p, bbox_in):
+    """Which room edge a point is nearest: the way out of the room from a wall rough-in."""
+    x0, y0, x1, y1 = [v * FT for v in bbox_in]
+    d = {"W": p.X - x0, "E": x1 - p.X, "S": p.Y - y0, "N": y1 - p.Y}
+    return min(d, key=d.get)
 
 
 def _text_type(doc, want):
@@ -499,24 +508,66 @@ def _note(doc, view, at, target, text, tn_type):
 
 
 class _Callouts(object):
-    """Notes in one view. Keeps an estimated box per note (model ft, top-left insertion) and slides a
-    new note down until it clears the earlier ones, so callouts on neighbouring equipment don't collide."""
+    """Notes in one view, each just outside the room past the wall its rough-in is on. Notes are laid out
+    in wall order (N/S walls left to right, E/W top to bottom) so leaders don't cross; one that would
+    collide slides along the wall, and one that would leave the frame starts a new row further out.
+    Boxes are estimated (model ft, top-left insertion) from the text type's size and the view scale."""
 
-    def __init__(self, doc, view, tn_type):
-        self.doc, self.view, self.tn = doc, view, tn_type
+    def __init__(self, doc, view, tn_type, frame, gap_ft=1.5):
+        self.doc, self.view, self.tn, self.frame = doc, view, tn_type, frame    # frame: x0, y0, x1, y1 ft
+        self.g = gap_ft                                 # ft from the wall point to the note
         p = doc.GetElement(tn_type).get_Parameter(BuiltInParameter.TEXT_SIZE)
         k = (p.AsDouble() if p else 3.0 / 32.0 / 12.0) * view.Scale
         self.cw, self.lh = 0.75 * k, 1.7 * k            # char width / line height on paper -> model
-        self.boxes = []
+        self.boxes, self.queue = [], []
 
-    def add(self, at, target, text):
+    def add(self, target, text, side):
+        self.queue.append((target, text, side))
+
+    def place(self):
+        """Create the queued notes; returns the extent of notes and leader targets (ft) or None."""
+        along = {"N": lambda t: t.X, "S": lambda t: t.X, "E": lambda t: -t.Y, "W": lambda t: -t.Y}
+        for target, text, side in sorted(self.queue, key=lambda q: (q[2], along[q[2]](q[0]))):
+            self._put(target, text, side)
+        if not self.boxes:
+            return None
+        pts = self.boxes + [(t.X, t.Y, t.X, t.Y) for t, _, _ in self.queue]
+        return (min(b[0] for b in pts), min(b[1] for b in pts), max(b[2] for b in pts), max(b[3] for b in pts))
+
+    def _put(self, target, text, side):
         lines = text.split("\n")
         w, h = self.cw * max(len(l) for l in lines), self.lh * len(lines)
-        x, y = at.X, at.Y
-        while any(x < b[2] and x + w > b[0] and y - h < b[3] and y > b[1] for b in self.boxes):
-            y -= h + 0.5 * self.lh
+        g, gap = self.g, 2 * self.cw                    # ft from the wall point; between notes
+        x0, y0, x1, y1 = self.frame
+        along_x = side in ("N", "S")
+        x, y = {"N": (target.X - w / 2.0, target.Y + g + h), "S": (target.X - w / 2.0, target.Y - g),
+                "E": (target.X + g, target.Y + h / 2.0), "W": (target.X - g - w, target.Y + h / 2.0)}[side]
+        if along_x:
+            x = max(x0, min(x, x1 - w))
+        for _ in range(200):
+            if along_x and x + w > x1 or not along_x and y - h < y0:      # off the frame: next row out
+                if along_x:
+                    x, y = max(x0, min(target.X - w / 2.0, x1 - w)), y + (h + gap if side == "N" else -h - gap)
+                else:
+                    x, y = x + (w + gap if side == "E" else -w - gap), target.Y + h / 2.0
+            elif any(x < b[2] and x + w > b[0] and y - h < b[3] and y > b[1] for b in self.boxes):
+                if along_x:
+                    x += w + gap
+                else:
+                    y -= h + 0.5 * self.lh
+            else:
+                break
         self.boxes.append((x, y - h, x + w, y))
         return _note(self.doc, self.view, XYZ(x, y, 0), target, text, self.tn)
+
+
+def _grow_crop(view, bbox_in, ext_ft, pad_ft=1.0):
+    """Crop = the room frame, grown to hold the callouts (Revit sizes a viewport by its annotations too)."""
+    if ext_ft is None:
+        return
+    x0, y0, x1, y1 = bbox_in
+    _crop(view, min(x0, (ext_ft[0] - pad_ft) * 12.0), min(y0, (ext_ft[1] - pad_ft) * 12.0),
+          max(x1, (ext_ft[2] + pad_ft) * 12.0), max(y1, (ext_ft[3] + pad_ft) * 12.0))
 
 
 _PIPE_SYS = {"DomesticHotWater": "HW", "DomesticColdWater": "CW", "Sanitary": "SAN", "Vent": "VENT",
@@ -532,25 +583,139 @@ def _inch_frac(x):
     return "%d-%s" % (whole, frac) if whole and frac else (frac or str(whole))
 
 
-def _pipe_line(c):
-    z = c["z_aff_in"]
-    return '%s %s" @ %s" AFF%s' % (_PIPE_SYS.get(c.get("system", ""), c.get("system") or "PIPE"),
-                                   _inch_frac(c.get("size_in")), z, "  VERIFY" if z < 0 else "")
+_SVC_DESC = {"CW": "COLD WATER", "HW": "HOT WATER", "SAN": "WASTE", "VENT": "VENT"}
+_CAT_SVC = [("hw", "HW"), ("cw", "CW"), ("waste", "SAN")]
+UTIL = "AEQ Utility"                    # the template's QF103 parameters: "AEQ Utility TAG", ...
 
 
-_AEQ_NOTE = re.compile(r"^(E-\d+  |P-[^\r\n]*[\r\n])")
+def _receptacle(nema):
+    m = re.search(r"(L?\d{1,2}-\d{2})", nema or "")
+    return "RECEPTACLE %sR" % m.group(1) if m else "RECEPTACLE, NEMA VERIFY"
+
+
+def utility_rows(layout, takeoff, s):
+    """One row per rough-in, numbered E1.. / P1..: what the QF103 Combined Utility Schedule lists and the
+    plan tags point to. Electrical: one per circuit. Plumbing: the family's pipe connectors, plus any
+    catalog service the family lacks (standard height, VERIFY). Points are the wall rough-ins."""
+    where = _roughin_targets(layout)
+    items = C.catalog(s)["items"]
+    rd = C.read_json(os.path.join(s["repo_root"], "config", "program.json"))["rough_in_defaults"]
+    synced = _synced(s)
+    sched = {(r["key"], str(r.get("item") or "")): r for r in takeoff["schedule"]}
+
+    def label(key, item):
+        r = sched.get((key, item)) or {}
+        return ("%s %s" % (r.get("mfr", ""), r.get("model", ""))).strip() or key
+
+    rows, seen = [], {}
+    for c in takeoff["circuits"]:
+        k = (c["key"], str(c.get("item") or ""))
+        pts = where.get(k) or []
+        i = seen.get(k, 0)
+        seen[k] = i + 1
+        if not pts:
+            continue
+        p, wall = pts[min(i, len(pts) - 1)]
+        flags = [f for f, bad in (("AMPS", c["amps"] is None), ("BKR", not c["breaker_a"]),
+                                  ("NEMA", c["conn"] != "direct" and not re.search(r"\d-\d", c["nema"] or ""))) if bad]
+        rows.append({"svc": "E", "point": p, "wall": wall, "item": k[1], "aff": '%d"' % c["height_aff"],
+                     "size": "%s-P %sA" % (c["poles"], c["breaker_a"] or "?"),
+                     "desc": "J-BOX, DIRECT CONNECT" if c["conn"] == "direct" else _receptacle(c["nema"]),
+                     "to": label(*k), "kw": (items.get(c["key"], {}).get("elec") or {}).get("kw"),
+                     "amps": c["amps"], "v": c["volts"], "ph": c["phase"] or 1,
+                     "remarks": "CKT %s%s" % (c["circuit"], "; VERIFY " + ", ".join(flags) if flags else "")})
+    for (key, item), pts in sorted(where.items()):
+        r = sched.get((key, item))
+        if not r or not r.get("plumb"):
+            continue
+        svcs = [(_PIPE_SYS.get(c.get("system", ""), c.get("system") or "PIPE"), _inch_frac(c.get("size_in")) + '"',
+                 c["z_aff_in"], "VERIFY HEIGHT" if c["z_aff_in"] < 0 else "")
+                for c in synced.get(key, {}).get("connectors", []) if "Piping" in c["domain"]]
+        plumb = items.get(key, {}).get("plumb") or {}
+        for ck, svc in _CAT_SVC:
+            if plumb.get(ck) and svc not in [x[0] for x in svcs]:
+                size = plumb[ck] if plumb[ck] == "VERIFY" else plumb[ck] + '"'
+                z = rd["cw_hw_supply_sink"] if svc in ("CW", "HW") else rd["waste_wall_sink"]
+                svcs.append((svc, size, z, "STD HEIGHT - VERIFY"))
+        for p, wall in pts:
+            for svc, size, z, note in svcs:
+                desc = _SVC_DESC.get(svc, svc) + (", INDIRECT" if svc == "SAN" and plumb.get("indirect") else "")
+                rows.append({"svc": svc, "point": p, "wall": wall, "item": item, "aff": '%s"' % z, "size": size,
+                             "desc": desc, "to": label(key, item), "kw": None, "amps": None, "v": None, "ph": None,
+                             "remarks": note})
+    n = {"E": 0, "P": 0}
+    for r in rows:
+        g = "E" if r["svc"] == "E" else "P"
+        n[g] += 1
+        r["tag"] = "%s%d" % (g, n[g])
+    return rows
+
+
+def _cube(c, a):
+    h = a / 2.0
+    pts = [XYZ(c.X - h, c.Y - h, c.Z - h), XYZ(c.X + h, c.Y - h, c.Z - h), XYZ(c.X + h, c.Y + h, c.Z - h),
+           XYZ(c.X - h, c.Y + h, c.Z - h)]
+    loop = CurveLoop.Create(List[Curve]([Line.CreateBound(pts[i], pts[(i + 1) % 4]) for i in range(4)]))
+    return GeometryCreationUtilities.CreateExtrusionGeometry(List[CurveLoop]([loop]), XYZ.BasisZ, a)
+
+
+def _set_text(el, name, value):
+    """Set a parameter from display text (a length or number parameter parses it in project units)."""
+    p = el.LookupParameter(name)
+    if p is None or p.IsReadOnly or value in (None, ""):
+        return
+    if p.StorageType == StorageType.String:
+        p.Set(str(value))
+    else:
+        try:
+            p.SetValueString(str(value))
+        except Exception:
+            pass
+
+
+def _utility_markers(doc):
+    return [d for d in FilteredElementCollector(doc).OfClass(DirectShape)
+            if d.LookupParameter(UTIL + " TAG") is not None and d.LookupParameter(UTIL + " TAG").AsString()]
+
+
+def utility_markers(doc, rows, lvl, phase):
+    """A small Generic Model at each rough-in (wall point, at its A.F.F.) carrying the AEQ Utility
+    parameters, so the template's QF103 Combined Utility Schedule lists it and elevations show where it
+    is. Replaces markers from an earlier run. False when the template has no AEQ Utility parameters."""
+    old = _utility_markers(doc)
+    if old:
+        doc.Delete(List[ElementId]([d.Id for d in old]))
+    for r in rows:
+        z = lvl.Elevation + max(_num(r["aff"]) or 0.0, 0.0) * FT
+        ds = DirectShape.CreateElement(doc, ElementId(BuiltInCategory.OST_GenericModel))
+        ds.SetShape(List[GeometryObject]([_cube(XYZ(r["point"].X, r["point"].Y, z), 1.5 * FT)]))
+        if ds.LookupParameter(UTIL + " TAG") is None:
+            doc.Delete(ds.Id)
+            return False
+        for field, value in (("ITEM", r["item"]), ("TAG", r["tag"]), ("SVC", r["svc"]), ("SIZE", r["size"]),
+                             ("DESCRIPTION", r["desc"]), ("LOC.", "WALL" if r["wall"] else "AT EQUIP"),
+                             ("A.F.F.", r["aff"]), ("SERVICE TO", r["to"]), ("KW", r["kw"]), ("AMPS", r["amps"]),
+                             ("V", r["v"]), ("PH", r["ph"]), ("REMARKS", r["remarks"])):
+            _set_text(ds, "%s %s" % (UTIL, field), value)
+        _set(ds, BuiltInParameter.PHASE_CREATED, phase.Id)
+    return True
+
+
+_AEQ_TAG = re.compile(r"^[EP]\d+(/[EP]\d+)*$")
 
 
 def _clear_aeq_notes(doc, view):
-    """Drop callouts from an earlier run (button 5 re-run) so they are not doubled."""
-    ids = [n.Id for n in FilteredElementCollector(doc, view.Id).OfClass(TextNote) if _AEQ_NOTE.match(n.Text or "")]
+    """Drop rough-in tags from an earlier run (button 5 re-run) so they are not doubled."""
+    ids = [n.Id for n in FilteredElementCollector(doc, view.Id).OfClass(TextNote)
+           if _AEQ_TAG.match((n.Text or "").strip())]
     if ids:
         doc.Delete(List[ElementId](ids))
 
 
 def roughin_views(doc, layout, takeoff, s):
-    """Frame every QF plan on the room at the fitted scale; electrical callouts on QF302 and plumbing
-    callouts on QF202, each with a leader to its equipment."""
+    """Frame every QF plan on the room at the fitted scale. Rough-ins become numbered utilities (E1.., P1..):
+    a marker per rough-in carrying the QF103 schedule data, and on QF302 / QF202 just the tag numbers,
+    leadered to the rough-in on the wall behind each item. Returns the plan views."""
     lvl = _level(doc)
     bbox = room_bbox(layout, 60.0)
     sc = _fit_scale(s, bbox[2] - bbox[0], bbox[3] - bbox[1])
@@ -569,38 +734,20 @@ def roughin_views(doc, layout, takeoff, s):
                 _halftone_equipment(doc, v)
             _clear_aeq_notes(doc, v)
         doc.Regenerate()
-        where = _equip_by_mark(doc)
-        sched = {(r["key"], str(r.get("item") or "")): r for r in takeoff["schedule"]}
-        # electrical callouts: one note per circuit, leader to the equipment
-        el = _Callouts(doc, v_el, tn)
-        seen = {}
-        for c in takeoff["circuits"]:
-            k = (c["key"], str(c.get("item") or ""))
-            pts = where.get(k) or []
-            i = seen.get(k, 0)
-            seen[k] = i + 1
-            tgt = pts[i] if i < len(pts) else (pts[0] if pts else None)
-            if tgt is None:
-                continue
-            txt = "E-%s  %s V %s-PH  %s A\n%s-P %s A BKR  %s\n%s @ %d\" AFF" % (
-                c["circuit"], c["volts"], c["phase"] or 1, c["amps"] if c["amps"] is not None else "VERIFY",
-                c["poles"], c["breaker_a"] or "VERIFY", c["nema"] or "",
-                "J-BOX / DIRECT" if c["conn"] == "direct" else "RECEPTACLE", c["height_aff"])
-            el.add(tgt + XYZ(2.5, 2.0, 0), tgt, txt)
-        rd = C.read_json(os.path.join(s["repo_root"], "config", "program.json"))["rough_in_defaults"]
-        synced = _synced(s)
-        pl = _Callouts(doc, v_pl, tn)
-        for (key, item), pts in sorted(where.items()):
-            r = sched.get((key, item))
-            if not r or not r.get("plumb"):
-                continue
-            conns = [c for c in synced.get(key, {}).get("connectors", []) if "Piping" in c["domain"]]
-            if conns:
-                lines = [_pipe_line(c) for c in conns]
-            else:
-                lines = [r["plumb"], "SUPPLY @ %d\" AFF (STD - VERIFY)" % rd["cw_hw_supply_sink"]]
-            head = "P-%s" % item if item else "P- %s %s" % (r.get("mfr", ""), r.get("model", key))
-            pl.add(pts[0] + XYZ(2.5, -2.0, 0), pts[0], "%s\n%s" % (head, "\n".join(lines)))
+        rows = utility_rows(layout, takeoff, s)
+        utility_markers(doc, rows, lvl, nc)
+        room = room_bbox(layout, 0.0)
+        frame = [v * FT for v in bbox]
+        for view, group in ((v_el, "E"), (v_pl, "P")):
+            at = {}                         # one tag note per rough-in point: "P1/P2/P3"
+            for r in rows:
+                if (r["svc"] == "E") == (group == "E"):
+                    key = (round(r["point"].X, 2), round(r["point"].Y, 2))
+                    at.setdefault(key, (r["point"], []))[1].append(r["tag"])
+            tags = _Callouts(doc, view, tn, frame, gap_ft=0.75)
+            for p, names in at.values():
+                tags.add(p, "/".join(names), _side(p, room))
+            _grow_crop(view, bbox, tags.place())
     return [views[n] for n, _ in QF_PLANS]
 
 
@@ -683,6 +830,7 @@ def view_3d(doc, layout, st):
             ogs.SetSurfaceTransparency(50)
             v.SetCategoryOverrides(ElementId(BuiltInCategory.OST_Walls), ogs)
             v.SetCategoryHidden(ElementId(BuiltInCategory.OST_Levels), True)
+            v.SetCategoryHidden(ElementId(BuiltInCategory.OST_GenericModel), True)   # utility markers
             v.AreImportCategoriesHidden = True
         except Exception:
             pass
@@ -726,9 +874,10 @@ ROUGHIN_GROUP = "AEQ ROUGH-IN TABLE"
 
 
 def roughin_schedule_drafting(doc, takeoff, title="ELECTRICAL ROUGH-IN (FROM TAKEOFF)"):
-    """Table of circuits from takeoff.json (text + detail lines). Drawn straight onto the QF103 sheet under
-    the template's utility schedule, since a 1:1 viewport there would overwrite the sheet's N.T.S. scale;
-    into a drafting view only when the template has no QF103. Returns the sheet or view drawn on."""
+    """Fallback for templates without the AEQ Utility parameters (no utility markers): a table of circuits
+    from takeoff.json (text + detail lines) drawn straight onto the QF103 sheet under the template's
+    schedule (a 1:1 viewport there would overwrite the sheet's N.T.S. scale), or into a drafting view when
+    there is no QF103. Returns the sheet or view drawn on, or None when the QF103 schedule has the data."""
     cols = [("CKT", 0.45), ("ITEM", 0.45), ("EQUIPMENT", 2.2), ("V", 0.45), ("PH", 0.35), ("AMPS", 0.55),
             ("BKR", 0.65), ("CONN", 0.9), ("NEMA", 0.8), ("AFF", 0.5), ("RUN LF", 0.6)]
     rows = [[str(c["circuit"]), str(c.get("item") or ""), c["key"], str(c["volts"]), str(c["phase"] or 1),
@@ -740,6 +889,8 @@ def roughin_schedule_drafting(doc, takeoff, title="ELECTRICAL ROUGH-IN (FROM TAK
         for gt in FilteredElementCollector(doc).OfClass(GroupType):     # table from an earlier run
             if _name(gt) == ROUGHIN_GROUP:
                 doc.Delete(gt.Id)
+        if _utility_markers(doc):       # the template's QF103 schedule lists the utility markers itself
+            return None
         if sh is not None:
             v, x0, top = sh, 0.55 / 12.0, 10.25 / 12.0
             for si in FilteredElementCollector(doc, sh.Id).OfClass(ScheduleSheetInstance):

@@ -144,7 +144,8 @@ def build(store, catalog, program, layout=None):
             if q["status"] == "demo" or not q["key"]:
                 continue
             rows.append({"item": q.get("item"), "key": q["key"], "qty": 1,
-                         "x": q["x"], "y": q["y"], "rotation": q["rotation"], "handle": q["handle"]})
+                         "x": q["x"], "y": q["y"], "rotation": q["rotation"], "handle": q["handle"],
+                         "roughin": q.get("roughin")})
         for r in rows:
             grouped.setdefault(r["key"], 0)
             grouped[r["key"]] += 1
@@ -188,7 +189,8 @@ def build(store, catalog, program, layout=None):
         row = {"item": r.get("item"), "key": r["key"], "qty": qty, "mfr": it["mfr"], "model": it["model"],
                "description": it["description"], "verified": it.get("verified", False),
                "flags": it.get("flags", []), "heat_sensible": round(s), "heat_latent": round(l_)}
-        loc = [r["x"], r["y"]] if "x" in r else None
+        # runs go to the rough-in on the wall behind the item (dxf_extract), else to the item itself
+        loc = r.get("roughin") or ([r["x"], r["y"]] if "x" in r else None)
         if e:
             kw = kw_of(e) * qty
             conn_kw += kw

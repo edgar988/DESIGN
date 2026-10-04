@@ -40,10 +40,12 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
   them from the KCL families into `config/families_synced.json`.
 - Licensing: no AEQ TX mechanical license (McAllen HVAC); NJ needs licensed plumbing/electrical of record.
 - GA-263 test quote came to $141,000 (travel $31.7k, 628 field hours). Draft only, not issued.
-- GA-263 DXF vs issued package: two identical ACP inserts at one point (2 circuits priced; schedule says 1),
-  STR1R drawn twice (schedule 1), Broaster VF-3 ventless fryer drawn where the package has MTI AutoFry, and no
-  Ovention C2000 block. From the DXF the heat load is 33,994 Btu/h vs the issued 61,106 (the package-list path
-  still reproduces 61,106). No panel / water / waste source points or room boundary on the drawing.
+- GA-263 drawing (AQ data) vs the store package, to review with Edgar: items 6 ACP and 7 Ovention each drawn
+  twice as identical stacked blocks, items 10 KLG-365 and 11 STR1R drawn twice (package qty 1), package item
+  15 MTI AutoFry not drawn, drawing item 16 Broaster VF-3 not in the package, items 3/4 T&S faucets not in the
+  catalog. Priced from the DXF as drawn: $181,600, design heat 89,053 Btu/h (the package-list path still
+  reproduces the issued 61,106). No panel / water / waste source points or room boundary on the drawing.
+- Stores are reviewed one at a time with Edgar (AutoQuotes is on the desktop to correct the drawings).
 - 7-PS-65 hand sink lands on the floor in Revit (level-based family); needs a mounting height.
 
 ## Where things go

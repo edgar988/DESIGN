@@ -48,6 +48,8 @@ def run(store_id, dxf=None, rev="R0", ntp=None, outdir=None, today=None):
         layout = dxf_extract.extract(dxf, store)
         json.dump(layout, open(os.path.join(out, "layout.json"), "w"), indent=1)
         print("layout:", layout["summary"])
+        for it in layout.get("items", []):
+            print("  ITEM %-4s x%-2d %-40s %s" % (it["item"], it["count"], it["label"][:40], it["key"] or "NO CATALOG MATCH"))
         for w in layout["warnings"]:
             print("  LAYOUT WARNING:", w)
     else:

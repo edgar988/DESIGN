@@ -1,6 +1,8 @@
+import base64
 import json
 import os
 import sys
+import zlib
 
 import ezdxf
 
@@ -60,6 +62,43 @@ def test_store_layer_map_reads_nonstandard_wall_layer(tmp_path):
     assert dxf_extract.extract(p)["walls"] == []
     walls = dxf_extract.extract(p, {"layer_map": {"Layer1": "A-WALL"}})["walls"]
     assert len(walls) == 1 and walls[0]["status"] == "exist" and abs(walls[0]["thickness"] - 4.0) < 0.01
+
+
+def _aq_xrecord(doc, name, items):
+    """AutoQuotes-style root record: XML dictionary keyed by block handle -> base64 -> raw DEFLATE."""
+    body = "".join("<item><key><long>%d</long></key><value><V>%s</V></value></item>"
+                   % (h, "".join("<%s>%s</%s>" % (k, v, k) for k, v in f.items())) for h, f in items.items())
+    xml = '<?xml version="1.0" encoding="utf-16"?><D><__dictionary>%s</__dictionary></D>' % body
+    co = zlib.compressobj(wbits=-15)
+    raw = co.compress(base64.b64encode(xml.encode())) + co.flush()
+    xr = doc.objects.add_xrecord(doc.rootdict.dxf.handle)
+    xr.reset([(310, raw[i:i + 127]) for i in range(0, len(raw), 127)])
+    doc.rootdict[name] = xr
+
+
+def test_autoquotes_item_numbers_and_wall_roughin(tmp_path):
+    """An AQ block with an unhelpful name matches on its AQ model and carries the AQ item number; its
+    rough-in lands on the room face of the wall behind it; the package check reports what is missing."""
+    doc = ezdxf.new("R2018")
+    doc.header["$INSUNITS"] = 1
+    msp = doc.modelspace()
+    make_sample_dxf.wall(msp, "A-WALL", 0, 144, 300, 144)
+    make_sample_dxf.rect_block(doc, "AQSL_GENERIC_TABLE", 60, 30, attribs=())
+    ref = msp.add_blockref("AQSL_GENERIC_TABLE", (100, 110), dxfattribs={"layer": "AQSL-PlanView"})
+    h = int(ref.dxf.handle, 16)
+    _aq_xrecord(doc, "AQSL-AQXBLOCKDATA", {h: {"Manufacturer": "Advance Tabco", "Model": "KLG-365",
+                                              "Width": "60", "Depth": "30"}})
+    _aq_xrecord(doc, "AQSL-AQXPROJECTDATA", {h: {"LineItemNumber": "10"}})
+    p = str(tmp_path / "aq.dxf")
+    doc.saveas(p)
+    store = {"package": [{"item": 10, "key": "TABCO_KLG365", "qty": 1}, {"item": 15, "key": "MTI_AUTOFRY5", "qty": 1}]}
+    lay = dxf_extract.extract(p, store)
+    q = next(q for q in lay["equipment"] if q["block"] == "AQSL_GENERIC_TABLE")
+    assert q["key"] == "TABCO_KLG365" and q["item"] == "10"
+    assert q["roughin"] == [130.0, round(144 - 4.875 / 2, 2)]
+    assert q["revit_rotation"] == 0.0           # back to the north wall, front facing south into the room
+    assert lay["items"] == [{"item": "10", "label": "Advance Tabco KLG-365", "key": "TABCO_KLG365", "count": 1}]
+    assert any("Package item 15 MTI_AUTOFRY5 is not on the drawing" in w for w in lay["warnings"])
 
 
 def test_takeoff_and_estimate_from_dxf(tmp_path):

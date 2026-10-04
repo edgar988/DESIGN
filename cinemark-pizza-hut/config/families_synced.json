@@ -1,128 +1,195 @@
 {
  "HOBART_LXNR": {
+  "revit_type": "208/60/1", 
   "connectors": [
    {
-    "system": "DomesticColdWater", 
-    "domain": "DomainPiping", 
-    "size_in": 0.75, 
-    "z_aff_in": 5.0
-   }, 
-   {
     "system": "Sanitary", 
-    "domain": "DomainPiping", 
     "size_in": 0.625, 
-    "z_aff_in": 8.5
+    "z_aff_in": 8.5, 
+    "domain": "DomainPiping"
    }, 
    {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 4.5999999999999996
+    "system": "DomesticColdWater", 
+    "size_in": 0.75, 
+    "z_aff_in": 5.0, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "z_aff_in": 4.5999999999999996, 
+    "domain": "DomainElectrical"
    }
   ], 
-  "revit_family": "QF_Hobart_LXnR-ADV_cat$2026$208_60_1", 
-  "elec": {
-   "amps": 40.0, 
-   "phase": null, 
-   "kw": 6.7000000000000002, 
-   "volts": 208.0
-  }, 
-  "synced_at": "2026-10-04T09:04:29", 
+  "synced_at": "2026-10-04T09:37:39", 
   "params": {
    "BTUH": "1100.0 Btu/h", 
-   "Cold Water Minimum Pressure": "15.00 psi", 
+   "Cold Water Temperature Recommended": "70 °F", 
    "Min Ckt Ampacity": "40 A", 
-   "Waste Water Discharge Temperature": "-460 °F", 
-   "Indirect Waste Size": "1\"", 
    "Indirect Waste Connection Type": "Barb Fitting with 6' Long Hose", 
    "Phase Demolished": "None", 
-   "Cold Water RI Height": "0' - 0\"", 
-   "FL Amps": "34 A", 
-   "Watts": "6700 W", 
-   "Cold Water Flow": "0 GPM", 
-   "Cold Water Size": "1\"", 
-   "Phase": "1", 
-   "Cold Water Connection Height": "0' - 7 1/2\"", 
    "Indirect Waste Connection Height": "0' - 8 1/2\"", 
-   "Cold Water Maximum Pressure": "65.00 psi", 
-   "Indirect Waste Flow": "4 GPM", 
+   "FL Amps": "34 A", 
+   "Cold Water RI Height": "0' - 0\"", 
+   "Indirect Waste Size": "1\"", 
    "Volts": "208 V", 
+   "Cold Water Size": "1\"", 
+   "Cold Water Flow": "0 GPM", 
+   "Cold Water Connection Height": "0' - 7 1/2\"", 
+   "Phase": "1", 
+   "Indirect Waste Flow": "4 GPM", 
+   "Cold Water Maximum Pressure": "65.00 psi", 
+   "Watts": "6700 W", 
+   "Waste Water Discharge Temperature": "-460 °F", 
    "Phase Created": "New Construction", 
-   "Cold Water Temperature Recommended": "70 °F", 
-   "Elec Conn Connection Height": "0' - 4 5/8\""
+   "Elec Conn Connection Height": "0' - 4 5/8\"", 
+   "Cold Water Minimum Pressure": "15.00 psi"
   }, 
-  "revit_type": "208/60/1"
- }, 
- "ACP_MXP22TLT": {
-  "connectors": [
-   {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 6.0
-   }
-  ], 
-  "revit_family": "QF_ACP_MXP22TLT$2025", 
   "elec": {
    "volts": 208.0, 
-   "nema": "NEMA 6-30", 
-   "amps": 27.0, 
-   "phase": 1, 
-   "kw": 5.7000000000000002
+   "amps": 40.0, 
+   "phase": null, 
+   "kw": 6.7000000000000002
   }, 
-  "synced_at": "2026-10-04T09:04:29", 
-  "params": {
-   "Watts": "5700 W", 
-   "FL Amps": "27 A", 
-   "Conn Plug": "NEMA 6-30", 
-   "Phase": "1", 
-   "Volts": "208 V", 
-   "Phase Demolished": "None", 
-   "Watermarked By": "http://revitwatermark.com", 
-   "Phase Created": "New Construction", 
-   "Elec Conn Connection Height": "0' - 6\""
-  }, 
-  "revit_type": "DefaultType"
+  "revit_family": "QF_Hobart_LXnR-ADV_cat$2026$208_60_1"
  }, 
  "ADVANCE_7PS65": {
+  "revit_type": "DefaultType", 
   "connectors": [
    {
-    "system": "DomesticHotWater", 
-    "domain": "DomainPiping", 
-    "size_in": 0.5, 
-    "z_aff_in": -1.7000000000000000
+    "system": "Sanitary", 
+    "size_in": 1.5, 
+    "z_aff_in": -6.4000000000000004, 
+    "domain": "DomainPiping"
    }, 
    {
-    "system": "Sanitary", 
-    "domain": "DomainPiping", 
-    "size_in": 1.5, 
-    "z_aff_in": -6.4000000000000004
+    "system": "DomesticHotWater", 
+    "size_in": 0.5, 
+    "z_aff_in": -1.7000000000000000, 
+    "domain": "DomainPiping"
    }, 
    {
     "system": "DomesticColdWater", 
-    "domain": "DomainPiping", 
     "size_in": 0.5, 
-    "z_aff_in": -1.7000000000000000
+    "z_aff_in": -1.7000000000000000, 
+    "domain": "DomainPiping"
    }
   ], 
-  "revit_family": "QF_Advance_7-PS-65$2026", 
+  "synced_at": "2026-10-04T09:37:39", 
+  "params": {
+   "Hot Water Flow": "0 GPM", 
+   "Direct Waste Size": "2\"", 
+   "Hot Water Temperature": "110 °F", 
+   "Direct Waste RI Height": "0' - 0\"", 
+   "Phase Demolished": "None", 
+   "Hot Water RI Height": "0' - 0\"", 
+   "Phase Created": "New Construction", 
+   "Direct Waste Connection Height": "-0' - 6\"", 
+   "Hot Water Connection Height": "0' - 0\"", 
+   "Cold Water Size": "1\"", 
+   "Hot Water Size": "1\"", 
+   "Cold Water Flow": "0 GPM", 
+   "Cold Water Connection Height": "0' - 0\"", 
+   "Cold Water RI Height": "0' - 0\"", 
+   "Direct Waste Flow": "0 GPM"
+  }, 
   "elec": {
    "phase": null
   }, 
-  "synced_at": "2026-10-04T09:04:29", 
+  "revit_family": "QF_Advance_7-PS-65$2026"
+ }, 
+ "OVENTION_C2000": {
+  "revit_type": "C2000_208/60/1", 
+  "connectors": [
+   {
+    "z_aff_in": 6.2000000000000002, 
+    "domain": "DomainElectrical"
+   }
+  ], 
+  "synced_at": "2026-10-04T09:37:39", 
   "params": {
-   "Cold Water Flow": "0 GPM", 
-   "Hot Water Size": "1\"", 
-   "Hot Water Flow": "0 GPM", 
-   "Cold Water Size": "1\"", 
-   "Direct Waste Connection Height": "-0' - 6\"", 
-   "Direct Waste Flow": "0 GPM", 
-   "Hot Water Temperature": "110 °F", 
-   "Hot Water Connection Height": "0' - 0\"", 
-   "Cold Water Connection Height": "0' - 0\"", 
+   "Watts": "9152 W", 
+   "Min Ckt Ampacity": "0 A", 
+   "Volts": "208 V", 
    "Phase Demolished": "None", 
-   "Direct Waste Size": "2\"", 
+   "Conn Plug": "NEMA 6-50P", 
    "Phase Created": "New Construction", 
-   "Direct Waste RI Height": "0' - 0\"", 
-   "Hot Water RI Height": "0' - 0\"", 
-   "Cold Water RI Height": "0' - 0\""
+   "FL Amps": "44 A", 
+   "Elec Conn Connection Height": "0' - 0\"", 
+   "Phase": "1"
   }, 
-  "revit_type": "DefaultType"
+  "elec": {
+   "nema": "NEMA 6-50P", 
+   "amps": 0.0, 
+   "volts": 208.0, 
+   "kw": 9.1519999999999992, 
+   "phase": null
+  }, 
+  "revit_family": "QF_OVENTION_CONVEYOR_C2000_cat$2025$C2000_208_60_1"
+ }, 
+ "ACP_MXP22TLT": {
+  "revit_type": "DefaultType", 
+  "connectors": [
+   {
+    "z_aff_in": 6.0, 
+    "domain": "DomainElectrical"
+   }
+  ], 
+  "synced_at": "2026-10-04T09:37:39", 
+  "params": {
+   "Watermarked By": "http://revitwatermark.com", 
+   "Watts": "5700 W", 
+   "Volts": "208 V", 
+   "Phase Demolished": "None", 
+   "Conn Plug": "NEMA 6-30", 
+   "Phase Created": "New Construction", 
+   "FL Amps": "27 A", 
+   "Elec Conn Connection Height": "0' - 6\"", 
+   "Phase": "1"
+  }, 
+  "elec": {
+   "nema": "NEMA 6-30", 
+   "amps": 27.0, 
+   "volts": 208.0, 
+   "kw": 5.7000000000000002, 
+   "phase": null
+  }, 
+  "revit_family": "QF_ACP_MXP22TLT$2025"
+ }, 
+ "TABCO_FC3": {
+  "revit_type": "FC-3-2030-20RL", 
+  "connectors": [
+   {
+    "system": "Sanitary", 
+    "size_in": 2.0, 
+    "z_aff_in": 19.100000000000001, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "system": "Sanitary", 
+    "size_in": 2.0, 
+    "z_aff_in": 19.100000000000001, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "system": "Sanitary", 
+    "size_in": 2.0, 
+    "z_aff_in": 19.100000000000001, 
+    "domain": "DomainPiping"
+   }
+  ], 
+  "synced_at": "2026-10-04T09:37:39", 
+  "params": {
+   "Indirect Waste Flow": "0 GPM", 
+   "Indirect Waste Size": "2\"", 
+   "Waste Water Discharge Temperature": "0 °F", 
+   "Left Drainboard": "1' - 8\"", 
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None", 
+   "Indirect Waste Connection Height": "0' - 0\"", 
+   "Right Drainboard": "1' - 8\""
+  }, 
+  "elec": {
+   "phase": null
+  }, 
+  "revit_family": "QF_ADVANCE_TABCO_FC_SERIES_3COMP_cat$2026$FC-3-2030-20RL"
  }
 }

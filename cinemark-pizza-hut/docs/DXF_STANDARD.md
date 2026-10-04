@@ -24,6 +24,24 @@ A drawing on other layer names (AutoQuotes puts walls on `Layer1`) does not need
 store file a `layer_map` saying which standard layer each one stands for, e.g.
 `"layer_map": {"Layer1": "A-WALL"}` (GA-263).
 
+## AutoQuotes drawings
+
+AutoQuotes stores its project inside the drawing (root-dictionary XRECORDs `AQSL-AQXBLOCKDATA` and
+`AQSL-AQXPROJECTDATA`). The extractor reads them, so for every AQ block it has the **AQ item number** (the
+number in the drawing's item tags), manufacturer, model, spec text, width and depth, including dynamic
+blocks (`*U123`) and KCL blocks AQ has linked. The item number becomes the Revit Mark and the item on
+quotes and callouts; the AQ model joins the catalog match. With item numbers on the drawing, the store's
+`package` list is checked item by item (missing, extra, quantity, different product) and `run_store.py`
+prints an `ITEM` table for review. Identical blocks stacked at one spot are reported (both are counted).
+
+## Rough-in locations
+
+Rough-ins are taken to be on the wall behind the item (about 90% of the time): the item's centre projected
+onto the room face of the wall within 18" of its outline that runs along the item's width (from AQ width;
+otherwise the nearest wall). Routing lengths and the Revit utility tags use that point, and the same wall
+sets the item's orientation in Revit (back to the wall, front into the room). Items with no wall in reach
+rough in at the item and keep the rotation drawn.
+
 ## Equipment blocks
 
 A block is matched to `config/families.json` in this order:
