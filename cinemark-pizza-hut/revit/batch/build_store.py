@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Background Revit build for one store, run in a SEPARATE Revit instance:
 
-    pyrevit run "C:\\AEQ\\design\\cinemark-pizza-hut\\revit\\batch\\build_store.py" --revit=2026
+    pyrevit run "C:\\AEQ\\design\\cinemark-pizza-hut\\revit\\batch\\build_store.py" --revit=2027
 
 Launched by tools/watch_stores.py (auto_revit = true) when the machine has been idle,
 so the Revit session you are working in is never touched. Reads the job the watcher
@@ -9,7 +9,8 @@ queued (%LOCALAPPDATA%\\AEQ\\revit_job_active.json), rebuilds <work_dir>\\<store
 from the template (previous model kept as *_prev.rvt), runs the same steps as ribbon
 buttons 2-7, and copies the sheet-set PDF + 3D image into the store's Drive "_AEQ OUTPUT".
 
-NOT YET RUN: validate buttons 2-7 interactively on GA-263 first, then enable auto_revit.
+Run clean on GA-263 (Revit 2027, 2026-10-04): QF set PDF + 3D PNG. The watcher path (auto_revit,
+idle detection) has not been exercised yet.
 """
 import io
 import json
@@ -21,8 +22,6 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "AEQ.extension", "lib"))
 
-from aeq_cinemark import config as C, build   # noqa: E402
-
 LOCAL = os.environ.get("LOCALAPPDATA", os.path.expanduser("~"))
 JOB = os.path.join(LOCAL, "AEQ", "revit_job_active.json")
 
@@ -33,6 +32,7 @@ def _app():
 
 
 def main():
+    from aeq_cinemark import config as C, build   # inside main so an import error lands in revit_build_error.txt
     job = C.read_json(JOB)
     s = C.load()
     s["store_id"] = job["store_id"]

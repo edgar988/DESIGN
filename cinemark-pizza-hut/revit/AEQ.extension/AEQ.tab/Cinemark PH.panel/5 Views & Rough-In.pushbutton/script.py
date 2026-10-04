@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Demo / equipment / electrical / plumbing plans with rough-in callouts, interior elevations, 3D, schedules."""
+"""Frame the template's QF plans at 1/4"; rough-in callouts on QF302 / QF202, interior elevations, 3D, schedules."""
 __title__ = "5 Views &\nRough-In"
 from pyrevit import forms, script
 from aeq_cinemark import config as C, build, ui

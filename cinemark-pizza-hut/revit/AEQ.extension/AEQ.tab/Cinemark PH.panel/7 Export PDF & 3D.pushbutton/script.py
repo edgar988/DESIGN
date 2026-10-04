@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Combined FS sheet-set PDF + 3600 px realistic 3D image into the store output folder."""
+"""Combined QF sheet-set PDF + 3600 px realistic 3D image into the store output folder."""
 __title__ = "7 Export\nPDF & 3D"
 from pyrevit import forms, script
 from aeq_cinemark import config as C, build, ui

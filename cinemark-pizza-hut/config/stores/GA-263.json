@@ -8,6 +8,9 @@
   "manager": "Adam Friedman",
   "drive_folder": "CINEMARK/PIZZA HUT/GA 263 FAYETTEVILLE TINSELTOWN",
   "layout_dxf": "263 GA FAYETTEVILLE TINSELTOWN.dxf",
+  "layer_map": {
+    "Layer1": "A-WALL"
+  },
   "survey_date": "2026-09-21",
   "existing_docs": [
     "263 GA FAYETTEVILLE TINSELTOWN-QF101-R1.pdf",

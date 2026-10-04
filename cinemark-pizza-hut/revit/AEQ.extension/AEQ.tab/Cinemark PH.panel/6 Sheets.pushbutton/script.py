@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FS-001 ... FS-501 sheets on the AEQ 11x17 title block with views placed."""
+"""Lay the views onto the template's QF sheets; adds QF403 interior elevations and QF502 3D."""
 __title__ = "6 Sheets"
 from pyrevit import forms, script
 from aeq_cinemark import config as C, build, ui

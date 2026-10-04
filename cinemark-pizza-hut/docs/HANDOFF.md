@@ -13,17 +13,21 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
 ## State
 - Python pipeline (DXF -> layout -> takeoff -> heat load -> estimate -> schedule -> quote PDF + INTERNAL xlsx):
   built, 7 tests pass. GA-263 reproduces its issued heat-load report.
-- pyRevit extension `revit/AEQ.extension` (buttons Settings, 1-7): written, **never run in Revit**.
-  First job here: run GA-263 through it and fix `revit/AEQ.extension/lib/aeq_cinemark/build.py` until clean.
-  You can drive Revit headlessly with `pyrevit run <script> <model> --revit=2026` (see `revit/batch/build_store.py`).
+- 2026-10-04 (local session on the desktop): machine set up (Git, Python 3.12, pyRevit 6.5.5 on **Revit 2027**,
+  extension registered, settings at `%APPDATA%\pyRevit\aeq_cinemark.json` -> Drive
+  `G:\Shared drives\AARON EQUIPMENT CO SHARED DRIVE\CINEMARK\PIZZA HUT`). Watcher task NOT registered yet.
+- GA-263 DXF exported with AutoCAD 2027 accoreconsole (DXFOUT 2018) into the store's Drive folder.
+- Revit build runs clean on GA-263 headless (`pyrevit run revit/batch/build_store.py --revit=2027`, ~65 s):
+  builds into the template's QF sheet set at 1/4" (Edgar's call), adds QF403 elevations + QF502 3D.
+  Model + outputs in `C:\AEQ\work\GA-263`. Open items in `docs/REVIT_WORKFLOW.md` "First run".
 - `desktop/setup_desktop.ps1`: installs Git/Python/pyRevit, pip packages, registers the extension and an
-  optional DXF watcher task. Run it (or do the equivalent steps) to set this machine up.
+  optional DXF watcher task.
 
 ## Waiting on Edgar
 - DXF exports (AutoCAD SAVEAS DXF 2018) of each store layout into its Drive store folder:
-  `GA 263 FAYETTEVILLE TINSELTOWN`, `TX 093 MCALLEN HOLLYWOOD`, `NJ 187 SOMERSET CINEMARK`. Only DWGs exist
-  now. If AutoCAD is on this machine you may be able to export them yourself (`accoreconsole.exe` script
-  with `-DXFOUT` / `SAVEAS`) - ask Edgar before writing into his DWG folders.
+  `GA 263 FAYETTEVILLE TINSELTOWN`, `TX 093 MCALLEN HOLLYWOOD`, `NJ 187 SOMERSET CINEMARK`. GA 263 done
+  (Edgar OK'd exporting with AutoCAD here: copy the DWG to C:\AEQ\work, `accoreconsole.exe /i <dwg> /s <scr>`
+  with `FILEDIA 0` / `_.DXFOUT "<dxf>" _V 2018 16` / `_.QUIT _Y`, copy the DXF to the store folder).
 - Pricing review of every `AEQ est - review` assembly in `config/cost_db.json` (HELM-anchored ones are set).
 - SSG + AEQ logo PNGs into `estimating/assets/` (ssg_logo.png, aeq_logo.png).
 
@@ -36,6 +40,11 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
   them from the KCL families into `config/families_synced.json`.
 - Licensing: no AEQ TX mechanical license (McAllen HVAC); NJ needs licensed plumbing/electrical of record.
 - GA-263 test quote came to $141,000 (travel $31.7k, 628 field hours). Draft only, not issued.
+- GA-263 DXF vs issued package: two identical ACP inserts at one point (2 circuits priced; schedule says 1),
+  STR1R drawn twice (schedule 1), Broaster VF-3 ventless fryer drawn where the package has MTI AutoFry, and no
+  Ovention C2000 block. From the DXF the heat load is 33,994 Btu/h vs the issued 61,106 (the package-list path
+  still reproduces 61,106). No panel / water / waste source points or room boundary on the drawing.
+- 7-PS-65 hand sink lands on the floor in Revit (level-based family); needs a mounting height.
 
 ## Where things go
 - Quote PDFs: Drive `AARON EQUIPMENT CO SHARED DRIVE\QUOTES\2026`; INTERNAL workbooks: `QUOTES\_RECORDS`.

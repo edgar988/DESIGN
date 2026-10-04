@@ -20,6 +20,10 @@ The extractor is tolerant: anything it can't classify is reported, never guessed
 | Water / waste source | `P-SOURCE` / `P-WATER`, `P-WASTE` | supply/waste runs measured from here |
 | Condenser location | `M-COND` | reserved for line-set length |
 
+A drawing on other layer names (AutoQuotes puts walls on `Layer1`) does not need re-layering: give the
+store file a `layer_map` saying which standard layer each one stands for, e.g.
+`"layer_map": {"Layer1": "A-WALL"}` (GA-263).
+
 ## Equipment blocks
 
 A block is matched to `config/families.json` in this order:

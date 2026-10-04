@@ -22,9 +22,11 @@ DEFAULTS = {
     "outputs_dir": os.path.join(DEFAULT_REPO, "stores"),
     "python_exe": "python",
     "store_id": "GA-263",
-    "titleblock_name": "",          # blank = first title block in the template
-    "plan_scale": 24,               # 1/2" = 1'-0"
-    "elev_scale": 24,
+    "titleblock_name": "",          # blank = the title block the template's QF sheets use (AEQ 11x17)
+    "plan_scale": 48,               # 1/4" = 1'-0" (steps down only if the room overflows the sheet)
+    "elev_scale": 48,
+    "sheet_area_in": [0.5, 0.65, 13.4, 10.5],   # AEQ 11x17 drawing area (x0, y0, x1, y1), left of the title strip
+    "note_text_type": "AEQ - Utility Tags",     # rough-in callout text style
     "rev": "R0",
 }
 

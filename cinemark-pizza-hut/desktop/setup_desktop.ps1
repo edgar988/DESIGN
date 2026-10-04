@@ -27,11 +27,19 @@ function Have($c) { [bool](Get-Command $c -ErrorAction SilentlyContinue) }
 Step "1. Prerequisites"
 if (-not (Have git))     { winget install -e --id Git.Git --silent --accept-package-agreements --accept-source-agreements }
 if (-not (Have py))      { winget install -e --id Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements }
-if (-not (Have pyrevit)) {
-  try { winget install -e --id pyRevitLabs.pyRevit --silent --accept-package-agreements --accept-source-agreements }
-  catch { Write-Warning "Install pyRevit manually: https://github.com/pyrevitlabs/pyRevit/releases (close Revit first)" }
-}
 $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
+if (-not (Have pyrevit)) {
+  # pyRevit is not on winget: per-user signed installer from the latest GitHub release (6.5+ supports Revit 2027)
+  try {
+    $rel = Invoke-RestMethod "https://api.github.com/repos/pyrevitlabs/pyRevit/releases/latest"
+    $asset = $rel.assets | Where-Object { $_.name -match '^pyRevit_[\d.]+_signed\.exe$' } | Select-Object -First 1
+    $exe = Join-Path $env:TEMP $asset.name
+    Invoke-WebRequest $asset.browser_download_url -OutFile $exe -UseBasicParsing
+    if ((Get-AuthenticodeSignature $exe).Status -ne "Valid") { throw "bad signature on $exe" }
+    Start-Process $exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -Wait
+  } catch { Write-Warning "Install pyRevit manually: https://github.com/pyrevitlabs/pyRevit/releases (close Revit first). $_" }
+  $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")
+}
 
 Step "2. Repository"
 $Repo = Join-Path $Root "design"
@@ -61,7 +69,8 @@ Step "5. Google Drive folder + settings"
 $drive = $null
 foreach ($d in (Get-PSDrive -PSProvider FileSystem).Root) {
   foreach ($base in @("My Drive", "Shared drives\*")) {
-    $hit = Get-ChildItem -Path (Join-Path $d $base) -Directory -Filter "CINEMARK" -ErrorAction SilentlyContinue |
+    # CINEMARK may sit inside a shared drive's top folder (e.g. Shared drives\AARON EQUIPMENT CO SHARED DRIVE\CINEMARK)
+    $hit = Get-ChildItem -Path (Join-Path $d $base) -Directory -Filter "CINEMARK" -Recurse -Depth 1 -ErrorAction SilentlyContinue |
            ForEach-Object { Join-Path $_.FullName "PIZZA HUT" } | Where-Object { Test-Path $_ } | Select-Object -First 1
     if ($hit) { $drive = $hit; break }
   }
@@ -80,11 +89,18 @@ $s.template_rte  = Join-Path $drive "CAD TEMPLATES\AEQ_FOODSERVICE_11X17_2026.rt
 $s.outputs_dir   = Join-Path $Root "work"
 $s.work_dir      = Join-Path $Root "work"
 $s.python_exe    = $Py
+$pyr = Get-Command pyrevit -ErrorAction SilentlyContinue
+if ($pyr) { $s.pyrevit_exe = $pyr.Source }
+# newest installed Revit drives the background build (pyrevit run --revit=<year>)
+$rv = Get-ChildItem "C:\Program Files\Autodesk" -Directory -Filter "Revit 20*" -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -match '^Revit (\d{4})$' } | ForEach-Object { [int]$Matches[1] } | Sort-Object | Select-Object -Last 1
+if ($rv) { $s.revit_year = $rv }
 if (-not $s.ContainsKey("store_id")) { $s.store_id = "GA-263" }
 if (-not $s.ContainsKey("rev"))      { $s.rev = "R0" }
 $s.auto_revit    = [bool]$AutoRevit
 if (-not $s.ContainsKey("revit_idle_minutes")) { $s.revit_idle_minutes = 10 }
-$s | ConvertTo-Json | Set-Content -Encoding UTF8 $SetPath
+# no BOM: Set-Content -Encoding UTF8 writes one in PowerShell 5.1 and json.load rejects it
+[IO.File]::WriteAllText($SetPath, ($s | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
 Write-Host "Settings: $SetPath (auto_revit = $($s.auto_revit))"
 
 Step "6. Background watcher (scheduled task)"

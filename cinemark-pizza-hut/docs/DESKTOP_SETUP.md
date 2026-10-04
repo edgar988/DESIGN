@@ -47,5 +47,5 @@ HELM rules. It does not need Revit closed for any of that.
   share only the customer PDF.
 - A background Revit build uses its own Revit process (memory ~2-4 GB) under your same Autodesk
   sign-in; it only starts when the machine is idle and closes when done.
-- Not yet run on Windows: the scheduled task, idle detection, tray notice and `pyrevit run` build. The
-  pipeline itself is tested.
+- The `pyrevit run` build has run clean on GA-263 (Revit 2027). Not yet run on Windows: the scheduled
+  task, idle detection and tray notice. The pipeline itself is tested.

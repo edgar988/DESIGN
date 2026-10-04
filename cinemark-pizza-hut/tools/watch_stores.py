@@ -50,7 +50,7 @@ DEFAULTS = {
     "work_dir": r"C:\AEQ\work",          # Revit models stay local, never on the Drive stream
     "auto_revit": False,                  # turn on after the first interactive Revit run checks out
     "revit_idle_minutes": 10,
-    "revit_year": 2026,
+    "revit_year": 2027,                   # the Revit desktop runs 2027 (setup writes the newest installed)
     "pyrevit_exe": "pyrevit",
 }
 

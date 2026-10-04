@@ -2,6 +2,8 @@ import json
 import os
 import sys
 
+import ezdxf
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "tests"))
@@ -46,6 +48,18 @@ def test_dxf_extract_sample(tmp_path):
     assert len([d for d in lay["doors"] if d["status"] == "new"]) == 1
     assert "panel" in lay["points"] and "water" in lay["points"]
     assert {q["item"] for q in lay["equipment"] if q["key"] == "OVENTION_C2000"} == {"7"}
+
+
+def test_store_layer_map_reads_nonstandard_wall_layer(tmp_path):
+    """AutoQuotes layouts (GA 263) draw walls on "Layer1"; the store's layer_map says what that layer is."""
+    doc = ezdxf.new("R2018")
+    doc.header["$INSUNITS"] = 1
+    make_sample_dxf.wall(doc.modelspace(), "Layer1", 0, 0, 120, 0, t=4.0)
+    p = str(tmp_path / "aq.dxf")
+    doc.saveas(p)
+    assert dxf_extract.extract(p)["walls"] == []
+    walls = dxf_extract.extract(p, {"layer_map": {"Layer1": "A-WALL"}})["walls"]
+    assert len(walls) == 1 and walls[0]["status"] == "exist" and abs(walls[0]["thickness"] - 4.0) < 0.01
 
 
 def test_takeoff_and_estimate_from_dxf(tmp_path):

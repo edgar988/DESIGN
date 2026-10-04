@@ -162,6 +162,8 @@ def extract(path, store=None, catalog_path=None):
     scale = UNIT_TO_IN.get(units, 1.0)
     items, compiled = load_catalog(catalog_path)
     block_map = (store or {}).get("block_map", {})
+    # store layer_map: drawing layer -> standard layer it stands for, e.g. AutoQuotes "Layer1" -> "A-WALL"
+    layer_map = {k.upper(): v for k, v in (store or {}).get("layer_map", {}).items()}
 
     out = {"source": os.path.basename(path), "insunits": units, "scale_to_in": scale,
            "walls": [], "rooms": [], "doors": [], "equipment": [], "points": {},
@@ -172,7 +174,8 @@ def extract(path, store=None, catalog_path=None):
     def walk(entities, xform_layer=None):
         for e in entities:
             layer = e.dxf.layer if e.dxf.layer != "0" or not xform_layer else xform_layer
-            up = layer.upper()
+            std = layer_map.get(layer.upper(), layer)
+            up = std.upper()
             t = e.dxftype()
             if t == "INSERT":
                 bname = e.dxf.name
@@ -181,7 +184,7 @@ def extract(path, store=None, catalog_path=None):
                 attribs = {a.dxf.tag.upper(): a.dxf.text for a in e.attribs} if e.attribs else {}
                 ins = Vec2(e.dxf.insert) * scale
                 rot = e.dxf.get("rotation", 0.0)
-                status = layer_status(layer, default="new")
+                status = layer_status(std, default="new")
                 hit_point = False
                 for pname, rx in POINT_LAYERS.items():
                     if rx.search(up) or rx.search(bname.upper()):
@@ -191,7 +194,7 @@ def extract(path, store=None, catalog_path=None):
                     continue
                 if DOOR_BLOCK.search(bname):
                     out["doors"].append({"block": bname, "x": ins.x, "y": ins.y, "rotation": rot,
-                                         "status": layer_status(layer, default="exist"),
+                                         "status": layer_status(std, default="exist"),
                                          "layer": layer})
                     continue
                 key = match_equipment(bname, attribs, compiled, block_map)
@@ -225,7 +228,7 @@ def extract(path, store=None, catalog_path=None):
                                          "area_sf": round(area / 144.0, 1),
                                          "perimeter_lf": round(per / 12.0, 1)})
                 elif WALL_LAYER.search(up):
-                    wall_segs[layer_status(layer)].extend(_segments(e, scale))
+                    wall_segs[layer_status(std)].extend(_segments(e, scale))
             elif t in ("TEXT", "MTEXT"):
                 txt = e.plain_text() if t == "MTEXT" else e.dxf.text
                 p = Vec2(e.dxf.insert) * scale
