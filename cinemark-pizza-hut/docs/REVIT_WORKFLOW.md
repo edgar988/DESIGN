@@ -4,9 +4,10 @@
 
 1. Install **pyRevit** (5.x, supports Revit 2026) and **Python 3.12** (python.org), then
    `pip install -r requirements.txt` from this folder.
-2. Clone `edgar988/design` (e.g. `C:\AEQ\design`). Register the extension:
-   `pyrevit extend ui AEQ "C:\AEQ\design\cinemark-pizza-hut\revit"` (or pyRevit Settings > Custom
-   extension directories > add `...\cinemark-pizza-hut\revit`), then reload pyRevit.
+2. Clone `edgar988/design` (e.g. `C:\AEQ\design`). Register the extension folder:
+   `pyrevit extensions paths add "C:\AEQ\design\cinemark-pizza-hut\revit"` (or pyRevit Settings >
+   Custom extension directories), then reload pyRevit. `desktop/setup_desktop.ps1` does all of this
+   (see `docs/DESKTOP_SETUP.md`).
 3. Make sure Google Drive for Desktop syncs `CINEMARK\PIZZA HUT` (families, template, store folders).
 4. Ribbon **AEQ > Cinemark PH > Settings**: pick the store, confirm the Drive folder, the CAD TEMPLATES
    folder, `AEQ_FOODSERVICE_11X17_2026.rte`, the revision, and the Python 3 path.

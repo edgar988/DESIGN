@@ -9,3 +9,9 @@
 - After-hours or weekend work is always billed.
 - Emails are drafts only; no em dashes in emails. Edgar sends.
 - Run `python -m pytest -q tests` before committing. GA-263 must keep reproducing its issued heat load.
+
+## On the Revit desktop (C:\AEQ\design)
+- Edgar works in Revit/AutoCAD/Inventor/Fusion while you run. Never close, restart or drive those apps
+  unless asked; run the pipeline as background processes. Revit models live in C:\AEQ\work.
+- Store outputs: `<Drive store folder>\_AEQ OUTPUT\` (watcher) or `C:\AEQ\work\<store>` (ribbon).
+- Settings: `%APPDATA%\pyRevit\aeq_cinemark.json`. Watcher log: `%LOCALAPPDATA%\AEQ\watch_stores.log`.

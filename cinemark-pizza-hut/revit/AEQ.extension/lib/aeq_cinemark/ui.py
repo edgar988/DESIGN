@@ -21,7 +21,7 @@ def run_takeoff(s, output):
     """Run the CPython pipeline (tools/run_store.py) and stream its report into the pyRevit output."""
     st = C.store(s)
     args = [s["python_exe"], os.path.join(s["repo_root"], "tools", "run_store.py"), s["store_id"],
-            "--rev", s.get("rev", "R0")]
+            "--rev", s.get("rev", "R0"), "--out", C.store_out(s)]
     dxf = dxf_path(s, st)
     if dxf:
         args += ["--dxf", dxf]

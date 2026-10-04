@@ -91,9 +91,10 @@ def main():
     ap.add_argument("--dxf")
     ap.add_argument("--rev", default="R0")
     ap.add_argument("--ntp", help="notice to proceed YYYY-MM-DD")
+    ap.add_argument("--out", help="output folder (default stores/<id>)")
     a = ap.parse_args()
     ntp = dt.date.fromisoformat(a.ntp) if a.ntp else None
-    run(a.store_id, a.dxf, a.rev, ntp)
+    run(a.store_id, a.dxf, a.rev, ntp, a.out)
 
 
 if __name__ == "__main__":

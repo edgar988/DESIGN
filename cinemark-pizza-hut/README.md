@@ -18,9 +18,12 @@ connections and tonnage tie out between the rough-in sheets and the price.
 config/            program.json (customer, contractor, rates, defaults), families.json (equipment catalog),
                    cost_db.json (INTERNAL unit assemblies), stores/<id>.json (one per theatre)
 tools/             dxf_extract.py  DXF -> layout.json
+                   watch_stores.py background watcher (desktop)
                    takeoff.py      layout -> rough-in schedule, quantities, heat load
                    run_store.py    one command per store (everything below)
 estimating/        estimate.py, schedule.py, build_quote.py, quote_doc.py
+desktop/           setup_desktop.ps1 (one-time install + watcher task)
+revit/batch        build_store.py (background Revit build via pyrevit run)
 revit/AEQ.extension  pyRevit ribbon tab "AEQ" > panel "Cinemark PH" (Revit 2026)
 docs/              DXF_STANDARD.md, REVIT_WORKFLOW.md, ESTIMATING.md
 tests/             pytest: GA 263 heat-load calibration, DXF extraction, estimate, customer-doc leak check
@@ -36,7 +39,9 @@ python tools/run_store.py TX-093 --dxf "G:/My Drive/CINEMARK/PIZZA HUT/TX 093 MC
 python -m pytest -q tests
 ```
 
-On the Revit PC, follow `docs/REVIT_WORKFLOW.md`.
+On the Revit desktop, run `desktop/setup_desktop.ps1` (see `docs/DESKTOP_SETUP.md`): it installs
+everything and starts a background watcher that re-prices a store whenever its DXF is saved.
+Revit button details: `docs/REVIT_WORKFLOW.md`.
 
 ## Stores
 
