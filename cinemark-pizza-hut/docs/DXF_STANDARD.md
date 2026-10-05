@@ -11,7 +11,7 @@ The extractor is tolerant: anything it can't classify is reported, never guessed
 | Existing walls | `WALL` | draw both faces as LINEs / polylines; faces 2"-14" apart pair into one wall with that thickness |
 | Walls to demolish | `WALL` + `DEMO` (e.g. `A-WALL-DEMO`) | priced as partition demo; Revit: existing phase, demolished in New Construction |
 | New partitions | `WALL` + `NEW` (e.g. `A-WALL-NEW`) | priced as new partition LF |
-| Scope area | `AREA`, `ROOM`, `SCOPE` or `BOUNDARY` (closed polyline) | room SF and perimeter (FRP, base, flooring, ceiling, lighting). Without it the wall extents rectangle is used and a warning is printed. |
+| Scope area | `AREA`, `ROOM`, `SCOPE` or `BOUNDARY` (closed polyline) | room SF and perimeter (FRP, base, flooring, ceiling, lighting). Without it the area comes from the walls: the enclosed spaces holding equipment, with openings up to 5 ft (doors, cased openings) closed and wider open fronts left open; a warning gives the SF. Only with no enclosed space is the wall extents rectangle used. |
 | Equipment (new) | any layer without `DEMO`/`EXIST`, e.g. `Q-EQPM` | block inserts |
 | Equipment to remove | `DEMO` or `REMOVE`, e.g. `Q-EQPM-DEMO` | counted for removal/disposal and make-safe |
 | Existing equipment to remain | `EXIST` | ignored for pricing |
@@ -32,7 +32,8 @@ PH stores (`"item_numbers": "master"` in the store file) are numbered from the P
 PFA570 block = X3, UR48B / UF60A = the 60 in. Atosa, item 6) or, for table stand-ins, by footprint (fab
 worktables 2.1-2.5). A model that fits two numbers (7-PS-65: new 1 / existing X2) takes the lower rank and is
 reported; `item_overrides` (`{"<block handle>": "X2"}`) settles it per store. Items not on the master list
-carry no number and are reported. Countertop units (ACP, PerfectFry, Ovention) are set on the base under them.
+are existing equipment at that store (Edgar): each model gets the next X number after the master's (X4, X5..)
+and is reported. Countertop units (ACP, PerfectFry, Ovention) are set on the base under them.
 
 Item numbers say who provides each item: plain number = AEQ supplies and installs,
 `X` (`E` in older drawings) = existing, relocated with new utilities, `PH` = provided by the owner, received

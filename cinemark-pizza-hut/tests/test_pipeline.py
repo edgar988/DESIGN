@@ -162,7 +162,9 @@ def test_takeoff_and_estimate_from_dxf(tmp_path):
     assert q["demo_equipment"] == 1 and q["doors_new"] == 1
     # every electrified item gets a circuit; routing uses the panel point
     assert len(t["circuits"]) == 5          # C2000, MXP22, LXnR, G22010, UR48B
-    assert all(c["home_run_lf"] > 14 for c in t["circuits"])
+    # up from the panel to the 10 ft ceiling (4 ft), over, and down to the rough-in (8 ft to a 24" j-box)
+    assert all(c["home_run_lf"] >= 12 for c in t["circuits"])
+    assert {c["item"] for c in t["circuits"]} == {"PH1", "4", "5", "PH3", "6"}
     e = em.estimate(t, store, PROG)
     assert abs(sum(e["customer_sections"].values()) - e["total"]) < 0.01
     assert e["total"] % 100 == 0 and e["margin_pct"] > 25
@@ -182,6 +184,43 @@ def test_customer_outputs_carry_no_internal_numbers(tmp_path):
     for banned in ("true cost", "margin", "INTERNAL", "$95", "$42", "per diem %d" % 0, "Edgar Aaron"):
         assert banned.lower() not in text.lower(), banned
     assert "${:,.2f}".format(e["total"]) in text
+
+
+def test_customer_text_follows_the_store_scope(tmp_path):
+    """A store with no HVAC and no sub-panel (TX-093 narrative) is not promised either; the narrative's
+    counter demo and new wall are described; equipment is listed by who provides it."""
+    from estimating import build_quote as bq
+    import pdfplumber
+    p = make_sample_dxf.build(str(tmp_path / "s.dxf"))
+    store = load("config", "stores", "TX-093.json")
+    t = tk.build(store, CAT, PROG, dxf_extract.extract(p, store))
+    e = em.estimate(t, store, PROG)
+    pdf = bq.build_pdf(str(tmp_path / "q.pdf"), store, PROG, t, e, sm.build(e, store), None)
+    text = " ".join(pg.extract_text() for pg in pdfplumber.open(pdf).pages).replace("\n", " ")
+    assert "HVAC" not in e["sections"]
+    for banned in ("tons added cooling", "sub-panel and feeder", "heat-load assessment", "concealed-duct"):
+        assert banned not in text, banned
+    assert "concession stand front counter" in text and "cased opening on either side" in text
+    assert "OWNER-FURNISHED EQUIPMENT (PH)" in text and "SUPPLIED BY AARON EQUIPMENT CO." in text
+
+
+def test_rooms_from_walls_close_doors_not_open_fronts():
+    def w(x1, y1, x2, y2):
+        return {"start": [x1, y1], "end": [x2, y2], "thickness": 4.875}
+    # 20 x 12 ft room, 36 in. door in the south wall; a second space east of it with a 10 ft open front
+    walls = [w(0, 0, 100, 0), w(136, 0, 240, 0), w(240, 0, 240, 144), w(240, 144, 0, 144), w(0, 144, 0, 0),
+             w(240, 144, 480, 144), w(480, 144, 480, 0), w(480, 0, 360, 0)]
+    rooms = dxf_extract.rooms_from_walls(walls, [(120, 72), (360, 72)])
+    assert len(rooms) == 1
+    inner = (240 - 4.875) * (144 - 4.875) / 144.0
+    assert abs(rooms[0]["area_sf"] - inner) < 0.05 * inner
+
+
+def test_schedule_skips_holidays():
+    import datetime as dt
+    h = sm.holidays(2026)
+    assert dt.date(2026, 11, 26) in h and dt.date(2026, 12, 25) in h and dt.date(2026, 7, 3) in h
+    assert sm._wd_add(dt.date(2026, 12, 23), 1) == dt.date(2026, 12, 28)
 
 
 def test_synced_family_data_fills_only_gaps():

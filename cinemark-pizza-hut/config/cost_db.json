@@ -464,7 +464,7 @@
       "sub": 0,
       "eqp": 0,
       "section": "HVAC",
-      "desc": "Refrigerant line set, insulated, beyond 25 ft",
+      "desc": "Refrigerant line set, insulated, installed",
       "basis": "AEQ est - review"
     },
     "hv_condensate": {
@@ -536,6 +536,126 @@
       "section": "EQUIPMENT SET & START-UP",
       "desc": "Receiving, inspection and staging of owner-furnished equipment at site",
       "basis": "AEQ est - review"
+    },
+    "demo_lump_sum": {
+      "desc": "Demolition and debris removal, dumpsters included",
+      "unit": "LS",
+      "section": "DEMOLITION",
+      "hrs": 0,
+      "mat": 0,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "Edgar narrative: lump sum (store scope demo_lump_sum)"
+    },
+    "demo_counter_front": {
+      "desc": "Remove existing concession front counter (cabinets, tops, cladding), cap utilities",
+      "unit": "LF",
+      "section": "DEMOLITION",
+      "hrs": 0.75,
+      "mat": 3.0,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "demo_counter_back": {
+      "desc": "Remove existing back counter and standard cabinets",
+      "unit": "LF",
+      "section": "DEMOLITION",
+      "hrs": 0.5,
+      "mat": 2.0,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "con_cased_opening": {
+      "desc": "Cased (bucked) opening in new wall for staff pass-through: header, jambs, corner bead, trim, finish",
+      "unit": "ea",
+      "section": "CONSTRUCTION & FINISHES",
+      "hrs": 6,
+      "mat": 150,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "con_wall_finish": {
+      "desc": "Standard wall finish: tape, mud, sand (level 4), prime and paint",
+      "unit": "SF",
+      "section": "CONSTRUCTION & FINISHES",
+      "hrs": 0.02,
+      "mat": 0.45,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "hv_split_system": {
+      "desc": "Split-system heat pump: outdoor condensing unit with indoor heads, controls, start-up",
+      "unit": "LS",
+      "section": "HVAC",
+      "hrs": 0,
+      "mat": 0,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "Edgar: system cost per store scope, marked up as material"
+    },
+    "hv_split_install": {
+      "desc": "Install split system: set condensing unit, hang indoor heads, evacuate, charge, start-up",
+      "unit": "ea head",
+      "section": "HVAC",
+      "hrs": 12,
+      "mat": 0,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "hv_condenser_set": {
+      "desc": "Set condensing unit, pad / stand, disconnect",
+      "unit": "ea",
+      "section": "HVAC",
+      "hrs": 8,
+      "mat": 180,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "hv_crane": {
+      "desc": "Crane pick for roof condensing unit (half day with operator)",
+      "unit": "ea",
+      "section": "HVAC",
+      "hrs": 2,
+      "mat": 0,
+      "sub": 2500,
+      "eqp": 0,
+      "basis": "Allowance - confirm crane quote"
+    },
+    "eq_relocate": {
+      "desc": "Existing item: disconnect, protect, move and reset in its new location",
+      "unit": "ea",
+      "section": "EQUIPMENT SET & START-UP",
+      "hrs": 3,
+      "mat": 25,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "eq_receive_nashville": {
+      "desc": "Owner-furnished item: receive, inspect and store at AEQ Nashville until site is ready",
+      "unit": "ea",
+      "section": "EQUIPMENT SET & START-UP",
+      "hrs": 1,
+      "mat": 10,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "AEQ est - review"
+    },
+    "eq_transport": {
+      "desc": "Deliver owner-furnished equipment from AEQ Nashville to site (truck, driver, fuel)",
+      "unit": "trip",
+      "section": "EQUIPMENT SET & START-UP",
+      "hrs": 0,
+      "mat": 0,
+      "sub": 0,
+      "eqp": 0,
+      "basis": "computed: driver hours at miles/55 x 2, fuel per trip mile"
     }
   }
 }

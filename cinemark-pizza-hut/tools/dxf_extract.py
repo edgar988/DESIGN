@@ -373,6 +373,81 @@ def polygon_area_perim(pts):
     return abs(a) / 2.0, p
 
 
+ROOM_GAP_IN = 60.0      # openings up to 5 ft (doors, cased openings) close a room; wider fronts stay open
+ROOM_CELL_IN = 2.0
+
+
+def rooms_from_walls(walls, points, gap=ROOM_GAP_IN, cell=ROOM_CELL_IN):
+    """The enclosed spaces holding equipment, for drawings with no room polyline: the walls are rasterised,
+    openings narrower than `gap` closed, the free space split into spaces, and the spaces that hold any of
+    `points` (equipment centres) grown back out to the wall faces. Area and perimeter to the wall faces;
+    polygon is the space's bounding rectangle (framing, routing fallback)."""
+    import numpy as np
+    from collections import deque
+    if not walls:
+        return []
+    xs = [c for w in walls for c in (w["start"][0], w["end"][0])]
+    ys = [c for w in walls for c in (w["start"][1], w["end"][1])]
+    x0, y0 = min(xs) - gap, min(ys) - gap
+    gx = np.arange(x0, max(xs) + gap, cell) + cell / 2.0
+    gy = np.arange(y0, max(ys) + gap, cell) + cell / 2.0
+    X, Y = np.meshgrid(gx, gy)
+    d = np.full(X.shape, np.inf)                # distance to the nearest wall face
+    for w in walls:
+        (ax, ay), (bx, by) = w["start"], w["end"]
+        vx, vy = bx - ax, by - ay
+        t = np.clip(((X - ax) * vx + (Y - ay) * vy) / ((vx * vx + vy * vy) or 1e-9), 0, 1)
+        d = np.minimum(d, np.hypot(X - (ax + t * vx), Y - (ay + t * vy)) - max(w["thickness"], 2.0) / 2.0)
+    wall, r = d <= 0, gap / 2.0
+    free = d > r
+    H, W = free.shape
+    lab = np.zeros(free.shape, int)
+    n = 0
+    for sy, sx in zip(*np.nonzero(free)):
+        if lab[sy, sx]:
+            continue
+        n += 1
+        lab[sy, sx] = n
+        dq = deque([(sy, sx)])
+        while dq:
+            cy, cx = dq.popleft()
+            for ny, nx in ((cy + 1, cx), (cy - 1, cx), (cy, cx + 1), (cy, cx - 1)):
+                if 0 <= ny < H and 0 <= nx < W and free[ny, nx] and not lab[ny, nx]:
+                    lab[ny, nx] = n
+                    dq.append((ny, nx))
+    outside = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1])
+    k = int(r / cell) + 1
+    hit = []
+    for px, py in points:
+        iy, ix = int((py - y0) // cell), int((px - x0) // cell)
+        if not (0 <= iy < H and 0 <= ix < W):
+            continue
+        # an item against a wall sits in the closed margin: take the space next to it
+        win = lab[max(0, iy - k):iy + k + 1, max(0, ix - k):ix + k + 1]
+        v = lab[iy, ix] or next((v for v in np.unique(win) if v), 0)
+        if v and v not in outside and v not in hit:
+            hit.append(v)
+    rooms = []
+    for v in sorted(hit):
+        m = lab == v
+        for _ in range(int(round(r / cell))):  # grow back out to the walls (square steps keep the corners)
+            g = m.copy()
+            g[1:, :] |= m[:-1, :]
+            g[:-1, :] |= m[1:, :]
+            g[:, 1:] |= g[:, :-1].copy()
+            g[:, :-1] |= g[:, 1:].copy()
+            m = g & ~wall
+        edges = (np.count_nonzero(m[1:, :] != m[:-1, :]) + np.count_nonzero(m[:, 1:] != m[:, :-1])
+                 + m[0, :].sum() + m[-1, :].sum() + m[:, 0].sum() + m[:, -1].sum())
+        bx0, by0, bx1, by1 = (float(X[m].min() - cell / 2), float(Y[m].min() - cell / 2),
+                              float(X[m].max() + cell / 2), float(Y[m].max() + cell / 2))
+        rooms.append({"layer": "(derived from walls)", "derived": True,
+                      "polygon": [[bx0, by0], [bx1, by0], [bx1, by1], [bx0, by1]],
+                      "area_sf": round(float(m.sum()) * cell * cell / 144.0, 1),
+                      "perimeter_lf": round(float(edges) * cell / 12.0, 1)})
+    return rooms
+
+
 def extract(path, store=None, catalog_path=None):
     doc = ezdxf.readfile(path)
     msp = doc.modelspace()
@@ -513,6 +588,17 @@ def extract(path, store=None, catalog_path=None):
                                    % (len(qs), _label(qs[0]), qs[0]["x"], qs[0]["y"],
                                       " (item %s)" % qs[0]["item"] if qs[0].get("item") else ""))
 
+    if not out["rooms"]:
+        centres = [((q["bbox"][0] + q["bbox"][2]) / 2.0, (q["bbox"][1] + q["bbox"][3]) / 2.0) if q.get("bbox")
+                   else (q["x"], q["y"]) for q in out["equipment"]
+                   if q["key"] and q["status"] != "demo" and not q["layer"].upper().startswith("FS-ELEC")]
+        out["rooms"] = rooms_from_walls(live, centres)
+        if out["rooms"]:
+            out["warnings"].append("No closed room polyline on a ROOM/AREA layer; room area taken from the walls: "
+                                   "%s SF in %d enclosed space(s) holding equipment (openings up to %d in. closed). "
+                                   "Draw A-AREA for an exact SF." % (
+                                       format(round(sum(r["area_sf"] for r in out["rooms"])), ","),
+                                       len(out["rooms"]), ROOM_GAP_IN))
     if not out["rooms"]:
         allpts = [w["start"] for w in out["walls"] if w["status"] != "demo"] + \
                  [w["end"] for w in out["walls"] if w["status"] != "demo"]

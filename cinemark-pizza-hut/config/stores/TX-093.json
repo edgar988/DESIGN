@@ -23,8 +23,8 @@
   "ceiling_ft": 10,
   "electrical_service": {
     "available_phase": "VERIFY",
-    "panel": "VERIFY",
-    "new_subpanel": true,
+    "panel": "Existing panel ~40 ft from the work (narrative)",
+    "new_subpanel": false,
     "feeder_lf": 60
   },
   "plumbing": {
@@ -35,24 +35,19 @@
     "underslab_lf": 30
   },
   "hvac": {
-    "existing_registers": 2,
-    "minisplit_override_tons": null,
-    "lineset_extra_lf": 25,
-    "exhaust_fan": true,
-    "roof_penetrations": 2
+    "none": true,
+    "note": "Open satellite concession stand: no added HVAC (only GA's closed room gets a system)."
   },
   "finishes": {
-    "floor": "quarry",
-    "frp": true,
-    "ceiling": "act_washable",
-    "new_partition_lf": "from_dxf",
-    "doors": "from_dxf"
+    "lighting": false,
+    "patch_paint": false,
+    "note": "Narrative gives no new floor / ceiling / FRP / lighting for the stand: confirm."
   },
   "demo": {
     "equipment_count": "from_dxf",
     "partition_lf": "from_dxf",
-    "ceiling_sf": "room",
-    "flooring_sf": "room",
+    "ceiling_sf": 0,
+    "flooring_sf": 0,
     "casework_lf": 0,
     "make_safe": "from_dxf"
   },
@@ -71,8 +66,28 @@
   ],
   "package": "from_dxf",
   "customer_verify": [
-    "available electrical service phase and panel capacity",
+    "available electrical service phase, spare capacity and breaker spaces at the existing panel (about 40 ft from the stand)",
     "hot water source capacity",
-    "ceiling cavity depth for ducted indoor units and condenser location"
-  ]
+    "ceiling height along the utility runs"
+  ],
+  "scope": {
+    "narrative": [
+      "Demo the existing satellite concession stand: back counter (standard cabinets) and front counter (standard movie theater front counter) come out; both sit in the footprint the new layout goes into.",
+      "Erect a wall with a cased (bucked) opening on either side for employees to pass in and out; standard finish.",
+      "All utilities priced new, run from a panel ~40 ft from the work: up, over at the ceiling and back down (Edgar, construction narrative 10-2026)."
+    ],
+    "counters": {
+      "front_lf": 20,
+      "back_lf": 20,
+      "provisional": true
+    },
+    "new_wall": {
+      "lf": 20,
+      "height_ft": null,
+      "cased_openings": 2,
+      "finish": "standard",
+      "provisional": true
+    },
+    "provisional_note": "Counter and wall lengths are placeholders (20 LF each) until measured; wall height taken as the ceiling height (VERIFY)."
+  }
 }

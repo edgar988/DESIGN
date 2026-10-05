@@ -1012,6 +1012,24 @@
       "source": "No utilities",
       "stack": "base",
       "height_in": 34
+    },
+    "QUANTUM_2472": {
+      "description": "Wire Shelving, 24x72",
+      "mfr": "Quantum",
+      "model": "2472GY",
+      "rfa": null,
+      "block_aliases": [
+        "2472GY"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities",
+      "height_in": 74
     }
   }
 }

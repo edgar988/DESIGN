@@ -244,7 +244,11 @@
       "category": "Conveyor Oven, Electric",
       "qty": "1",
       "provided_by": "OWNER",
-      "key": "OVENTION_C2000"
+      "key": "OVENTION_C2000",
+      "match": [
+        "C2000",
+        "OVENTION"
+      ]
     },
     {
       "item": "PH2",

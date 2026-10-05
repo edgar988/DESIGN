@@ -9,7 +9,7 @@
   "customer": {
     "name": "Cinemark USA, Inc.",
     "address": "3900 Dallas Parkway, Plano, TX 75093",
-    "attn": "Juan Cardenas, Director of Culinary \u00b7 David Haywood, Senior VP of Food & Beverage",
+    "attn": "Juan Cardenas, Director of Culinary · David Haywood, Senior VP of Food & Beverage",
     "cc": "Natalie Ingram"
   },
   "contractor": {
@@ -44,7 +44,11 @@
     "electrical_vertical_ft": 14,
     "plumbing_factor": 1.2,
     "plumbing_vertical_ft": 10,
-    "default_ceiling_ft": 10
+    "default_ceiling_ft": 10,
+    "panel_distance_ft": 40,
+    "panel_top_ft": 6,
+    "water_distance_ft": 40,
+    "_narrative": "Edgar 10-2026: all utilities priced new, from a panel ~40 ft away; most runs go up, over at the ceiling and back down. Water supply taken on the same basis until a source point is drawn (confirm)."
   },
   "heat_load": {
     "_method": "ASHRAE Fundamentals Ch.18, unhooded equipment, peak-hour nameplate x duty factor (same basis as SSG-2026-CNK-PH01-263-M1).",

@@ -140,16 +140,30 @@ def build(store, catalog, program, layout=None):
     rows = []
     if layout:
         grouped = {}
+        unnumbered = {}
         for q in layout["equipment"]:
             if q["status"] == "demo" or not q["key"]:
                 continue
+            if store.get("item_numbers") == "master" and not q.get("item"):
+                unnumbered[q["key"]] = unnumbered.get(q["key"], 0) + 1     # not on the PH master list
+                continue
             rows.append({"item": q.get("item"), "key": q["key"], "qty": 1,
                          "x": q["x"], "y": q["y"], "rotation": q["rotation"], "handle": q["handle"],
-                         "roughin": q.get("roughin")})
+                         "roughin": q.get("roughin"), "provided_by": q.get("provided_by")})
         for r in rows:
             grouped.setdefault(r["key"], 0)
             grouped[r["key"]] += 1
-        room = layout["rooms"][0] if layout["rooms"] else None
+        for k, n in sorted(unnumbered.items()):
+            warn.append("Not priced, not on the master list: %s x%d (in scope? give it a master number)" % (k, n))
+        rooms = layout["rooms"]
+        room = None
+        if rooms:                       # a kitchen can read as more than one space (TX-093: two)
+            allp = [p for r in rooms for p in r["polygon"]]
+            room = {"area_sf": sum(r["area_sf"] for r in rooms),
+                    "perimeter_lf": sum(r["perimeter_lf"] for r in rooms),
+                    "polygon": rooms[0]["polygon"] if len(rooms) == 1 else
+                    [[min(p[0] for p in allp), min(p[1] for p in allp)], [max(p[0] for p in allp), min(p[1] for p in allp)],
+                     [max(p[0] for p in allp), max(p[1] for p in allp)], [min(p[0] for p in allp), max(p[1] for p in allp)]]}
         pts = layout.get("points", {})
     else:
         if not isinstance(store.get("package"), list):
@@ -158,17 +172,27 @@ def build(store, catalog, program, layout=None):
         room, pts = None, {}
         warn.append("No layout: routing lengths use allowances, room quantities use store values.")
 
-    ref = room and centroid(room["polygon"])
+    # with no panel / source drawn, they sit ~40 ft from the work (Edgar): measure from the middle of the
+    # rough-ins, not the room, which can take in more than the kitchen (TX-093 reads two rooms)
+    def _util(r):
+        it = items.get(r["key"]) or {}
+        return bool(it.get("elec") or it.get("plumb"))
+
+    rough = [r.get("roughin") or [r["x"], r["y"]] for r in rows if _util(r) and (r.get("roughin") or "x" in r)]
+    ref = ([sum(p[0] for p in rough) / len(rough), sum(p[1] for p in rough) / len(rough)] if rough
+           else room and centroid(room["polygon"]))
     panel = pts.get("panel")
     water = pts.get("water")
     waste = pts.get("waste") or water
 
+    ceil_ft = store.get("ceiling_ft") or rt["default_ceiling_ft"]
     sched, circuits = [], []
     q_el = {"branch_lf": 0.0}
     q_pl = {"hw": 0, "cw": 0, "waste": 0, "indirect": 0, "supply_lf": 0.0}
     sens = lat = 0.0
     conn_kw = 0.0
     counts = {"plug": 0, "plumbed": 0, "set": 0}
+    by_source = {}                  # who provides it (item prefix): AEQ / EXISTING / OWNER -> install counts
     unverified = []
     ckt = 1
     for r in rows:
@@ -181,12 +205,16 @@ def build(store, catalog, program, layout=None):
         if it.get("verified") is False or it.get("verified") is None:
             unverified.append(r["key"])
         counts[it.get("install", "set")] = counts.get(it.get("install", "set"), 0) + qty
+        if it.get("category") != "accessory":          # faucets move with their sink
+            src_counts = by_source.setdefault(r.get("provided_by") or "AEQ", {})
+            src_counts[it.get("install", "set")] = src_counts.get(it.get("install", "set"), 0) + qty
         s, l_, hw = heat_of(it, qty, hl)
         if hw:
             warn.append("%s: %s" % (r["key"], hw))
         sens += s
         lat += l_
-        row = {"item": r.get("item"), "key": r["key"], "qty": qty, "mfr": it["mfr"], "model": it["model"],
+        row = {"item": r.get("item"), "provided_by": r.get("provided_by"),
+               "key": r["key"], "qty": qty, "mfr": it["mfr"], "model": it["model"],
                "description": it["description"], "verified": it.get("verified", False),
                "flags": it.get("flags", []), "heat_sensible": round(s), "heat_latent": round(l_)}
         # runs go to the rough-in on the wall behind the item (dxf_extract), else to the item itself
@@ -196,12 +224,15 @@ def build(store, catalog, program, layout=None):
             conn_kw += kw
             brk, poles = breaker_for(e)
             asm = connection_assembly(e)
+            # up from the panel to the ceiling, over, and back down to the rough-in (Edgar)
+            aff_ft = (rd["direct_connect_jbox"] if e.get("conn") == "direct" else rd["receptacle_cord_under_counter"]) / 12.0
+            up_down = max(0.0, ceil_ft - rt.get("panel_top_ft", 6)) + max(0.0, ceil_ft - aff_ft)
             if panel and loc:
-                run = manhattan_ft(panel, loc) * rt["electrical_factor"] + rt["electrical_vertical_ft"]
-            elif ref and loc:
-                run = manhattan_ft(ref, loc) * rt["electrical_factor"] + rt["electrical_vertical_ft"] + 25
+                run = manhattan_ft(panel, loc) * rt["electrical_factor"] + up_down
+            elif ref and loc:               # panel ~40 ft from the work, then across to the rough-in
+                run = rt.get("panel_distance_ft", 25) + manhattan_ft(ref, loc) * rt["electrical_factor"] + up_down
             else:
-                run = 45.0
+                run = rt.get("panel_distance_ft", 25) + 15 + up_down
             for _ in range(qty):
                 circuits.append({"circuit": ckt, "item": r.get("item"), "key": r["key"],
                                  "volts": e.get("volts"), "phase": e.get("phase"), "amps": e.get("amps"),
@@ -226,17 +257,19 @@ def build(store, catalog, program, layout=None):
                 else:
                     q_pl["waste"] += qty
             if water and loc:
-                q_pl["supply_lf"] += (manhattan_ft(water, loc) * rt["plumbing_factor"]
-                                      + rt["plumbing_vertical_ft"]) * qty
+                lf = manhattan_ft(water, loc) * rt["plumbing_factor"] + rt["plumbing_vertical_ft"]
+            elif ref and loc:               # source taken ~40 ft away like the panel until one is drawn
+                lf = (rt.get("water_distance_ft", 20) + manhattan_ft(ref, loc) * rt["plumbing_factor"]
+                      + rt["plumbing_vertical_ft"])
             else:
-                q_pl["supply_lf"] += 30.0 * qty
+                lf = 30.0
+            q_pl["supply_lf"] += lf * qty
             row["plumb"] = ", ".join("%s %s" % (k.upper(), v) for k, v in p.items()
                                      if v and k in ("hw", "cw", "waste")) + (
                 " (indirect)" if p.get("indirect") else "")
         sched.append(row)
 
     # ---- room / construction quantities ----------------------------------
-    ceil_ft = store.get("ceiling_ft") or rt["default_ceiling_ft"]
     if room:
         area, perim = room["area_sf"], room["perimeter_lf"]
     else:
@@ -267,6 +300,7 @@ def build(store, catalog, program, layout=None):
         "demo_casework_lf": dm.get("casework_lf", 0) or 0,
         "make_safe": pick(dm.get("make_safe"), demo_eq),
         "equipment_counts": counts,
+        "equipment_by_source": by_source,
         "electrical": {"circuits": len(circuits), "branch_lf": round(q_el["branch_lf"]),
                        "connected_kw": round(conn_kw, 1),
                        "connected_amps_208_3ph": round(conn_kw * 1000 / (208 * math.sqrt(3)), 1)},

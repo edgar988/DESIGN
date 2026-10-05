@@ -12,7 +12,16 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
 
 ## State
 - Python pipeline (DXF -> layout -> takeoff -> heat load -> estimate -> schedule -> quote PDF + INTERNAL xlsx):
-  built, 7 tests pass. GA-263 reproduces its issued heat-load report.
+  built, 15 tests pass. GA-263 reproduces its issued heat-load report.
+- PH master list wired in (`config/master_items.json`, from Edgar's `PH MASTER EQUIPMENT LIST - W PRICING.xlsx`;
+  prices stay in the xlsx): every PH store is numbered by model from it; plain = AEQ supplies, X = existing
+  (relocated, new utilities), PH = owner-furnished (received at AEQ Nashville, delivered when ready). Items not
+  on the master become existing X numbers at that store.
+- Construction narrative (Edgar, 2026-10-04) in each store file's `scope` / `hvac`: all utilities new from a panel
+  ~40 ft away (up, over, down); GA = closed storage room, ~$8k demo incl. dumpsters, 5 tons as 2 x 2.5-ton heads
+  ($7,200 system cost, marked up), 65 ft line sets, existing penetration, crane; TX / NJ = demo the satellite
+  concession stand's front and back counters, new wall with a cased opening each side, standard finish, no HVAC.
+  Draft totals (not issued): GA-263 $165,500, TX-093 $160,900, NJ-187 waits on which room copy is the design.
 - 2026-10-04 (local session on the desktop): machine set up (Git, Python 3.12, pyRevit 6.5.5 on **Revit 2027**,
   extension registered, settings at `%APPDATA%\pyRevit\aeq_cinemark.json` -> Drive
   `G:\Shared drives\AARON EQUIPMENT CO SHARED DRIVE\CINEMARK\PIZZA HUT`). Watcher task NOT registered yet.
@@ -39,17 +48,16 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
 - Unverified utilities: 7-PS-65 hand sink, FC-3 sink, Hoshizaki, Traulsen, PerfectFry, Follett. Button 4 syncs
   them from the KCL families into `config/families_synced.json`.
 - Licensing: no AEQ TX mechanical license (McAllen HVAC); NJ needs licensed plumbing/electrical of record.
-- GA-263 test quote came to $141,000 (travel $31.7k, 628 field hours). Draft only, not issued.
-- GA-263 drawing (AQ data) vs the store package, to review with Edgar: items 6 ACP and 7 Ovention each drawn
-  twice as identical stacked blocks, items 10 KLG-365 and 11 STR1R drawn twice (package qty 1), package item
-  15 MTI AutoFry not drawn, drawing item 16 Broaster VF-3 not in the package, items 3/4 T&S faucets not in the
-  catalog. Priced from the DXF as drawn: $181,600, design heat 89,053 Btu/h (the package-list path still
-  reproduces the issued 61,106). No panel / water / waste source points or room boundary on the drawing.
 - Stores are reviewed one at a time with Edgar (AutoQuotes is on the desktop to correct the drawings).
-- Master equipment list DRAFT (Edgar reviewing, may add items): Drive `CINEMARK\PIZZA HUT\PH MASTER EQUIPMENT
-  LIST - DRAFT.xlsx`. Fixed ITEM # per product (1-16 = GA-263 issued set, 17+ proposed), PROVIDED BY = AEQ /
-  OWNER / EXISTING. Not wired into the pipeline yet: once reviewed, check drawings against it, put PROVIDED BY
-  on QF102 and use it for quote scope.
+- Narrative pricing, asked of Edgar (store files carry the provisional values, flagged):
+  NJ-187 room copy (sets `plan_window`); TX / NJ ceiling heights (10 ft assumed); GA $8k demo taken as sell;
+  crane allowance $2,500 sub; $7,200 system marked up as material (30%); TX / NJ counter and new-wall LF
+  (20 LF each, provisional); PH Nashville receiving and transport (AEQ truck, TX 1,150 mi each way) vs LTL;
+  whether AEQ-supplied equipment is quoted separately (the construction quote lists it as "set & connected",
+  purchase not included); finishes in TX / NJ (none priced beyond the new wall); GA finishes (FRP, washable
+  ceiling, quarry tile, cove base priced on the 381 SF read from the walls).
+- No panel / water / waste source points or room boundary on the drawings: routing runs ~40 ft to the middle
+  of the rough-ins, then across; room SF from the walls (GA 381, TX 522).
 - 7-PS-65 hand sink lands on the floor in Revit (level-based family); needs a mounting height.
 
 ## Where things go

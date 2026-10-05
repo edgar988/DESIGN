@@ -120,8 +120,7 @@ def assign(out, store, master):
         if not hits:                            # its AutoQuotes number is from the old numbering: drop it
             q["aq_item"], q["item"], q["provided_by"] = q.get("item"), None, None
             if q["key"] or _models(q):
-                missing.setdefault(q.get("key") or _models(q)[0], 0)
-                missing[q.get("key") or _models(q)[0]] += 1
+                missing.setdefault(q.get("key") or _models(q)[0], []).append(q)
             continue
         it, how = hits[0]
         q["aq_item"], q["item"], q["master_match"] = q.get("item"), it["item"], how
@@ -135,8 +134,15 @@ def assign(out, store, master):
         out["warnings"].append("Item %s chosen for %d block(s) that could also be %s (handles %s): set "
                                "item_overrides in the store file if not." % (n, len(handles), "/".join(alts),
                                                                              ", ".join(handles)))
-    for k, c in sorted(missing.items()):
-        out["warnings"].append("Not on the master list: %s (x%d)." % (k, c))
+    # not on the master list = existing equipment at this store (Edgar): its own X number per model, after
+    # the master's X numbers, priced like any existing item (moved, new utilities)
+    nxt = 1 + max([int(m.group(1)) for it in master["items"]
+                   for m in [re.match(r"X(\d+)$", it["item"])] if m] or [0])
+    for k, qs in sorted(missing.items()):
+        for q in qs:
+            q["item"], q["provided_by"], q["master_match"] = "X%d" % nxt, "EXISTING", "existing, not on master"
+        out["warnings"].append("Existing, not on the master list: X%d = %s (x%d)." % (nxt, k, len(qs)))
+        nxt += 1
 
 
 if __name__ == "__main__":

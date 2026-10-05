@@ -10,19 +10,42 @@ import datetime as dt
 import math
 
 
+def _nth(year, month, weekday, n):
+    """nth weekday (0 = Mon) of a month; n = -1 for the last."""
+    if n > 0:
+        d = dt.date(year, month, 1)
+        return d + dt.timedelta(days=(weekday - d.weekday()) % 7 + 7 * (n - 1))
+    d = dt.date(year + (month == 12), month % 12 + 1, 1) - dt.timedelta(days=1)
+    return d - dt.timedelta(days=(d.weekday() - weekday) % 7)
+
+
+def holidays(year):
+    """Days crews do not work: New Year, Memorial Day, July 4, Labor Day, Thanksgiving + Friday, Christmas
+    Eve and Day (a weekend holiday moves to the nearest weekday)."""
+    def obs(d):
+        return d - dt.timedelta(days=1) if d.weekday() == 5 else d + dt.timedelta(days=1) if d.weekday() == 6 else d
+    tg = _nth(year, 11, 3, 4)
+    return {obs(dt.date(year, 1, 1)), _nth(year, 5, 0, -1), obs(dt.date(year, 7, 4)), _nth(year, 9, 0, 1),
+            tg, tg + dt.timedelta(days=1), obs(dt.date(year, 12, 24)), obs(dt.date(year, 12, 25))}
+
+
+def _working(d):
+    return d.weekday() < 5 and d not in holidays(d.year)
+
+
 def _wd_add(start, n):
-    """Add n working days (Mon-Fri) to a date."""
+    """Add n working days (Mon-Fri, holidays off) to a date."""
     d = start
     step = 0
     while step < n:
         d += dt.timedelta(days=1)
-        if d.weekday() < 5:
+        if _working(d):
             step += 1
     return d
 
 
 def _next_wd(d):
-    while d.weekday() >= 5:
+    while not _working(d):
         d += dt.timedelta(days=1)
     return d
 
@@ -74,7 +97,7 @@ def build(est, store, ntp=None):
     t_punch = task("Punch list, clean & turnover", _wd_add(t_final["end"], 1), 1)
 
     site_wd = sum(1 for i in range((t_punch["end"] - start_site).days + 1)
-                  if (start_site + dt.timedelta(days=i)).weekday() < 5)
+                  if _working(start_site + dt.timedelta(days=i)))
     return {"ntp": ntp, "site_start": start_site, "turnover": t_punch["end"], "tasks": tasks,
             "site_working_days": site_wd,
             "calendar_weeks": round(((t_punch["end"] - ntp).days + 1) / 7.0, 1),

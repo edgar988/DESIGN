@@ -58,6 +58,87 @@ EXCLUSIONS = [
 ]
 
 
+def section_text(sec, store, est):
+    """The section's scope paragraph, from what is actually priced in it (and the store's construction
+    narrative), so the words never promise work the numbers leave out. A store can still give its own
+    text per section in scope.text."""
+    scope = store.get("scope") or {}
+    if (scope.get("text") or {}).get(sec):
+        return [scope["text"][sec]]
+    asm = set(l.get("assembly") for l in est["sections"][sec]["lines"])
+    hv = store.get("hvac") or {}
+    if sec == "DEMOLITION":
+        out = []
+        if "demo_lump_sum" in asm:
+            out.append("Demolition in the existing room for the new kitchen, with debris removal and dumpsters.")
+        if asm & {"demo_counter_front", "demo_counter_back"}:
+            out.append("Remove the existing concession stand front counter and back counter / cabinets in the "
+                       "footprint of the new layout; cap and make safe their utilities.")
+        if asm & {"demo_equipment", "demo_partition", "demo_ceiling", "demo_flooring", "demo_casework"}:
+            out.append("Selective demolition within the Pizza Hut kitchen scope area per the layout.")
+        if asm & {"demo_equipment", "demo_make_safe"}:
+            out.append("Disconnect and remove existing equipment shown for removal; cap and make safe existing "
+                       "utilities.")
+        return out
+    if sec == "CONSTRUCTION & FINISHES":
+        out = []
+        if "con_cased_opening" in asm:
+            out.append("New partition wall with a cased opening on either side for staff to pass in and out; "
+                       "standard finish.")
+        elif "con_partition" in asm:
+            out.append("New partitions per the layout.")
+        if "con_blocking" in asm:
+            out.append("In-wall blocking for wall-hung sinks and shelving.")
+        fin = [t for k, t in (("con_frp", "FRP wall panels"), ("con_act_washable", "washable lay-in ceiling"),
+                              ("con_floor_quarry", "sanitary flooring"), ("con_floor_epoxy", "sanitary flooring"),
+                              ("con_cove_base", "cove base")) if k in asm]
+        if fin:
+            fin = sorted(set(fin), key=fin.index)
+            out.append("Kitchen finishes: %s." % (", ".join(fin[:-1]) + " and " + fin[-1] if len(fin) > 1 else fin[0]))
+        return out
+    if sec == "ELECTRICAL":
+        sub = "el_subpanel" in asm
+        out = [("Kitchen sub-panel and feeder; dedicated" if sub else "Dedicated") +
+               " branch circuits%s, breakers and receptacles / direct connections for every piece of equipment "
+               "per the electrical rough-in schedule." % ("" if sub else " from the existing panel")]
+        if "el_lighting_sf" in asm:
+            out.append("LED lighting in the kitchen area.")
+        if "el_hvac_circuit" in asm:
+            out.append("Circuit and disconnect for the HVAC condensing unit%s." % (
+                " and exhaust fan" if hv.get("exhaust_fan") else ""))
+        return out
+    if sec == "HVAC" and "hv_split_system" in asm:
+        heads = hv.get("heads") or 1
+        out = ["Added cooling for the enclosed kitchen: %g-ton split system with %d indoor head%s, new refrigerant "
+               "line sets, condensate drains and controls, start-up." % (hv.get("tons") or 0, heads,
+                                                                       "s" if heads != 1 else "")]
+        if "hv_crane" in asm:
+            out.append("Condensing unit set by crane%s." % (
+                " using the existing roof penetration" if hv.get("penetration_existing") else ""))
+        if hv.get("exhaust_fan"):
+            out.append("General exhaust fan interlocked with the conveyor oven.")
+        return out
+    if sec == "EQUIPMENT SET & START-UP" and asm & {"eq_receive_nashville", "eq_relocate"}:
+        out = []
+        if "eq_receive_nashville" in asm:
+            out.append("Owner-furnished Pizza Hut equipment received, inspected and held at AEQ Nashville, then "
+                       "delivered to site when the kitchen is ready.")
+        if "eq_relocate" in asm:
+            out.append("Existing equipment disconnected, protected, moved to its new location and reconnected "
+                       "to new utilities.")
+        out.append("Set, level, connect and commission each piece (list below).")
+        return out
+    return SCOPE_TEXT.get(sec, [])
+
+
+EQUIPMENT_HEADS = [
+    ("OWNER", "OWNER-FURNISHED EQUIPMENT (PH): RECEIVED, DELIVERED, SET &amp; CONNECTED", None),
+    ("AEQ", "SUPPLIED BY AARON EQUIPMENT CO.: SET &amp; CONNECTED",
+     "Equipment purchase is not included in this quote."),
+    ("EXISTING", "EXISTING EQUIPMENT: RELOCATED &amp; RECONNECTED TO NEW UTILITIES", None),
+]
+
+
 def _qty(q, unit):
     if unit in ("LS", "allow"):
         return ""
@@ -74,7 +155,9 @@ def scope_detail(lines):
     out = []
     for l in lines:
         d = l["desc"].replace("&", "&amp;")
-        out.append(d[0].lower() + d[1:] + _qty(l["qty"], l["unit"]) if out else d + _qty(l["qty"], l["unit"]))
+        if out and d[1:2].islower():            # not acronyms: LED, FRP, HVAC
+            d = d[0].lower() + d[1:]
+        out.append(d + _qty(l["qty"], l["unit"]))
     return "; ".join(out)
 
 
@@ -106,6 +189,7 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
     s.append(Q.red_rule())
     s.append(Spacer(1, 4))
     heat = takeoff["heat_load"]
+    has_hvac = "HVAC" in est["sections"]
     s.append(Q.panels(
         "CUSTOMER",
         [("Customer:", cust["name"]), ("Address:", cust["address"]), ("Attn:", cust["attn"]),
@@ -114,12 +198,13 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
         "JOB SITE",
         [("Theatre:", "Cinemark %s" % loc), ("Address:", store["address"]),
          ("Scope area:", "%s SF Pizza Hut kitchen" % format(round(takeoff["quantities"]["room_sf"]), ",")),
-         ("Basis:", "Store survey, %s, heat-load assessment SSG-2026-CNK-PH01-%03d-M1" % (
+         ("Basis:", "Store survey, %s%s" % (
              ("layout " + store.get("layout_dxf", "")) if takeoff.get("layout_used")
              else ", ".join(d for d in store.get("existing_docs", ["equipment package list"])
-                            if "Heat-Load" not in d), store["theatre_no"])),
-         ("Connected load:", "%.1f kW equipment; %.1f tons added cooling" % (
-             heat["connected_kw"], heat["minisplit_tons"]))]))
+                            if "Heat-Load" not in d),
+             ", heat-load assessment SSG-2026-CNK-PH01-%03d-M1" % store["theatre_no"] if has_hvac else "")),
+         ("Connected load:", "%.1f kW equipment%s" % (
+             heat["connected_kw"], "; %.1f tons added cooling" % heat["minisplit_tons"] if has_hvac else ""))]))
     s.append(Paragraph("CONTRACTOR", Q.sechead))
     s.append(Q.kv([("Contractor:", con["entity"]), ("Address:", con["address"]), ("Contact:", con["contact"]),
                    ("Phone / Email:", "%s · %s" % (con["phone"], con["email"])),
@@ -131,7 +216,7 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
         detail = scope_detail(est["sections"][sec]["lines"]) if sec != "TRAVEL & SUPERVISION" else ""
         rows.append(("<b>%s</b><br/>%s%s" % (
             sec.title().replace("&", "&amp;").replace("Hvac", "HVAC"),
-            " ".join(SCOPE_TEXT.get(sec, [])),
+            " ".join(section_text(sec, store, est)),
             ("<br/><font color='#666666'>Includes: %s.</font>" % detail) if detail else ""),
             est["customer_sections"][sec]))
     s.append(Q.price_table(rows, "TOTAL · LUMP SUM, ALL TRAVEL INCLUDED", est["total"]))
@@ -139,13 +224,26 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
                        "Survey, design and rough-in drawings are billed under the program proposal (Tier 2) "
                        "and are not included here.", Q.sub))
 
+    def _eq(rows):
+        n = {}                                  # one line per item: blocks of the same item add up
+        for r in rows:
+            k = (r.get("item"), r["mfr"], r["model"], r["description"])
+            n[k] = n.get(k, 0) + r["qty"]
+        return [("%s(%d) %s %s, %s" % (("Item %s: " % k[0]) if k[0] else "", q, k[1], k[2], k[3])).replace("&", "&amp;")
+                for k, q in n.items()]
+
     s.append(CondPageBreak(2.5 * inch))
-    s.append(Paragraph("OWNER-FURNISHED EQUIPMENT SET &amp; CONNECTED", Q.sechead))
-    eq = []
-    for r in takeoff["schedule"]:
-        tag = ("Item %s: " % r["item"]) if r.get("item") else ""
-        eq.append("%s(%d) %s %s, %s" % (tag, r["qty"], r["mfr"], r["model"], r["description"]))
-    s.extend(Q.bullets(eq))
+    if any(r.get("provided_by") for r in takeoff["schedule"]):     # numbered from the PH master list
+        for src, head, note in EQUIPMENT_HEADS:
+            rows = [r for r in takeoff["schedule"] if (r.get("provided_by") or "AEQ") == src]
+            if rows:
+                s.append(Paragraph(head, Q.sechead))
+                s.extend(Q.bullets(_eq(rows)))
+                if note:
+                    s.append(Paragraph(note, Q.sub))
+    else:
+        s.append(Paragraph("OWNER-FURNISHED EQUIPMENT SET &amp; CONNECTED", Q.sechead))
+        s.extend(Q.bullets(_eq(takeoff["schedule"])))
 
     s.append(CondPageBreak(3.2 * inch))
     s.append(Paragraph("SCHEDULE", Q.sechead))
@@ -169,8 +267,14 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
         "service office for warranty.",
         "One-year workmanship warranty on SSG-performed installation from date of substantial completion.",
     ])))
+    excl = list(EXCLUSIONS)
+    if "el_subpanel" not in set(l.get("assembly") for l in est["lines"]):
+        excl[excl.index(EXCLUSIONS[4])] = ("Electrical service, panel or switchboard upgrades: circuits are fed from "
+                                           "the existing panel, assumed to have spare capacity and breaker spaces.")
+    if not has_hvac:
+        excl[excl.index(EXCLUSIONS[6])] = "HVAC: none included; the area stays on the theatre's existing system."
     s.append(KeepTogether([Paragraph("EXCLUSIONS / ASSUMPTIONS", Q.sechead)] + Q.bullets(
-        EXCLUSIONS + ["Work performed during normal business hours with the kitchen area vacated; theatre "
+        excl + ["Work performed during normal business hours with the kitchen area vacated; theatre "
                       "remains open." if store.get("schedule", {}).get("work_window", "day") == "day"
                       else "After-hours work included as noted in the schedule.",
                       "Sales / use tax per applicable jurisdiction; non-union pricing; quoted materials subject "
