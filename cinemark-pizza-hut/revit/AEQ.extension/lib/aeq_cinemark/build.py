@@ -131,9 +131,14 @@ class _LoadOpts(IFamilyLoadOptions):
 
 
 def room_bbox(layout, margin_in=36.0):
-    poly = layout["rooms"][0]["polygon"] if layout.get("rooms") else None
-    if poly:
-        xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+    # every room (a drawing can read as several) and every item, so open areas with equipment stay in frame
+    pts = [p for r in layout.get("rooms", []) for p in r["polygon"]]
+    if pts:
+        for q in layout.get("equipment", []):
+            b = q.get("bbox")
+            if b and q.get("status") != "demo":
+                pts += [[b[0], b[1]], [b[2], b[3]]]
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
     else:
         pts = [w["start"] for w in layout["walls"]] + [w["end"] for w in layout["walls"]]
         if not pts:     # no walls or room on the drawing: frame the equipment instead
@@ -192,13 +197,16 @@ def _first_plan(doc):
 
 
 def _wall_type_for(doc, thk_in):
-    """Closest basic wall type by width, interior partitions first (the kitchen room is inside the
-    building; a 4" face pair is a stud partition, not 4" brick). Ties go to the thicker type."""
+    """Closest basic wall type by width: an interior partition when one is within 1" (a 4" face pair is a
+    stud partition, not 4" brick), else the closest of any type. Ties go to the thicker type."""
     basics = [w for w in FilteredElementCollector(doc).OfClass(WallType) if w.Kind == WallKind.Basic]
     if not basics:
         raise Exception("Template has no basic wall types")
-    pool = [w for w in basics if w.Function == WallFunction.Interior] or basics
-    best = min(pool, key=lambda w: (round(abs(w.Width - thk_in * FT) * 12.0, 3), -w.Width))
+    err = lambda w: (round(abs(w.Width - thk_in * FT) * 12.0, 3), -w.Width)
+    interior = [w for w in basics if w.Function == WallFunction.Interior]
+    best = min(interior, key=err) if interior else None
+    if best is None or err(best)[0] > 1.0:     # thick (masonry) walls: closest of any type
+        best = min(basics, key=err)
     return best, abs(best.Width - thk_in * FT) * 12.0
 
 
@@ -521,21 +529,31 @@ def _halftone_equipment(doc, view):
             pass
 
 
+def _centre(q):
+    b = q.get("bbox")
+    return _pt([(b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0] if b else [q["x"], q["y"]])
+
+
 def _roughin_targets(layout):
-    """(key, item) -> [(rough-in point in feet, on a wall?)] in drawing order. dxf_extract puts rough-ins
-    on the wall behind the item, so tags point where the trades rough in, family or not."""
+    """(key, item) -> [(rough-in point in feet, on a wall?, item centre)] in drawing order. dxf_extract puts
+    rough-ins on the wall behind the item, so tags point where the trades rough in, family or not."""
     out = {}
     for q in layout["equipment"]:
         if q["status"] == "demo" or not q["key"]:
             continue
-        b = q.get("bbox")
-        p = q.get("roughin") or ([(b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0] if b else [q["x"], q["y"]])
-        out.setdefault((q["key"], str(q.get("item") or "")), []).append((_pt(p), bool(q.get("roughin"))))
+        c = _centre(q)
+        p = _pt(q["roughin"]) if q.get("roughin") else c
+        out.setdefault((q["key"], str(q.get("item") or "")), []).append((p, bool(q.get("roughin")), c))
     return out
 
 
-def _side(p, bbox_in):
-    """Which room edge a point is nearest: the way out of the room from a wall rough-in."""
+def _side(p, bbox_in, centre=None):
+    """Which way a tag at p faces out: from the item's centre toward its wall when p is on that wall,
+    else the nearest room edge."""
+    if centre is not None:
+        dx, dy = p.X - centre.X, p.Y - centre.Y
+        if abs(dx) > 0.1 or abs(dy) > 0.1:
+            return ("E" if dx > 0 else "W") if abs(dx) > abs(dy) else ("N" if dy > 0 else "S")
     x0, y0, x1, y1 = [v * FT for v in bbox_in]
     d = {"W": p.X - x0, "E": x1 - p.X, "S": p.Y - y0, "N": y1 - p.Y}
     return min(d, key=d.get)
@@ -566,9 +584,9 @@ def _spread(items, gap):
 
 
 class _Callouts(object):
-    """Tags in one view, one clean row per wall side just outside the room. Each tag sits square to its
-    rough-in so its leader runs straight to the wall; only tags that would overlap (stacked or close-set
-    equipment) are spread apart, as little as needed, and get an angled leader."""
+    """Tags in one view, one clean row per wall just outside it. Each tag sits square to its target so its
+    leader runs straight; only tags that would overlap (stacked or close-set equipment) are spread apart,
+    as little as needed, and get an angled leader."""
 
     def __init__(self, doc, view, tn_type, frame, gap_ft=1.5):
         self.doc, self.view, self.tn, self.frame = doc, view, tn_type, frame    # frame: x0, y0, x1, y1 ft
@@ -577,19 +595,21 @@ class _Callouts(object):
         self.lh = 1.7 * (p.AsDouble() if p else 3.0 / 32.0 / 12.0) * view.Scale   # a line of text, model ft
         self.queue = []
 
-    def add(self, target, text, side):
-        self.queue.append((target, text, side))
+    def add(self, target, text, side, anchor=None):
+        """side: which way the tag's wall faces out; anchor: the point on that wall its row is measured
+        from (default the target itself, e.g. a wall rough-in)."""
+        self.queue.append((target, text, side, anchor or target))
 
     def place(self):
         """Create the queued tags; returns the extent of tags and leader targets (ft) or None. Each tag is
         measured once created (text outline, and where its leader attaches, which depends on the text
-        type), the row is spread from those real sizes, then each tag is moved into place."""
+        type), each wall's row is spread from those real sizes, then each tag is moved into place."""
         doc, made = self.doc, []
-        for target, text, side in self.queue:
+        for target, text, side, anchor in self.queue:
             n = TextNote.Create(doc, self.view.Id, XYZ(target.X, target.Y, 0), text, TextNoteOptions(self.tn))
             n.LeaderLeftAttachment = LeaderAtachement.Midpoint      # E/W leaders leave the middle of the tag
             n.LeaderRightAttachment = LeaderAtachement.Midpoint
-            made.append([n, target, side])
+            made.append([n, target, side, anchor])
         if not made:
             return None
         doc.Regenerate()
@@ -601,39 +621,46 @@ class _Callouts(object):
         doc.Regenerate()
         boxes, wanted = [], []
         for side in ("N", "S", "E", "W"):
-            group = [m for m in made if m[2] == side]
-            if not group:
-                continue
             ax = side in ("N", "S")                         # tags run along X (N/S walls) or Y (E/W)
-            group.sort(key=lambda m: m[1].X if ax else m[1].Y)
-            items, anchors = [], []
-            for n, target, _, bb in group:
-                # where the leader meets the tag: measured along X; mid-height for E/W (Midpoint attachment)
-                a = list(n.GetLeaders())[0].Anchor if ax else XYZ(0, (bb.Min.Y + bb.Max.Y) / 2.0, 0)
-                anchors.append(a)
-                lo, hi = (a.X - bb.Min.X, bb.Max.X - a.X) if ax else (a.Y - bb.Min.Y, bb.Max.Y - a.Y)
-                items.append((target.X if ax else target.Y, lo, hi))
-            h = max(bb.Max.Y - bb.Min.Y for _, _, _, bb in group)
-            pos = _spread(items, 0.6 * h)
-            row = {"N": max(m[1].Y for m in group) + self.g, "S": min(m[1].Y for m in group) - self.g,
-                   "E": max(m[1].X for m in group) + self.g, "W": min(m[1].X for m in group) - self.g}[side]
-            for (n, target, _, bb), a, p in zip(group, anchors, pos):
-                # along the wall: anchor to its spot; across: the text's near edge on the row
-                across = {"N": row - bb.Min.Y, "S": row - bb.Max.Y, "E": row - bb.Min.X, "W": row - bb.Max.X}[side]
-                d = XYZ(p - a.X, across, 0) if ax else XYZ(across, p - a.Y, 0)
-                n.Coord = n.Coord + d
-                boxes.append((bb.Min.X + d.X, bb.Min.Y + d.Y, bb.Max.X + d.X, bb.Max.Y + d.Y))
-                if ax:
-                    wanted.append((n, p))
+            perp = (lambda pt: pt.Y) if ax else (lambda pt: pt.X)
+            rows = []
+            for m in sorted([m for m in made if m[2] == side], key=lambda m: perp(m[3])):
+                if rows and abs(perp(m[3]) - perp(rows[-1][-1][3])) <= 2.0:   # same wall: same row
+                    rows[-1].append(m)
+                else:
+                    rows.append([m])
+            for row_ms in rows:
+                row_ms.sort(key=lambda m: m[1].X if ax else m[1].Y)
+                items, anchors = [], []
+                for n, target, _, _, bb in row_ms:
+                    # where the leader meets the tag: measured along X; mid-height for E/W (Midpoint)
+                    a = list(n.GetLeaders())[0].Anchor if ax else XYZ(0, (bb.Min.Y + bb.Max.Y) / 2.0, 0)
+                    anchors.append(a)
+                    lo, hi = (a.X - bb.Min.X, bb.Max.X - a.X) if ax else (a.Y - bb.Min.Y, bb.Max.Y - a.Y)
+                    items.append((target.X if ax else target.Y, lo, hi))
+                h = max(m[4].Max.Y - m[4].Min.Y for m in row_ms)
+                pos = _spread(items, 0.6 * h)
+                walls = [perp(m[3]) for m in row_ms]
+                row = {"N": max(walls) + self.g, "S": min(walls) - self.g,
+                       "E": max(walls) + self.g, "W": min(walls) - self.g}[side]
+                for (n, target, _, _, bb), a, p in zip(row_ms, anchors, pos):
+                    # along the wall: anchor to its spot; across: the text's near edge on the row
+                    across = {"N": row - bb.Min.Y, "S": row - bb.Max.Y, "E": row - bb.Min.X,
+                              "W": row - bb.Max.X}[side]
+                    d = XYZ(p - a.X, across, 0) if ax else XYZ(across, p - a.Y, 0)
+                    n.Coord = n.Coord + d
+                    boxes.append((bb.Min.X + d.X, bb.Min.Y + d.Y, bb.Max.X + d.X, bb.Max.Y + d.Y))
+                    if ax:
+                        wanted.append((n, p))
         doc.Regenerate()
         for n, p in wanted:                 # the attach point can shift as a tag moves: square it up once more
             r = p - list(n.GetLeaders())[0].Anchor.X
             if abs(r) > 1e-4:
                 n.Coord = n.Coord + XYZ(r, 0, 0)
         doc.Regenerate()
-        for n, target, _, _ in made:
-            for ld in n.GetLeaders():
-                ld.End = XYZ(target.X, target.Y, 0)
+        for m in made:
+            for ld in m[0].GetLeaders():
+                ld.End = XYZ(m[1].X, m[1].Y, 0)
         pts = boxes + [(m[1].X, m[1].Y, m[1].X, m[1].Y) for m in made]
         return (min(b[0] for b in pts) - self.lh, min(b[1] for b in pts) - self.lh,
                 max(b[2] for b in pts) + self.lh, max(b[3] for b in pts) + self.lh)
@@ -693,10 +720,10 @@ def utility_rows(layout, takeoff, s):
         seen[k] = i + 1
         if not pts:
             continue
-        p, wall = pts[min(i, len(pts) - 1)]
+        p, wall, ctr = pts[min(i, len(pts) - 1)]
         flags = [f for f, bad in (("AMPS", c["amps"] is None), ("BKR", not c["breaker_a"]),
                                   ("NEMA", c["conn"] != "direct" and not re.search(r"\d-\d", c["nema"] or ""))) if bad]
-        rows.append({"svc": "E", "point": p, "wall": wall, "item": k[1], "aff": '%d"' % c["height_aff"],
+        rows.append({"svc": "E", "point": p, "wall": wall, "centre": ctr, "item": k[1], "aff": '%d"' % c["height_aff"],
                      "size": "%s-P %sA" % (c["poles"], c["breaker_a"] or "?"),
                      "desc": "J-BOX, DIRECT CONNECT" if c["conn"] == "direct" else _receptacle(c["nema"]),
                      "to": label(*k), "kw": (items.get(c["key"], {}).get("elec") or {}).get("kw"),
@@ -715,10 +742,10 @@ def utility_rows(layout, takeoff, s):
                 size = plumb[ck] if plumb[ck] == "VERIFY" else plumb[ck] + '"'
                 z = rd["cw_hw_supply_sink"] if svc in ("CW", "HW") else rd["waste_wall_sink"]
                 svcs.append((svc, size, z, "STD HEIGHT - VERIFY"))
-        for p, wall in pts:
+        for p, wall, ctr in pts:
             for svc, size, z, note in svcs:
                 desc = _SVC_DESC.get(svc, svc) + (", INDIRECT" if svc == "SAN" and plumb.get("indirect") else "")
-                rows.append({"svc": svc, "point": p, "wall": wall, "item": item, "aff": '%s"' % z, "size": size,
+                rows.append({"svc": svc, "point": p, "wall": wall, "centre": ctr, "item": item, "aff": '%s"' % z, "size": size,
                              "desc": desc, "to": label(key, item), "kw": None, "amps": None, "v": None, "ph": None,
                              "remarks": note})
     n = {"E": 0, "P": 0}
@@ -835,10 +862,10 @@ def roughin_views(doc, layout, takeoff, s):
             for r in rows:
                 if (r["svc"] == "E") == (group == "E"):
                     key = (round(r["point"].X, 2), round(r["point"].Y, 2))
-                    at.setdefault(key, (r["point"], []))[1].append(r["tag"])
+                    at.setdefault(key, (r["point"], [], r["centre"]))[1].append(r["tag"])
             tags = _Callouts(doc, view, tn, frame, gap_ft=0.75)
-            for p, names in at.values():
-                tags.add(p, _tag_text(names), _side(p, room))
+            for p, names, ctr in at.values():
+                tags.add(p, _tag_text(names), _side(p, room, ctr))
             _grow_crop(view, bbox, tags.place())
         # QF101: item numbers in the same clean rows, leaders to each item's centre
         v_eq = views["QF101"]
@@ -848,8 +875,9 @@ def roughin_views(doc, layout, takeoff, s):
             if q["status"] == "demo" or not q.get("item") or not q.get("bbox") \
                     or q["layer"].upper().startswith("FS-ELEC"):
                 continue
-            c = XYZ((q["bbox"][0] + q["bbox"][2]) / 2.0 * FT, (q["bbox"][1] + q["bbox"][3]) / 2.0 * FT, 0)
-            items.add(c, str(q["item"]), _side(c, room))
+            c = _centre(q)
+            w = _pt(q["roughin"]) if q.get("roughin") else None
+            items.add(c, str(q["item"]), _side(w, room, c) if w else _side(c, room), anchor=w)
         _grow_crop(v_eq, bbox, items.place())
     return [views[n] for n, _ in QF_PLANS]
 
