@@ -88,6 +88,7 @@
       "finish": "standard",
       "provisional": true
     },
-    "provisional_note": "Counter and wall lengths are placeholders (20 LF each) until measured; wall height taken as the ceiling height (VERIFY)."
+    "provisional_note": "Counter and wall lengths are placeholders (20 LF each) until measured; wall height taken as the ceiling height (VERIFY).",
+    "equipment_priced": true
   }
 }

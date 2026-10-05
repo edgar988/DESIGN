@@ -1823,8 +1823,12 @@ def interior_elevations(doc, layout, st, s):
             for q, _, _ in pairs:
                 if str(q.get("item")) not in labels:
                     labels.append(str(q.get("item")))
-            ev.Name = _unique_name(doc, type(ev), "%s - ELEVATION %d - %s WALL" % (ELEV_SHEET[0], idx + 1,
-                                                                                _compass(n)))
+            # two runs on walls facing the same way (NJ: a partition, the dish wall, the PH3 alcove all "NORTH")
+            # are told apart by the items on them
+            same = sum(1 for kk, qq in order if _compass(qq[0]["roughin_n"]) == _compass(n))
+            ev.Name = _unique_name(doc, type(ev), "%s - ELEVATION %d - %s WALL%s" % (
+                ELEV_SHEET[0], idx + 1, _compass(n),
+                " (%s)" % ", ".join(labels[:3] + (["..."] if len(labels) > 3 else [])) if same > 1 else ""))
             try:
                 ev.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(back_off + 1.0)
             except Exception:

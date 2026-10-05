@@ -56,17 +56,36 @@ def _days_only(est, n, cap):
     calendar dates. The schedule only - it does not reprice anything."""
     n, cap = max(3, n), max(n, cap)
     secs = est["sections"]
+    hrs = lambda s: (secs.get(s) or {}).get("hrs", 0.0)
     tasks = []
 
     def task(name, first, days, kind="site"):
         tasks.append({"name": name, "start": first, "end": first + days - 1, "days": days, "kind": kind})
 
-    task("Mobilize, protection%s" % (", demolition & make-safe" if "DEMOLITION" in secs else ""), 1, 1)
-    task("Electrical & plumbing rough-in", 1, n - 2)
-    if "HVAC" in secs:
-        task("HVAC: split system, line sets, crane pick", 2, max(1, n - 3))
-    task("Equipment set & final connections", n - 1, 1)
+    # the work in order, each sized by its labor hours over the days before the last (start-up and turnover);
+    # a section with no hours of its own (a lump-sum demo) rides on the mobilize day; HVAC runs with the rough-in
+    seq = [(nm, h) for nm, h in (("Demolition & make-safe", hrs("DEMOLITION")),
+                                 ("Partitions, blocking & finishes", hrs("CONSTRUCTION & FINISHES")),
+                                 ("Electrical & plumbing rough-in", hrs("ELECTRICAL") + hrs("PLUMBING")),
+                                 ("Equipment set & final connections", hrs("EQUIPMENT SET & START-UP"))) if h > 0]
+    room = max(n - 1, len(seq))
+    tot = sum(h for _, h in seq) or 1.0
+    size = [max(1, int(round(room * h / tot))) for _, h in seq]
+    while sum(size) > room and max(size) > 1:
+        size[size.index(max(size))] -= 1
+    while sum(size) < room and size:
+        size[size.index(max(size))] += 1
+    task("Mobilize, protection%s" % (", demolition & make-safe" if "DEMOLITION" in secs and not hrs("DEMOLITION")
+                                     else ""), 1, 1)
+    day = 1
+    for (nm, _), d in zip(seq, size):
+        task(nm, day, d)
+        if nm.startswith("Electrical") and "HVAC" in secs:
+            task("HVAC: split system, line sets, crane pick", day, d)
+        day += d
+    n = day
     task("Start-up, commissioning, punch list & turnover", n, 1)
+    cap = max(cap, n)
     if cap > n:
         task("Allowance (%d working days maximum)" % cap, n + 1, cap - n, "allow")
     return {"relative": True, "tasks": tasks, "site_working_days": n, "max_working_days": cap,
@@ -103,8 +122,11 @@ def build(est, store, ntp=None):
               if permits else t_sub)
     t_lead = task("Owner equipment procurement & delivery (by owner)", ntp, lead_wk * 5, "owner")
     start_site = _next_wd(_wd_add(t_perm["end"], 1))
-    if sch.get("site_days"):
-        return _days_only(est, int(sch["site_days"]), int(sch.get("max_site_days") or sch["site_days"]))
+    if not sch.get("dated"):
+        # PH quotes give working days on site, no start date (Edgar 2026-10-05); his day count when he gives
+        # one, else the labor basis, with 2 days of allowance
+        n = int(sch.get("site_days") or est["labor"]["site_days"])
+        return _days_only(est, n, int(sch.get("max_site_days") or n + 2))
     t_mob = task("Mobilize, protection & site verification", start_site, 1)
     t_demo = task("Demolition & make-safe", _wd_add(t_mob["end"], 1), days("DEMOLITION"))
     rough = max(days("ELECTRICAL", max(1, crew - 1)), days("PLUMBING", max(1, crew - 1)))
@@ -167,7 +189,11 @@ def gantt_png(sched, path, title=""):
         ax.invert_yaxis()
         ax.set_xlim(0.5, cap + 0.5)
         ax.set_xticks(range(1, cap + 1))
-        ax.set_xticklabels(["Day %d" % d for d in range(1, cap + 1)], fontsize=7)
+        if cap > 10:                        # long jobs: day numbers under a "Working day" label, not run together
+            ax.set_xticklabels([str(d) for d in range(1, cap + 1)], fontsize=7)
+            ax.set_xlabel("Working day", fontsize=7)
+        else:
+            ax.set_xticklabels(["Day %d" % d for d in range(1, cap + 1)], fontsize=7)
         ax.grid(axis="x", color="#E5E5E5", linewidth=0.6)
         ax.set_axisbelow(True)
         for sp in ("top", "right", "left"):

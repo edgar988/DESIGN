@@ -12,6 +12,13 @@
     "0": "A-WALL"
   },
   "item_numbers": "master",
+  "plan_window": [
+    100,
+    -790,
+    520,
+    -420
+  ],
+  "_plan_window_note": "The DWG has two copies of the room; Edgar 2026-10-05: use the bottom one (the one closer to TX), walls x 136-469, y -757 to -453.",
   "survey_date": "VERIFY",
   "space": "VERIFY from survey",
   "ceiling_ft": 10,
@@ -83,6 +90,7 @@
       "finish": "standard",
       "provisional": true
     },
-    "provisional_note": "Counter and wall lengths are placeholders (20 LF each) until measured; wall height taken as the ceiling height (VERIFY)."
+    "provisional_note": "Counter and wall lengths are placeholders (20 LF each) until measured; wall height taken as the ceiling height (VERIFY).",
+    "equipment_priced": true
   }
 }

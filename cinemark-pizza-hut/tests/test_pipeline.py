@@ -169,8 +169,13 @@ def test_takeoff_and_estimate_from_dxf(tmp_path):
     assert {c["item"] for c in t["circuits"]} == {"PH1", "4", "5", "PH3", "6"}
     e = em.estimate(t, store, PROG)
     assert abs(sum(e["customer_sections"].values()) - e["total"]) < 0.01
-    assert e["total"] % 100 == 0 and e["margin_pct"] > 25
-    s = sm.build(e, store)
+    # the construction rounds to $100; AEQ equipment rides on top at its master-list sell, to the cent
+    eq = e["customer_sections"].get("EQUIPMENT", 0)
+    assert round(e["total"] - eq, 2) % 100 == 0 and e["margin_pct"] > 25
+    s = sm.build(e, store)                  # PH quotes: working days on site, no dates
+    assert s["relative"] and 3 <= s["site_working_days"] <= s["max_working_days"]
+    assert s["tasks"][-1]["kind"] == "allow" or s["tasks"][-1]["end"] == s["site_working_days"]
+    s = sm.build(e, dict(store, schedule=dict(store["schedule"], dated=True)))
     assert s["turnover"] > s["site_start"] > s["ntp"]
 
 
@@ -203,7 +208,8 @@ def test_customer_text_follows_the_store_scope(tmp_path):
     for banned in ("tons added cooling", "sub-panel and feeder", "heat-load assessment", "concealed-duct"):
         assert banned not in text, banned
     assert "concession stand front counter" in text and "cased opening on either side" in text
-    assert "OWNER-FURNISHED EQUIPMENT (PH)" in text and "SUPPLIED BY AARON EQUIPMENT CO." in text
+    # AEQ's own equipment is itemized with its prices in the pricing table (Edgar), owner items listed below
+    assert "OWNER-FURNISHED EQUIPMENT (PH)" in text and "Equipment Supplied by Aaron Equipment Co." in text
 
 
 def test_rooms_from_walls_close_doors_not_open_fronts():
