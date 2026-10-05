@@ -236,9 +236,29 @@ def _type_params(fd, it, key):
                 pass
 
 
+def _footprint(g, it):
+    """A placeholder's own plan symbol (catalog plan_size_in), centred where the block is drawn: its outline
+    and corner posts, in place of the block's linework (the PH cut table drawn as a Quantum 30x30)."""
+    bx = g.get("body_bbox") or g.get("bbox") or [0, 0, 0, 0]
+    w, d = it["plan_size_in"]
+    if (bx[2] - bx[0] < bx[3] - bx[1]) != (w < d):
+        w, d = d, w                             # long side along the drawn one
+    cx, cy = (bx[0] + bx[2]) / 2.0, (bx[1] + bx[3]) / 2.0
+    x0, y0, x1, y1 = cx - w / 2.0, cy - d / 2.0, cx + w / 2.0, cy + d / 2.0
+
+    def rect(a, b, c, e):
+        return [["L", a, b, c, b], ["L", c, b, c, e], ["L", c, e, a, e], ["L", a, e, a, b]]
+    curves = rect(x0, y0, x1, y1)
+    for px, py in ((x0, y0), (x1 - 1, y0), (x0, y1 - 1), (x1 - 1, y1 - 1)):
+        curves += rect(px, py, px + 1, py + 1)
+    return {"curves": curves, "bbox": [x0, y0, x1, y1], "body_bbox": [x0, y0, x1, y1], "z": None}
+
+
 def block_family(app, doc, out_dir, key, block_name, g, it, back_local=None):
     """Make (or remake) the family for an item drawn with `block_name` and load it into doc. Returns
     (family name, note). doc must have no open transaction."""
+    if it.get("plan_size_in"):
+        g = _footprint(g, it)
     name = "AEQ_%s_%s" % (_safe(key), _safe(block_name)[:8])
     path = os.path.join(out_dir, name + ".rfa")
     fd = app.NewFamilyDocument(_rft(app, "Specialty Equipment.rft"))

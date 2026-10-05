@@ -141,8 +141,9 @@ def build_lines(takeoff, store, cost_db, rates):
     add("pl_supply_conn", pl["hw"] + pl["cw"])
     add("pl_supply_lf", pl["supply_lf"])
     add("pl_waste_conn", pl["waste"])
-    if plm.get("drain") == "wall":                # NJ: no floor cutting, waste to the existing wall drain
-        add("pl_indirect", pl["indirect"], desc="Indirect waste to the existing wall drain with air gap")
+    if plm.get("drain") in ("wall", "existing"):  # NJ / TX: no floor cutting, waste to the existing drain
+        add("pl_indirect", pl["indirect"], desc="Indirect waste to the existing %sdrain with air gap" % (
+            "wall " if plm["drain"] == "wall" else ""))
     else:
         add("pl_indirect", pl["indirect"])
     if not only:

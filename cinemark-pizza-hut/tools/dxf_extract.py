@@ -711,6 +711,145 @@ def rooms_from_walls(walls, points, gap=ROOM_GAP_IN, cell=ROOM_CELL_IN):
     return rooms
 
 
+def _loose_rects(segs, most=48.0, gap=4.0):
+    """Small closed rectangles drawn as four loose lines on a wall layer (Edgar draws the PH cut table this way
+    beside the ovens): [(x0, y0, x1, y1, [its segments])]. Every side under `most` in., the four sides'
+    ends within `gap` in. of the box's corners; or three such sides closed by a wall line."""
+    short = [s for s in segs if (s[1] - s[0]).magnitude < most]
+    hor = [s for s in short if abs(s[0].y - s[1].y) < 0.5]
+    ver = [s for s in short if abs(s[0].x - s[1].x) < 0.5]
+    out, used = [], set()
+    for i, h1 in enumerate(hor):
+        for h2 in hor[i + 1:]:
+            if id(h1) in used or id(h2) in used or abs(h1[0].y - h2[0].y) < 6:
+                continue
+            xs = sorted([h1[0].x, h1[1].x, h2[0].x, h2[1].x])
+            if xs[-1] - xs[0] > most or abs(min(h1[0].x, h1[1].x) - min(h2[0].x, h2[1].x)) > gap:
+                continue
+            x0, x1 = xs[0], xs[-1]
+            y0, y1 = sorted([h1[0].y, h2[0].y])
+            sides = [v for v in ver if id(v) not in used and min(v[0].y, v[1].y) >= y0 - gap
+                     and max(v[0].y, v[1].y) <= y1 + gap and (abs(v[0].x - x0) <= gap or abs(v[0].x - x1) <= gap)]
+            left = [v for v in sides if abs(v[0].x - x0) <= gap]
+            right = [v for v in sides if abs(v[0].x - x1) <= gap]
+            if left and right:
+                four = [h1, h2, left[0], right[0]]
+                used.update(id(s) for s in four)
+                xs = [p.x for s in four for p in s]
+                ys = [p.y for s in four for p in s]
+                out.append((min(xs), min(ys), max(xs), max(ys), four))
+    # three sides against a wall, the wall's own line the fourth (TX-093): two parallel sides of the same
+    # span, a third joining them at one end, and a long wall line within `gap` of the open end
+
+    def uv(p, flip):
+        return (p.y, p.x) if flip else (p.x, p.y)
+
+    for flip in (False, True):
+        sides = [s for s in (hor if flip else ver) if id(s) not in used]
+        ends = [s for s in (ver if flip else hor) if id(s) not in used]
+        walls = [s for s in segs if (s[1] - s[0]).magnitude >= most
+                 and abs(uv(s[0], flip)[1] - uv(s[1], flip)[1]) < 0.5]
+        for i, a in enumerate(sides):
+            for b in sides[i + 1:]:
+                if id(a) in used or id(b) in used:
+                    continue
+                ua, ub = uv(a[0], flip)[0], uv(b[0], flip)[0]
+                va, vb = sorted(uv(p, flip)[1] for p in a), sorted(uv(p, flip)[1] for p in b)
+                if not 6 <= abs(ua - ub) <= most or abs(va[0] - vb[0]) > gap or abs(va[1] - vb[1]) > gap:
+                    continue
+                u0, u1 = sorted([ua, ub])
+                lo, hi = min(va[0], vb[0]), max(va[1], vb[1])
+                for c in ends:
+                    cu, cv = sorted(uv(p, flip)[0] for p in c), uv(c[0], flip)[1]
+                    if id(c) in used or abs(cu[0] - u0) > gap or abs(cu[1] - u1) > gap:
+                        continue
+                    shut = lo if abs(cv - hi) <= gap else hi if abs(cv - lo) <= gap else None
+                    if shut is None or not any(
+                            abs(uv(w[0], flip)[1] - shut) <= gap
+                            and min(uv(p, flip)[0] for p in w) <= u0 + gap
+                            and max(uv(p, flip)[0] for p in w) >= u1 - gap for w in walls):
+                        continue
+                    three = [a, b, c]
+                    used.update(id(s) for s in three)
+                    us = [uv(p, flip)[0] for s in three for p in s]
+                    vs = [uv(p, flip)[1] for s in three for p in s] + [shut]
+                    box = (min(us), min(vs), max(us), max(vs))
+                    out.append((box[1], box[0], box[3], box[2], three) if flip else box + (three,))
+                    break
+    return out
+
+
+def _outline_frame(x0, y0, x1, y1, segs, reach=12.0):
+    """(rotation, insertion corner, world -> local) for an outline item: its back (+Y in the family) to the side
+    with a wall line (24 in. or longer, spanning it) closest outside it, within `reach` in.; else rotation 0."""
+    best = (reach, 0.0)
+    for a, b in segs:
+        if (b - a).magnitude < 24:
+            continue
+        if abs(a.y - b.y) < 0.5 and min(a.x, b.x) <= x1 and max(a.x, b.x) >= x0:
+            for gap_, rot in ((a.y - y1, 0.0), (y0 - a.y, 180.0)):
+                if -0.5 <= gap_ < best[0]:
+                    best = (gap_, rot)
+        elif abs(a.x - b.x) < 0.5 and min(a.y, b.y) <= y1 and max(a.y, b.y) >= y0:
+            for gap_, rot in ((a.x - x1, 270.0), (x0 - a.x, 90.0)):
+                if -0.5 <= gap_ < best[0]:
+                    best = (gap_, rot)
+    rot = best[1]
+    if rot == 180.0:
+        return rot, Vec2(x1, y1), lambda p: (x1 - p.x, y1 - p.y)
+    if rot == 270.0:
+        return rot, Vec2(x0, y1), lambda p: (y1 - p.y, p.x - x0)
+    if rot == 90.0:
+        return rot, Vec2(x1, y0), lambda p: (p.y - y0, x1 - p.x)
+    return rot, Vec2(x0, y0), lambda p: (p.x - x0, p.y - y0)
+
+
+def _outline_items(out, wall_segs, master):
+    """Master items Edgar draws as a plain outline, not a block (master 'outline': size range and the item it
+    stands beside): such a rectangle on a wall layer comes out of the walls and becomes that item, its
+    outline the plan symbol the Revit family is built from. Returns {geom name: linework}."""
+    specs = [it for it in (master or {}).get("items", []) if it.get("outline")]
+    if not specs:
+        return {}
+    geoms = {}
+    for status, segs in wall_segs.items():
+        for x0, y0, x1, y1, four in _loose_rects(segs):
+            w, d = sorted([x1 - x0, y1 - y0])
+            for it in specs:
+                o = it["outline"]
+                lo, hi = o["size"]
+                if not (lo <= w <= hi and lo <= d <= hi):
+                    continue
+                near = [q for q in out["equipment"] if q.get("key") == o.get("near") and q.get("bbox")]
+                if o.get("near") and not any(
+                        max(q["bbox"][0] - x1, x0 - q["bbox"][2], q["bbox"][1] - y1, y0 - q["bbox"][3], 0)
+                        <= o.get("reach_in", 72) for q in near):
+                    continue
+                for s in four:
+                    segs.remove(s)
+                # its back is the side against the nearest wall line: the insertion corner and rotation turn
+                # the outline so the family's back (+Y) is that side
+                rot, ins, loc = _outline_frame(x0, y0, x1, y1, [s for ss in wall_segs.values() for s in ss])
+                name = "OUTLINE_%s_%d_%d" % (it["item"], round(x0), round(y0))
+                curves = [["L"] + [round(v, 3) for v in loc(a) + loc(b)] for a, b in four]
+                lw, ld = (x1 - x0, y1 - y0) if rot in (0.0, 180.0) else (y1 - y0, x1 - x0)
+                lw, ld = round(lw, 3), round(ld, 3)
+                if len(four) < 4:               # its fourth side is the wall line: draw the closed outline
+                    curves = [["L", 0, 0, lw, 0], ["L", lw, 0, lw, ld], ["L", lw, ld, 0, ld], ["L", 0, ld, 0, 0]]
+                geoms[name] = {"curves": curves, "bbox": [0, 0, lw, ld], "body_bbox": [0, 0, lw, ld], "z": None,
+                               "n_faces": 0}
+                out["equipment"].append({
+                    "handle": name, "block": "outline (%s)" % it.get("model"), "layer": "0", "key": it["key"],
+                    "item": it["item"], "x": round(ins.x, 3), "y": round(ins.y, 3), "rotation": rot,
+                    "xscale": 1.0, "yscale": 1.0, "geom_block": name, "status": "new" if status != "demo" else "demo",
+                    "attribs": {}, "bbox": [x0, y0, x1, y1], "provided_by": provided_by(it["item"]),
+                    "front_offset": 0.0, "revit_rotation": rot, "master_match": "outline"})
+                out["warnings"].append("Item %s (%s) read from the rectangle drawn at (%.0f, %.0f), %.0f x %.0f in."
+                                       % (it["item"], it.get("category"), x0, y0, x1 - x0, y1 - y0))
+                break
+    return geoms
+
+
 def extract(path, store=None, catalog_path=None):
     doc = ezdxf.readfile(path)
     msp = doc.modelspace()
@@ -824,6 +963,9 @@ def extract(path, store=None, catalog_path=None):
                         out["points"].setdefault(pname, list(p))
 
     walk(msp)
+    outlines = {}
+    if (store or {}).get("item_numbers") == "master":     # the PH cut table: a rectangle, not walls
+        outlines = _outline_items(out, wall_segs, master_items.load_master())
 
     centres = [Vec2((q["bbox"][0] + q["bbox"][2]) / 2.0, (q["bbox"][1] + q["bbox"][3]) / 2.0)
                for q in out["equipment"] if q.get("bbox") and q["key"]]
@@ -839,7 +981,7 @@ def extract(path, store=None, catalog_path=None):
 
     # block linework: the body outline of every item (placement checks) and, for items with no Revit family,
     # the whole plan symbol, from which build.py makes the family
-    out["blocks"], cache = {}, {}
+    out["blocks"], cache = {}, dict(outlines)
     for q in out["equipment"]:
         if not q["key"] or q["status"] == "demo" or q["layer"].upper().startswith("FS-ELEC"):
             continue

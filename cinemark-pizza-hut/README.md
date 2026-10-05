@@ -49,7 +49,7 @@ Revit button details: `docs/REVIT_WORKFLOW.md`.
 |---|---|---|
 | GA-263 | Tinseltown USA, 134 Pavilion Pkwy, Fayetteville GA | QF101-R1 + heat load issued; calibration store |
 | TX-093 | #93 (list: Movies 17), 100 W. Nolana Loop, McAllen TX | needs DXF; confirm theatre name |
-| NJ-187 | #187 (list: Cinemark 16, Cooper Towne Center, **Somerdale** NJ) | needs DXF; Drive folder says "Somerset", confirm |
+| NJ-187 | #187 Cinemark Somerdale 16 and XD, Cooper Towne Center, Somerdale NJ (verified 2026-10-05) | bottom room copy of the DWG; folder renamed from Somerset |
 
 ## Status
 

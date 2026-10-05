@@ -24,7 +24,7 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 MASTER = os.path.join(ROOT, "config", "master_items.json")
-KEEP = ("key", "match", "size", "size_keys", "rank", "note", "stack")
+KEEP = ("key", "match", "size", "size_keys", "rank", "note", "stack", "outline")
 
 
 def _norm(s):
@@ -72,6 +72,8 @@ def refresh(xlsx, path=MASTER):
         it["provided_by"] = provided_by(it["item"])
         it.update({k: v for k, v in old.get(it["item"], {}).items() if k in KEEP})
         items.append(it)
+    have = set(it["item"] for it in items)            # items AEQ keeps that the AutoQuotes list lacks
+    items += [it for n, it in sorted(old.items()) if it.get("local") and n not in have]
     data = {"_about": (load_master(path) or {}).get("_about", [__doc__.strip().splitlines()[0]]),
             "source": os.path.basename(xlsx), "items": items}
     with open(path, "w", encoding="utf-8", newline="\n") as f:
@@ -110,8 +112,8 @@ def assign(out, store, master):
     by_no = dict((it["item"], it) for it in master["items"])
     picks, missing = {}, {}
     for q in out["equipment"]:
-        if q["status"] == "demo" or q["layer"].upper().startswith("FS-ELEC"):
-            continue
+        if q["status"] == "demo" or q["layer"].upper().startswith("FS-ELEC") or q.get("master_match") == "outline":
+            continue                            # an outline item was numbered when it was read
         if q["handle"] in over:
             hits = [(by_no[over[q["handle"]]], "override")]
         else:

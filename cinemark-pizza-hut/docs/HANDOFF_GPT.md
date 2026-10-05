@@ -33,7 +33,7 @@ Stores (store config files in `config/stores/`):
 |---|---|---|---|---|
 | GA-263 | Cinemark #263 Tinseltown USA | 134 Pavilion Parkway, Fayetteville, GA 30214 | `GA 263 FAYETTEVILLE TINSELTOWN` | drawn + priced (draft) |
 | TX-093 | Cinemark #93 Movies 17 (folder says Hollywood) | 100 W. Nolana Loop, McAllen, TX 78504 | `TX 093 MCALLEN HOLLYWOOD` | drawn + priced (draft) |
-| NJ-187 | Somerset per folder; Cinemark list says Cinemark 16, Cooper Towne Center, **Somerdale** NJ (open flag) | | `NJ 187 SOMERSET CINEMARK` | **blocked**: the DWG has two copies of the room; Edgar has not said which is the design |
+| NJ-187 | Cinemark Somerdale 16 and XD, Cooper Towne Center, Somerdale NJ (verified 2026-10-05) | | `NJ 187 SOMERDALE CINEMARK` (renamed from Somerset) | drawn from the bottom room copy (Edgar) |
 
 ---
 
@@ -255,6 +255,11 @@ His redline of TX-093 QF101 is `docs/redlines/TX-093_QF101_redline_2026-10-05.pn
   6 Atosa AUF60SD; X1 Advance FC-3-2030-24RL 3-comp sink with X1.1 WS-12-108 shelf, X1.2 T&S B-0133, X1.3 T&S B-0230-02;
   X2 existing 7-PS-65; X3 PerfectFry PFA500; PH1 Ovention C2000-SB; PH2 Traulsen G10011; PH3 Traulsen G22010;
   PH4 Traulsen UHT48-LR; PH5 Traulsen UST3212-L; PH6 Metro TWS3030SU-304B-K.
+- PH6 is the PH cut table beside the ovens (Juan's list: PHXCT30, YUM). Until PH sends its CAD block, Edgar's call
+  (2026-10-05) is to draw and schedule it as a **Quantum 30x30, 3-tier** unit marked "PLACEHOLDER - PH CAD BLOCK TBD"
+  (catalog `QUANTUM_3030_3T_PH`, 30x30 footprint centred where the item is drawn, 34" high assumed). GA has the Metro
+  block (matched by model); NJ / TX have a plain rectangle beside the ovens (master `outline`; TX's has three sides and
+  the wall line as the fourth).
 - Verified utilities (from `CINEMARK_PH_MASTER.pdf`): G10011 115/1 3.8 A 5-15P; G22010 7.6 A; Atosa AUF60SD 115/1 2.6 A
   5-15P; UST3212 7.2 A; UHT48 7.2 A; PerfectFry PFA500 208/1 24 A 5.0 kW 6-30P. Others: see `config/families.json`
   (`verified` flags) and `config/families_synced.json` (data read from the KCL families by the Revit build).
@@ -270,7 +275,7 @@ down**. Ask Edgar if ceiling height needs clarification.
   2.5 tons**; system cost to us **$7,200**, marked up appropriately. **Line sets 65 ft**; the roof **penetration already
   exists**; a **crane** is needed for the condensing unit; **new wire** to the condensing unit, new line sets, **new
   drains** for the heads. Demo about **$8,000 including dumpsters**.
-- **TX-093 McAllen and NJ-187 Somerset** (nearly identical): demo the existing **satellite concession stand**: the **back
+- **TX-093 McAllen and NJ-187 Somerdale** (nearly identical): demo the existing **satellite concession stand**: the **back
   counter** (standard cabinets) and the **front counter** (standard theater front counter) come out; erect a **wall with
   a cased (bucked) opening on either side** for employees; **standard finish**. Standard cabinets and front counters
   exist in the footprint the new layout goes into. No HVAC.

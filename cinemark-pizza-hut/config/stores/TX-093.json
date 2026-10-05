@@ -12,6 +12,13 @@
     "0": "A-WALL"
   },
   "item_numbers": "master",
+  "item_overrides": {
+    "63132": "X2"
+  },
+  "_item_overrides_note": "Edgar 2026-10-05: the hand sink on the west wall by the passage (block 63132) is existing; the one in the cook area (5EEA5) is new, by AEQ.",
+  "omit_sheets": ["QF203", "QF204", "QF401", "QF402"],
+  "_omit_sheets_note": "Edgar 2026-10-05: no ventilation, refrigeration, special conditions or wall backing sheets for TX / NJ.",
+  "views_3d": 3,
   "plan_window": [
     -60,
     -260,
@@ -32,7 +39,10 @@
     "new_water_heater": false,
     "floor_sinks": 2,
     "grease_interceptor": true,
-    "underslab_lf": 30
+    "underslab_lf": 30,
+    "drain": "existing",
+    "supply_lf_each": 10,
+    "_note": "Edgar 2026-10-05: existing water connections and drains for the new hand sink and the dishwasher (10 LF per fixture assumed)."
   },
   "hvac": {
     "none": true,

@@ -34,14 +34,14 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
 
 ## Waiting on Edgar
 - DXF exports (AutoCAD SAVEAS DXF 2018) of each store layout into its Drive store folder:
-  `GA 263 FAYETTEVILLE TINSELTOWN`, `TX 093 MCALLEN HOLLYWOOD`, `NJ 187 SOMERSET CINEMARK`. GA 263 done
+  `GA 263 FAYETTEVILLE TINSELTOWN`, `TX 093 MCALLEN HOLLYWOOD`, `NJ 187 SOMERDALE CINEMARK` (renamed from Somerset 2026-10-05). GA 263 done
   (Edgar OK'd exporting with AutoCAD here: copy the DWG to C:\AEQ\work, `accoreconsole.exe /i <dwg> /s <scr>`
   with `FILEDIA 0` / `_.DXFOUT "<dxf>" _V 2018 16` / `_.QUIT _Y`, copy the DXF to the store folder).
 - Pricing review of every `AEQ est - review` assembly in `config/cost_db.json` (HELM-anchored ones are set).
 - SSG + AEQ logo PNGs into `estimating/assets/` (ssg_logo.png, aeq_logo.png).
 
 ## Open flags (do not resolve by guessing)
-- Store #187: Cinemark list says Cinemark 16, Cooper Towne Center, **Somerdale** NJ; Drive folder says Somerset.
+- Store #187: Cinemark Somerdale 16 and XD, Cooper Towne Center, Somerdale NJ (verified 2026-10-05; folder and files renamed from Somerset).
 - Store #93: list says "Movies 17", 100 W. Nolana Loop, McAllen; folder says Hollywood.
 - Ovention C2000 and Hobart LXnR families are 208/1 types; GA specs are 208/3. Confirm site phase per store.
 - GA package items without .rfa: Beverage-Air DP60HC / WTF60AHC, True STR1R / STR2F / STA1HRI, MTI AutoFry, KLG-365, WS-12-108.

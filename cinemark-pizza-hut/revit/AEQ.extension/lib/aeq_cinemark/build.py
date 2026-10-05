@@ -176,6 +176,27 @@ def _cover_note(doc, lines):
             doc.Delete(n.Id)
 
 
+def _trim_general_notes(doc):
+    """QF002: general notes 5 on (tag format, legend colours, VERIFY log, view scales, print check) are AEQ's
+    drafting instructions, not notes for the trades - Edgar: off every drawing. So is the tag-format
+    box's font instruction. Notes 1-4 stay."""
+    legend = next((x for x in FilteredElementCollector(doc).OfClass(ViewSheet) if x.SheetNumber == "QF002"), None)
+    if legend is None:
+        return
+    internal = re.compile(r"^\s*([5-9]|1\d)\.\s|serif utility-tag font", re.I)
+    for n in list(FilteredElementCollector(doc, legend.Id).OfClass(TextNote)):
+        paras = re.split(r"\r\n?|\n", n.Text or "")
+        keep = [p for p in paras if not internal.search(p)]
+        if len(keep) == len(paras):
+            continue
+        while keep and not keep[-1].strip():
+            keep.pop()
+        if any(p.strip() for p in keep):
+            n.Text = "\r".join(keep)
+        else:
+            doc.Delete(n.Id)
+
+
 def new_store_model(app, s):
     """Create <outputs>/<store>/<store>.rvt from the AEQ 11x17 template and fill Project Information."""
     st = C.store(s)
@@ -185,7 +206,10 @@ def new_store_model(app, s):
     prog = C.read_json(os.path.join(s["repo_root"], "config", "program.json"))
     with _Tx(doc, "AEQ: project information"):
         pi = doc.ProjectInformation
-        name = "Cinemark #%d %s - Pizza Hut Kitchen" % (st["theatre_no"], st["theatre_name"].split(" (")[0])
+        # the title block holds the project name on two lines: a store with a long theatre name gives a short
+        # one for it (NJ "Somerdale 16 and XD" ran into OWNER / CLIENT - Edgar)
+        name = "Cinemark #%d %s - Pizza Hut Kitchen" % (
+            st["theatre_no"], st.get("title_name") or st["theatre_name"].split(" (")[0])
         number = "SSG-2026-CNK-PH01-%03d" % st["theatre_no"]
         _set(pi, BuiltInParameter.PROJECT_NAME, name)       # wraps to 2 lines in the AEQ title block
         _set(pi, BuiltInParameter.PROJECT_NUMBER, number)
@@ -195,6 +219,7 @@ def new_store_model(app, s):
         _set(pi, BuiltInParameter.PROJECT_STATUS, "Tier 2 Rough-In Package %s" % s.get("rev", "R0"))
         _cover_note(doc, [name, st["address"], "Owner: " + prog["customer"]["name"], "Project No. " + number,
                           "", "Drawn to AEQ foodservice drawing standards."])
+        _trim_general_notes(doc)
     path = os.path.join(C.store_out(s), "%s_PH.rvt" % s["store_id"])
     opts = SaveAsOptions()
     opts.OverwriteExistingFile = True
@@ -342,6 +367,11 @@ REMARK = {"OWNER": "BY OWNER - SET & CONNECTED BY AEQ",
           "EXISTING": "EXISTING - RELOCATE, NEW UTILITIES",
           "AEQ": "AEQ - SUPPLY & INSTALL"}
 _NOT_BODY = re.compile(r"clear|service|swing|access|zone|hidden|invisible|envelope", re.I)
+
+
+def _remark(q, it):
+    """The schedule remark: the catalog's own (a placeholder says so), else who provides the item."""
+    return it.get("remark") or REMARK.get(q.get("provided_by") or "AEQ", "")
 
 
 def _key_of(doc, inst):
@@ -584,7 +614,7 @@ def place_equipment(doc, layout, catalog, s, block_fams=None):
                     notes.append("%s %s mounted at %s in. A.F.F. (%s)" % (
                         q.get("item"), q["key"], it["mount"]["aff_in"], it["mount"].get("ref", "bottom")))
             _set(inst, BuiltInParameter.ALL_MODEL_MARK, q.get("item") or "")
-            _set(inst, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS, REMARK.get(q.get("provided_by") or "AEQ", ""))
+            _set(inst, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS, _remark(q, it))
             _set(inst, BuiltInParameter.PHASE_CREATED, nc.Id)
             placed.append((q["key"], _id_int(inst.Id)))
             made[q["handle"]] = inst
@@ -619,8 +649,7 @@ def place_equipment(doc, layout, catalog, s, block_fams=None):
                 for cid in ElementTransformUtils.CopyElement(doc, inst.Id, XYZ(0, 0, (bb[5] - bb[2]) * k)):
                     cp = doc.GetElement(cid)            # Revit blanks a copy's Mark: same item number
                     _set(cp, BuiltInParameter.ALL_MODEL_MARK, q.get("item") or "")
-                    _set(cp, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS,
-                         REMARK.get(q.get("provided_by") or "AEQ", ""))
+                    _set(cp, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS, _remark(q, items.get(q["key"], {})))
             notes.append("%s %s: %d stacked" % (q.get("item"), q["key"], int(q["stack"])))
     return placed, skipped, notes
 
@@ -785,6 +814,36 @@ def _halftone_equipment(doc, view):
             view.SetCategoryOverrides(ElementId(bic), ogs)
         except Exception:
             pass
+
+
+def _see_through(doc, view, markers):
+    """Edgar (NJ / TX review): the connection symbols behind PH2, PH5, PH4, PH1 and the fryer were missing.
+    The symbols sit at the wall face on the floor and the items stand over them, so a plan hides them. Items
+    over a symbol shown on this sheet draw see-through here (outlines kept), so the symbol reads."""
+    boxes = []
+    for m in markers:
+        bb = m.get_BoundingBox(None) if m is not None else None
+        if bb is not None:
+            boxes.append((bb.Min.X, bb.Min.Y, bb.Max.X, bb.Max.Y))
+    if not boxes:
+        return
+    ogs = OverrideGraphicSettings()
+    ogs.SetSurfaceTransparency(100)
+    for fi in FilteredElementCollector(doc).OfClass(FamilyInstance):
+        try:
+            if fi.Symbol.Family.Name.startswith("AEQ_CONN") or not (
+                    fi.get_Parameter(BuiltInParameter.ALL_MODEL_MARK).AsString() or ""):
+                continue
+            bb = fi.get_BoundingBox(None)
+        except Exception:
+            continue
+        if bb is None:
+            continue
+        if any(bb.Min.X < b[2] and bb.Max.X > b[0] and bb.Min.Y < b[3] and bb.Max.Y > b[1] for b in boxes):
+            try:
+                view.SetElementOverrides(fi.Id, ogs)
+            except Exception:
+                pass
 
 
 def _centre(q):
@@ -1692,8 +1751,9 @@ def roughin_views(doc, layout, takeoff, s):
                     insts[q["handle"]] = inst
         room = room_bbox(layout, 0.0)
         demo = any(x.get("status") == "demo" for x in (layout.get("walls") or []) + layout["equipment"])
-        for num, title in QF_PLANS:
-            if num == "QF111" and not demo:     # nothing to take out: no demolition plan (Edgar 10/05)
+        omit = set(C.store(s).get("omit_sheets") or [])     # NJ / TX: no ventilation, refrigeration, special
+        for num, title in QF_PLANS:                           # conditions or wall backing sheets (Edgar 10/05)
+            if (num == "QF111" and not demo) or num in omit:     # QF111: nothing to take out, no demo plan
                 old = _view_named(doc, ViewPlan, num + " ")
                 if old is not None:
                     doc.Delete(old.Id)
@@ -1722,6 +1782,10 @@ def roughin_views(doc, layout, takeoff, s):
                 _cut_high(v)
                 _clear_aeq_tags(doc, v)
                 _show_connections(doc, v, f_el, f_pl, num)
+                el_on, pl_on = _SHOWS.get(num, (False, False))
+                if el_on or pl_on:
+                    _see_through(doc, v, [r.get("marker") for r in rows
+                                          if r.get("marker") is not None and r["svc"].startswith("E") == el_on])
                 out.append((sheet_no, name, v, area))
         doc.Regenerate()
         for sheet_no, name, v, area in out:
@@ -1936,38 +2000,48 @@ def interior_elevations(doc, layout, st, s):
     return [ev for ev, _, _ in made]
 
 
+# the 3D kitchen from the southwest (QF502); stores with views_3d > 1 also get it from the northeast (QF503)
+# and the southeast, lower (QF504) - Edgar (NJ / TX review): a couple more renderings from other perspectives
+VIEWS_3D = [("QF502", "3D KITCHEN", (-1, -1), 25.0), ("QF503", "3D KITCHEN FROM NORTHEAST", (1, 1), 25.0),
+            ("QF504", "3D KITCHEN FROM SOUTHEAST", (1, -1), 14.0)]
+
+
 def view_3d(doc, layout, st):
     lvl = _level(doc)
     x0, y0, x1, y1 = room_bbox(layout, 12.0)
     h = (st.get("ceiling_ft") or 10.0)
+    made = []
     with _Tx(doc, "AEQ: 3D view"):
-        v = View3D.CreateIsometric(doc, _vft(doc, ViewFamily.ThreeDimensional).Id)
-        v.Name = _unique_name(doc, View3D, "%s - 3D KITCHEN" % VIEW3D_SHEET[0])
-        sb = BoundingBoxXYZ()
-        sb.Min = XYZ(x0 * FT, y0 * FT, lvl.Elevation - 0.5)
-        sb.Max = XYZ(x1 * FT, y1 * FT, lvl.Elevation + h - 1.0)    # cut below ceiling to see in
-        v.IsSectionBoxActive = True
-        v.SetSectionBox(sb)
-        eye = XYZ(x0 * FT - 20, y0 * FT - 20, lvl.Elevation + 25)
-        tgt = XYZ((x0 + x1) / 2 * FT, (y0 + y1) / 2 * FT, lvl.Elevation + 2)
-        fwd = (tgt - eye).Normalize()
-        up = fwd.CrossProduct(XYZ.BasisZ).CrossProduct(fwd).Normalize()
-        v.SetOrientation(ViewOrientation3D(eye, up, fwd))
-        v.DisplayStyle = DisplayStyle.Realistic
-        try:
-            v.get_Parameter(BuiltInParameter.VIEW_PHASE).Set(_phase(doc, "New Construction").Id)
-        except Exception:
-            pass
-        try:                                    # see the equipment through the near walls; no level heads
-            ogs = OverrideGraphicSettings()
-            ogs.SetSurfaceTransparency(50)
-            v.SetCategoryOverrides(ElementId(BuiltInCategory.OST_Walls), ogs)
-            v.SetCategoryHidden(ElementId(BuiltInCategory.OST_Levels), True)
-            v.SetCategoryHidden(ElementId(BuiltInCategory.OST_GenericModel), True)   # utility markers
-            v.AreImportCategoriesHidden = True
-        except Exception:
-            pass
-    return v
+        for num, title, (sx, sy), ez in VIEWS_3D[:max(1, int(st.get("views_3d") or 1))]:
+            v = View3D.CreateIsometric(doc, _vft(doc, ViewFamily.ThreeDimensional).Id)
+            v.Name = _unique_name(doc, View3D, "%s - %s" % (num, title))
+            sb = BoundingBoxXYZ()
+            sb.Min = XYZ(x0 * FT, y0 * FT, lvl.Elevation - 0.5)
+            sb.Max = XYZ(x1 * FT, y1 * FT, lvl.Elevation + h - 1.0)    # cut below ceiling to see in
+            v.IsSectionBoxActive = True
+            v.SetSectionBox(sb)
+            eye = XYZ((x1 if sx > 0 else x0) * FT + 20 * sx, (y1 if sy > 0 else y0) * FT + 20 * sy,
+                      lvl.Elevation + ez)
+            tgt = XYZ((x0 + x1) / 2 * FT, (y0 + y1) / 2 * FT, lvl.Elevation + 2)
+            fwd = (tgt - eye).Normalize()
+            up = fwd.CrossProduct(XYZ.BasisZ).CrossProduct(fwd).Normalize()
+            v.SetOrientation(ViewOrientation3D(eye, up, fwd))
+            v.DisplayStyle = DisplayStyle.Realistic
+            try:
+                v.get_Parameter(BuiltInParameter.VIEW_PHASE).Set(_phase(doc, "New Construction").Id)
+            except Exception:
+                pass
+            try:                                # see the equipment through the near walls; no level heads
+                ogs = OverrideGraphicSettings()
+                ogs.SetSurfaceTransparency(50)
+                v.SetCategoryOverrides(ElementId(BuiltInCategory.OST_Walls), ogs)
+                v.SetCategoryHidden(ElementId(BuiltInCategory.OST_Levels), True)
+                v.SetCategoryHidden(ElementId(BuiltInCategory.OST_GenericModel), True)   # utility markers
+                v.AreImportCategoriesHidden = True
+            except Exception:
+                pass
+            made.append(v)
+    return made[0]
 
 
 def _by_item(vs):
@@ -2353,7 +2427,9 @@ def make_sheets(doc, s):
                 _place(doc, sh, [v], s, rescale=False)
             _north_and_scale(doc, sh, v.Scale, s)
         planned = set(n[:5] for n, _, v in plans if v is not None)
-        drop = list(DROP_SHEETS) + ([SCHED_SHEET[0]] if on_plan else []) + [n for n in ("QF111",) if n not in planned]
+        omit = tuple(C.store(s).get("omit_sheets") or ())
+        drop = list(DROP_SHEETS) + ([SCHED_SHEET[0]] if on_plan else []) + [n for n in ("QF111",) + omit
+                                                                            if n not in planned]
         for num in drop:
             if num in sheets:
                 doc.Delete(sheets.pop(num).Id)
@@ -2368,10 +2444,12 @@ def make_sheets(doc, s):
                 num = "QF%03d" % (403 + gi)
                 _place(doc, sheet(num, ELEV_SHEET[1] if gi == 0 else ELEV_SHEET[1] + " (CONT.)"), grp, s,
                        rescale=False)
-        v3 = _view_named(doc, View3D, VIEW3D_SHEET[0] + " ")
-        if v3 is not None:
-            _set_scale(doc, v3, int(s.get("plan_scale", 48)))
-            _place(doc, sheet(*VIEW3D_SHEET), [v3], s)
+        for num, title, _, _ in VIEWS_3D:                   # QF502 (+ QF503 / QF504 where the store has them)
+            v3 = _view_named(doc, View3D, num + " ")
+            if v3 is not None:
+                _set_scale(doc, v3, int(s.get("plan_scale", 48)))
+                _place(doc, sheet(num, VIEW3D_SHEET[1] if num == VIEW3D_SHEET[0] else
+                                  title.replace("3D KITCHEN", "3D VIEW")), [v3], s)
         if es is not None and not on_plan:
             sh = sheet(*SCHED_SHEET)
             pt = XYZ(0.55 / 12.0, 10.25 / 12.0, 0)

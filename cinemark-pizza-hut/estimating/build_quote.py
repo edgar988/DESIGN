@@ -86,8 +86,10 @@ def section_text(sec, store, est):
                 ("s" if n_sup > 1 else ""), ("s" if n_sup > 1 else ""),
                 " from the existing supply" if (store.get("plumbing") or {}).get("supply_lf_each") else "")),
             ("pl_waste_conn", "direct waste"),
-            ("pl_indirect", "indirect waste to the existing wall drain" if (store.get("plumbing") or {}).get("drain") == "wall"
-             else "indirect waste to the %sfloor sink" % ("" if "pl_floor_sink" in asm else "existing ")),
+            ("pl_indirect", {"wall": "indirect waste to the existing wall drain",
+                             "existing": "indirect waste to the existing drain"}.get(
+                (store.get("plumbing") or {}).get("drain"),
+                "indirect waste to the %sfloor sink" % ("" if "pl_floor_sink" in asm else "existing "))),
             ("pl_floor_sink", "floor sinks with slab saw-cut and patch"),
             ("pl_grease_interceptor", "point-of-use grease interceptor"),
             ("pl_mixing_valve", "mixing valve at the hand sink"), ("pl_backflow", "dish machine backflow preventer"),

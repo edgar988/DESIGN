@@ -295,7 +295,13 @@
       "category": "Work Table, Stainless Steel Top",
       "qty": "1",
       "provided_by": "OWNER",
-      "key": "METRO_TWS3030"
+      "key": "QUANTUM_3030_3T_PH",
+      "outline": {
+        "size": [26, 38],
+        "near": "OVENTION_C2000",
+        "reach_in": 72
+      },
+      "note": "The PH cut table beside the ovens (Juan's list: PHXCT30, YUM). No PH CAD block yet, so it is drawn and scheduled as a Quantum 30x30 3-tier unit marked PLACEHOLDER (Edgar 2026-10-05: in lieu of the Metro piece). GA-263 has the Metro TWS3030 block; NJ-187 / TX-093 have a plain rectangle (outline)."
     }
   ]
 }

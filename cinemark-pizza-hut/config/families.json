@@ -815,6 +815,29 @@
       "source": "PerfectFry PFA500, CINEMARK_PH_MASTER.pdf (AutoQuotes master estimate + cut sheets) p.4 (estimate) and cut sheet p.39: 208/60/1, 5.0 kW, 24 A, NEMA 6-30P; heat duty as PFA570",
       "stack": "top"
     },
+    "QUANTUM_3030_3T_PH": {
+      "description": "Shelving Unit (Cut Table Placeholder)",
+      "mfr": "Quantum",
+      "model": "30x30, 3-TIER",
+      "rfa": null,
+      "block_aliases": [],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": false,
+      "source": "Edgar 2026-10-05: a Quantum 30x30 with 3 tiers in lieu of the Metro TWS3030, noted as a placeholder until PH sends the CAD block for their cut table (Juan's list: PHXCT30, YUM). 34 in. high assumed.",
+      "remark": "PLACEHOLDER - PH CAD BLOCK TBD",
+      "plan_size_in": [30, 30],
+      "stack": "base",
+      "height_in": 34,
+      "shape": {
+        "kind": "shelving",
+        "shelves": 3
+      }
+    },
     "METRO_TWS3030": {
       "description": "Work Table, stainless top, 30x30",
       "mfr": "Metro",
