@@ -283,8 +283,10 @@ def equipment_lines(takeoff, program):
     return L, warn
 
 
-def travel_and_supervision(lines, store, rates):
-    field_hrs = sum(l["hrs"] for l in lines)
+def travel_and_supervision(lines, store, rates, scale=None):
+    # scale: per section, the share of the build's hours Edgar's own price for it stands for (his install at a
+    # fifth of the build's means a fifth of the days on site), so travel follows his numbers
+    field_hrs = sum(l["hrs"] * (scale or {}).get(l["section"], 1.0) for l in lines)
     crew = store.get("crew_size") or rates["crew_size_default"]
     hpd = rates["hours_per_day"]
     # Edgar's day count when he gives one (GA-263: a 4 day job), else from the field hours
@@ -352,7 +354,13 @@ def estimate(takeoff, store, program=None, cost_db=None):
     if store.get("schedule", {}).get("work_window") in ("night", "after_hours", "weekend"):
         rates["labor_billed_hr"] *= 1 + rates["after_hours_premium"]   # always bill after-hours
     lines = build_lines(takeoff, store, cost_db, rates)
-    tlines, meta = travel_and_supervision(lines, store, rates)
+    ov = store.get("overrides", {}) or {}
+    built = {}
+    for l in lines:
+        built[l["section"]] = built.get(l["section"], 0.0) + l["sell"]
+    scale = dict((sec, float(val) / built[sec]) for sec, val in (ov.get("section_sell") or {}).items()
+                 if built.get(sec))
+    tlines, meta = travel_and_supervision(lines, store, rates, scale)
     lines += tlines
     warnings = []
     if (store.get("scope") or {}).get("equipment_priced"):     # AEQ's own equipment on the quote too
@@ -361,10 +369,11 @@ def estimate(takeoff, store, program=None, cost_db=None):
 
     sections = {}
     for l in lines:
-        s = sections.setdefault(l["section"], {"cost": 0.0, "sell": 0.0, "hrs": 0.0, "lines": []})
+        s = sections.setdefault(l["section"], {"cost": 0.0, "sell": 0.0, "hrs": 0.0, "hrs_plan": 0.0, "lines": []})
         s["cost"] += l["cost"]
         s["sell"] += l["sell"]
         s["hrs"] += l["hrs"]
+        s["hrs_plan"] += l["hrs"] * scale.get(l["section"], 1.0)     # the days the schedule lays out
         s["lines"].append(l)
         if l.get("fixed"):
             s["fixed"] = True

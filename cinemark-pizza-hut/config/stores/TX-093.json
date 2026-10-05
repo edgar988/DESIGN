@@ -60,7 +60,13 @@
     "permit_weeks": 4,
     "equipment_lead_weeks": 6
   },
-  "overrides": {},
+  "overrides": {
+    "_note": "Edgar 2026-10-05: install of owner equipment comes down to about GA's (almost the same work); demo up to about $8,800.",
+    "section_sell": {
+      "DEMOLITION": 8800,
+      "EQUIPMENT SET & START-UP": 3700
+    }
+  },
   "notes": [
     "AEQ holds a TX electrical license; NO TX mechanical license yet (HELM 9/2) - obtain before mini-split work or sub the HVAC."
   ],
@@ -89,6 +95,8 @@
       "provisional": true
     },
     "provisional_note": "Counter and wall lengths are placeholders (20 LF each) until measured; wall height taken as the ceiling height (VERIFY).",
-    "equipment_priced": true
+    "equipment_priced": true,
+    "plumbing_items": ["5", "1"],
+    "_plumbing_items_note": "Edgar 2026-10-05: plumbing is just the dishwasher and one new hand sink (about $3,200). TX draws two hand sinks: which one is new is still to confirm."
   }
 }

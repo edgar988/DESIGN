@@ -65,7 +65,13 @@
     "permit_weeks": 6,
     "equipment_lead_weeks": 6
   },
-  "overrides": {},
+  "overrides": {
+    "_note": "Edgar 2026-10-05: install of owner equipment comes down to about GA's (almost the same work); demo up to about $8,800.",
+    "section_sell": {
+      "DEMOLITION": 8800,
+      "EQUIPMENT SET & START-UP": 3700
+    }
+  },
   "notes": [
     "NJ: confirm licensing path (NJ requires licensed master plumber / electrical contractor of record) - local sub or NJ license before quoting firm.",
     "NJ permitting typically runs longer; 6 wk assumed."
@@ -103,6 +109,8 @@
       }
     ],
     "provisional_note": "Counter lengths are placeholders (20 LF each) until measured; wall heights taken as the ceiling height (VERIFY).",
-    "equipment_priced": true
+    "equipment_priced": true,
+    "plumbing_items": ["5", "1"],
+    "_plumbing_items_note": "Edgar 2026-10-05: plumbing is just the dishwasher and the one new hand sink (about $3,200)."
   }
 }

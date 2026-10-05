@@ -56,7 +56,7 @@ def _days_only(est, n, cap):
     calendar dates. The schedule only - it does not reprice anything."""
     n, cap = max(3, n), max(n, cap)
     secs = est["sections"]
-    hrs = lambda s: (secs.get(s) or {}).get("hrs", 0.0)
+    hrs = lambda s: (secs.get(s) or {}).get("hrs_plan", (secs.get(s) or {}).get("hrs", 0.0))
     tasks = []
 
     def task(name, first, days, kind="site"):
@@ -95,7 +95,7 @@ def _days_only(est, n, cap):
 def build(est, store, ntp=None):
     crew = est["labor"]["crew"]
     hpd = 10
-    hrs = {k: v["hrs"] for k, v in est["sections"].items()}
+    hrs = {k: v.get("hrs_plan", v["hrs"]) for k, v in est["sections"].items()}   # as Edgar's prices imply
 
     def days(sec, people=crew, minimum=1):
         return max(minimum, math.ceil(hrs.get(sec, 0) / (people * hpd)))
