@@ -109,6 +109,24 @@ DXFs are 80-125 MB.
 
 ---
 
+## 3b. Status after the redo (2026-10-05, Claude)
+
+Done and checked sheet by sheet (images), GA-263 and TX-093 rebuilt, saved to Drive (`DRAWINGS\`, `ESTIMATE\`):
+- Walls from the DWG lines exactly: collinear pieces joined, face pairs split with remainders kept, single lines
+  built as room faces off the equipment side, exact-thickness wall types (`AEQ - Wall 5-1/2"`). TX back wall back.
+- Rotation = the DWG's (plus the AQ/KCL block front convention); the wall-normal rule is gone.
+- Families made from Edgar's DWG blocks where there is no KCL family (KCL 3D mesh blocks -> real geometry with
+  coplanar faces merged; 2D AQ blocks -> his plan linework + a body). KCL families aligned body-to-body, back to the
+  wall. Fab tables 2.2 / 2.4 from blocks too (the TFSS/FSS stand-in locks its manufacturer).
+- Hand sink at 35" A.F.F. to the bowl's front rim; wall shelf provisional 60"; countertop units on the base's top.
+- Native tags: AEQ_TAG_EQUIPMENT (+ _BY_OTHERS double bubble for PH / X) from the template's Door Tag, utility key
+  tag (serif) on colour-coded connection symbols (AEQ_CONN_*), QF002 tag format (E4.1, H1.1, C1.2, D1.3).
+- Rough-in groups (connections within 2 ft on one wall) at 8" O.C., dimensioned from the nearest wall face, the
+  rest located in QF103 remarks. Plans 1/4"; kitchens too big split into area sheets (TX: QF101A / QF101B ...);
+  north arrow + graphic scale; per-wall interior elevations (QF403 / QF404); schedules one row per item.
+Open: NJ-187 (room copy), wall shelf height, DWG gaps (TX X5 bins ~4" and PH3 ~1.4" off the wall in the DWG),
+stand-in family sizes (Atosa / PerfectFry / ACP), KCL families for the items built from blocks if Edgar prefers.
+
 ## 4. What Edgar rejected on 2026-10-05, and why it happened
 
 His words: "I hate the way the tags are set up - the arrow on the leader is way too big, and the numbers don't seem to

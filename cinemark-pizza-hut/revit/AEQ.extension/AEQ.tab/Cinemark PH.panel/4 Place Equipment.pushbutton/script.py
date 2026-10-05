@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Load the catalog families, place equipment from the layout, then sync KCL data back and re-run the takeoff."""
+"""Make the AEQ tags, connection symbols and the families from Edgar's DWG blocks (items with no KCL family), place
+every item where the DWG has it, then sync KCL data back and re-run the takeoff."""
 __title__ = "4 Place\nEquipment"
 from pyrevit import forms, script
 from aeq_cinemark import config as C, build, ui

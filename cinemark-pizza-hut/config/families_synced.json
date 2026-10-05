@@ -1,474 +1,578 @@
 {
- "ADVANCE_ELAG_24x72": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase Created": "New Construction", 
-   "Phase Demolished": "None"
-  }, 
-  "revit_type": "ELAG 24x72", 
-  "elec": {
-   "phase": null
-  }, 
-  "connectors": [], 
-  "revit_family": "QF_Advance_ELAG-X_cat$2026$ELAG 24x72"
- }, 
- "ATOSA_AUF60SD": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase": "1", 
-   "Phase Demolished": "None", 
-   "Volts": "115 V", 
-   "Elec Conn Connection Height": "0' - 0\"", 
-   "Watts": "644 W", 
-   "Min Ckt Ampacity": "0 A", 
-   "Phase Created": "New Construction", 
-   "FL Amps": "6 A"
-  }, 
-  "revit_type": "UF60A_115/60/1", 
-  "elec": {
-   "kw": 0.64400000000000002, 
-   "phase": 1, 
-   "amps": 0.0, 
-   "volts": 115.0
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 7.5999999999999996
-   }
-  ], 
-  "revit_family": "QF_Hoshizaki_CRMR-CRMF_cat$2026$UF60A_115_60_1"
- }, 
- "FOLLETT_SG1650": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase Created": "New Construction", 
-   "Indirect Waste Connection Height": "0' - 6\"", 
-   "Phase Demolished": "None", 
-   "Indirect Waste Size": "1\""
-  }, 
-  "revit_type": "SG1650S-60", 
-  "elec": {
-   "phase": null
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainPiping", 
-    "system": "Sanitary", 
-    "size_in": 1.0, 
-    "z_aff_in": 6.0
-   }
-  ], 
-  "revit_family": "QF_IceBin_Follett_SG_Sngl_cat$2026$SG1650S-60"
- }, 
- "TRAULSEN_G10011": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Watermarked By": "http://revitwatermark.com", 
-   "Phase": "1", 
-   "Conn Plug NEMA": "5-15P", 
-   "Phase Demolished": "None", 
-   "Volts": "115 V", 
-   "Elec Conn Connection Height": "0' - 0\"", 
-   "Electric Connection Type": "Cord and Plug", 
-   "Phase Created": "New Construction", 
-   "FL Amps": "6 A"
-  }, 
-  "revit_type": "G10011", 
-  "elec": {
-   "phase": 1, 
-   "amps": 6.0, 
-   "nema": "5-15P", 
-   "volts": 115.0
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 44.600000000000001
-   }
-  ], 
-  "revit_family": "QF_Refg_Traulsen_Refrg_1Door_G-Series$2026$G10011"
- }, 
- "AEQ_FABSS_9630": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase Created": "New Construction", 
-   "Phase Demolished": "None"
-  }, 
-  "revit_type": "FSS 30x96", 
-  "elec": {
-   "phase": null
-  }, 
-  "connectors": [], 
-  "revit_family": "QF_Advance_FSS-FLG_cat$2026$FSS 30x96"
- }, 
- "HOBART_LXNR": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase": "1", 
-   "Cold Water RI Height": "0' - 0\"", 
-   "Waste Water Discharge Temperature": "-460 °F", 
-   "Cold Water Flow": "0 GPM", 
-   "Cold Water Connection Height": "0' - 7 1/2\"", 
-   "Volts": "208 V", 
-   "Elec Conn Connection Height": "0' - 4 5/8\"", 
-   "Cold Water Temperature Recommended": "70 °F", 
-   "Phase Created": "New Construction", 
-   "Cold Water Size": "1\"", 
-   "Indirect Waste Connection Type": "Barb Fitting with 6' Long Hose", 
-   "Phase Demolished": "None", 
-   "Watts": "6700 W", 
-   "Indirect Waste Flow": "4 GPM", 
-   "Cold Water Minimum Pressure": "15.00 psi", 
-   "Cold Water Maximum Pressure": "65.00 psi", 
-   "Min Ckt Ampacity": "40 A", 
-   "Indirect Waste Connection Height": "0' - 8 1/2\"", 
-   "Indirect Waste Size": "1\"", 
-   "BTUH": "1100.0 Btu/h", 
-   "FL Amps": "34 A"
-  }, 
-  "revit_type": "208/60/1", 
-  "elec": {
-   "kw": 6.7000000000000002, 
-   "phase": 1, 
-   "amps": 40.0, 
-   "volts": 208.0
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainPiping", 
-    "system": "DomesticColdWater", 
-    "size_in": 0.75, 
-    "z_aff_in": 5.0
-   }, 
-   {
-    "domain": "DomainPiping", 
-    "system": "Sanitary", 
-    "size_in": 0.625, 
-    "z_aff_in": 8.5
-   }, 
-   {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 4.5999999999999996
-   }
-  ], 
-  "revit_family": "QF_Hobart_LXnR-ADV_cat$2026$208_60_1"
- }, 
- "HOSHIZAKI_F2A": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase": "1", 
-   "Volts as Text": "115/60/1", 
-   "Phase Demolished": "None", 
-   "Volts": "115 V", 
-   "Elec Conn Connection Height": "0' - 0\"", 
-   "Watts": "1001 W", 
-   "Min Ckt Ampacity": "0 A", 
-   "Phase Created": "New Construction", 
-   "Conn Plug": "5-15P", 
-   "FL Amps": "9 A"
-  }, 
-  "revit_type": "F2A-FS  115V/60Hz/1Ph", 
-  "elec": {
-   "phase": 1, 
-   "volts": 115.0, 
-   "amps": 0.0, 
-   "nema": "5-15P", 
-   "kw": 1.0009999999999999
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 69.299999999999997
-   }
-  ], 
-  "revit_family": "QF_Hoshizaki_RXA-FXA_cat$2026$F2A-FS  115V_60Hz_1Ph"
- }, 
- "ADVANCE_7PS65": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Direct Waste RI Height": "0' - 0\"", 
-   "Cold Water RI Height": "0' - 0\"", 
-   "Direct Waste Size": "2\"", 
-   "Cold Water Flow": "0 GPM", 
-   "Hot Water Size": "1\"", 
-   "Cold Water Connection Height": "0' - 0\"", 
-   "Hot Water Flow": "0 GPM", 
-   "Direct Waste Flow": "0 GPM", 
-   "Phase Demolished": "None", 
-   "Hot Water Connection Height": "0' - 0\"", 
-   "Hot Water RI Height": "0' - 0\"", 
-   "Phase Created": "New Construction", 
-   "Hot Water Temperature": "110 °F", 
-   "Direct Waste Connection Height": "-0' - 6\"", 
-   "Cold Water Size": "1\""
-  }, 
-  "revit_type": "DefaultType", 
-  "elec": {
-   "phase": null
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainPiping", 
-    "system": "DomesticColdWater", 
-    "size_in": 0.5, 
-    "z_aff_in": -1.7000000000000000
-   }, 
-   {
-    "domain": "DomainPiping", 
-    "system": "DomesticHotWater", 
-    "size_in": 0.5, 
-    "z_aff_in": -1.7000000000000000
-   }, 
-   {
-    "domain": "DomainPiping", 
-    "system": "Sanitary", 
-    "size_in": 1.5, 
-    "z_aff_in": -6.4000000000000004
-   }
-  ], 
-  "revit_family": "QF_Advance_7-PS-65$2026"
- }, 
- "STS_R_RACK": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase": "1", 
-   "Cold Water RI Height": "0' - 0\"", 
-   "Cold Water Connection Height": "0' - 0\"", 
-   "Phase Demolished": "None", 
-   "Volts": "115 V", 
-   "Elec Conn Connection Height": "0' - 0\"", 
-   "Watts": "2300 W", 
-   "Cold Water Temperature Recommended": "-460 °F", 
-   "Min Ckt Ampacity": "0 A", 
-   "Phase Created": "New Construction", 
-   "Conn Plug": "NEMA 5-20P", 
-   "Cold Water Size": "1\"", 
-   "FL Amps": "20 A"
-  }, 
-  "revit_type": "DefaultType", 
-  "elec": {
-   "phase": 1, 
-   "volts": 115.0, 
-   "amps": 0.0, 
-   "nema": "NEMA 5-20P", 
-   "kw": 2.2999999999999998
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainPiping", 
-    "system": "SupplyHydronic", 
-    "size_in": 0.375, 
-    "z_aff_in": 58.0
-   }, 
-   {
-    "domain": "DomainPiping", 
-    "system": "DomesticColdWater", 
-    "size_in": 0.5, 
-    "z_aff_in": 58.0
-   }, 
-   {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 58.0
-   }
-  ], 
-  "revit_family": "QF_STS_R_Rack$2026"
- }, 
- "PERFECTFRY_PFA500": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Watermarked By": "romanogatland.com", 
-   "Phase": "1", 
-   "Conn Plug NEMA": "6-50", 
-   "Phase Demolished": "None", 
-   "Volts": "208 V", 
-   "Elec Conn Connection Height": "0' - 11\"", 
-   "Watts": "6000 W", 
-   "Electric Connection Type": "Cord & Plug", 
-   "Phase Created": "New Construction", 
-   "FL Amps": "29 A"
-  }, 
-  "revit_type": "PFA570-208V", 
-  "elec": {
-   "phase": 1, 
-   "volts": 208.0, 
-   "amps": 29.0, 
-   "nema": "6-50", 
-   "kw": 6.0
-  }, 
-  "connectors": [
-   {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 54.0
-   }
-  ], 
-  "revit_family": "QF_PerfectFryCompany_Fryer_PFAseries$2025$PFA570-208V"
- }, 
- "AEQ_FABSS_4830": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase Created": "New Construction", 
-   "Phase Demolished": "None"
-  }, 
-  "revit_type": "TFSS 30x48", 
-  "elec": {
-   "phase": null
-  }, 
-  "connectors": [], 
-  "revit_family": "QF_Advance_TFSS-TFLG_cat$2026$TFSS 30x48"
- }, 
  "ACP_MXP22TLT": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Watermarked By": "http://revitwatermark.com", 
-   "Phase": "1", 
-   "Phase Demolished": "None", 
-   "Volts": "208 V", 
-   "Elec Conn Connection Height": "0' - 6\"", 
-   "Watts": "5700 W", 
-   "Phase Created": "New Construction", 
-   "Conn Plug": "NEMA 6-30", 
-   "FL Amps": "27 A"
-  }, 
-  "revit_type": "DefaultType", 
+  "revit_type": "AEQ - ACP_MXP22TLT", 
   "elec": {
-   "phase": 1, 
-   "volts": 208.0, 
    "amps": 27.0, 
    "nema": "NEMA 6-30", 
-   "kw": 5.7000000000000002
+   "kw": 5.7000000000000002, 
+   "volts": 208.0, 
+   "phase": 1
+  }, 
+  "synced_at": "2026-10-05T08:02:52", 
+  "params": {
+   "Phase": "1", 
+   "FL Amps": "27 A", 
+   "Phase Created": "New Construction", 
+   "Elec Conn Connection Height": "0' - 6\"", 
+   "Conn Plug": "NEMA 6-30", 
+   "Phase Demolished": "None", 
+   "Volts": "208 V", 
+   "Watts": "5700 W", 
+   "Watermarked By": "http://revitwatermark.com"
   }, 
   "connectors": [
    {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 43.600000000000001
+    "z_aff_in": 35.200000000000003, 
+    "domain": "DomainElectrical"
    }
   ], 
   "revit_family": "QF_ACP_MXP22TLT$2025"
  }, 
- "OVENTION_C2000": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase": "1", 
-   "Phase Demolished": "None", 
-   "Volts": "208 V", 
-   "Elec Conn Connection Height": "0' - 0\"", 
-   "Watts": "9152 W", 
-   "Min Ckt Ampacity": "0 A", 
-   "Phase Created": "New Construction", 
-   "Conn Plug": "NEMA 6-50P", 
-   "FL Amps": "44 A"
-  }, 
-  "revit_type": "C2000_208/60/1", 
+ "HOBART_LXNR": {
+  "revit_type": "AEQ - HOBART_LXNR", 
   "elec": {
-   "phase": 1, 
+   "amps": 34.0, 
    "volts": 208.0, 
-   "amps": 0.0, 
-   "nema": "NEMA 6-50P", 
-   "kw": 9.1519999999999992
+   "kw": 6.7000000000000002, 
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Indirect Waste Size": "1\"", 
+   "Cold Water Minimum Pressure": "15.00 psi", 
+   "Phase Created": "New Construction", 
+   "Cold Water RI Height": "0' - 0\"", 
+   "Cold Water Size": "1\"", 
+   "BTUH": "1100.0 Btu/h", 
+   "Waste Water Discharge Temperature": "-460 °F", 
+   "Phase": "1", 
+   "FL Amps": "34 A", 
+   "Elec Conn Connection Height": "0' - 4 5/8\"", 
+   "Cold Water Flow": "0 GPM", 
+   "Indirect Waste Connection Type": "Barb Fitting with 6' Long Hose", 
+   "Min Ckt Ampacity": "40 A", 
+   "Volts": "208 V", 
+   "Indirect Waste Flow": "4 GPM", 
+   "Watts": "6700 W", 
+   "Cold Water Connection Height": "0' - 7 1/2\"", 
+   "Indirect Waste Connection Height": "0' - 8 1/2\"", 
+   "Phase Demolished": "None", 
+   "Cold Water Temperature Recommended": "70 °F", 
+   "Cold Water Maximum Pressure": "65.00 psi"
   }, 
   "connectors": [
    {
-    "domain": "DomainElectrical", 
-    "z_aff_in": 40.200000000000003
+    "size_in": 0.75, 
+    "system": "DomesticColdWater", 
+    "z_aff_in": 5.0, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "z_aff_in": 4.5999999999999996, 
+    "domain": "DomainElectrical"
+   }, 
+   {
+    "size_in": 0.625, 
+    "system": "Sanitary", 
+    "z_aff_in": 8.5, 
+    "domain": "DomainPiping"
    }
   ], 
-  "revit_family": "QF_OVENTION_CONVEYOR_C2000_cat$2025$C2000_208_60_1"
+  "revit_family": "QF_Hobart_LXnR-ADV_cat$2026$208_60_1"
+ }, 
+ "TABCO_FC3": {
+  "revit_type": "AEQ - TABCO_FC3", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Left Drainboard": "1' - 8\"", 
+   "Indirect Waste Flow": "0 GPM", 
+   "Phase Created": "New Construction", 
+   "Indirect Waste Connection Height": "0' - 0\"", 
+   "Waste Water Discharge Temperature": "0 °F", 
+   "Right Drainboard": "1' - 8\"", 
+   "Phase Demolished": "None", 
+   "Indirect Waste Size": "2\""
+  }, 
+  "connectors": [
+   {
+    "size_in": 2.0, 
+    "system": "Sanitary", 
+    "z_aff_in": 19.100000000000001, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "size_in": 2.0, 
+    "system": "Sanitary", 
+    "z_aff_in": 19.100000000000001, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "size_in": 2.0, 
+    "system": "Sanitary", 
+    "z_aff_in": 19.100000000000001, 
+    "domain": "DomainPiping"
+   }
+  ], 
+  "revit_family": "QF_ADVANCE_TABCO_FC_SERIES_3COMP_cat$2026$FC-3-2030-20RL"
+ }, 
+ "TS_B0133": {
+  "revit_type": "AEQ - TS_B0133", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }, 
+  "connectors": [], 
+  "revit_family": "AEQ_TS_B0133_AQSL_T_S"
+ }, 
+ "AEQ_FABSS_6036": {
+  "revit_type": "AEQ - AEQ_FABSS_6036", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }, 
+  "connectors": [], 
+  "revit_family": "AEQ_AEQ_FABSS_6036_d2c2a85d"
+ }, 
+ "TRAULSEN_UST3212": {
+  "revit_type": "AEQ - TRAULSEN_UST3212", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }, 
+  "connectors": [], 
+  "revit_family": "AEQ_TRAULSEN_UST3212_700ffe7a"
+ }, 
+ "TABCO_WS12108": {
+  "revit_type": "AEQ - TABCO_WS12108", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }, 
+  "connectors": [], 
+  "revit_family": "AEQ_TABCO_WS12108_AQSL_Adv"
  }, 
  "HOSHIZAKI_EF1A": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase": "1", 
-   "Volts as Text": "115/60/1", 
-   "Phase Demolished": "None", 
-   "Volts": "115 V", 
-   "Elec Conn Connection Height": "0' - 0\"", 
-   "Watts": "368 W", 
-   "Min Ckt Ampacity": "0 A", 
-   "Phase Created": "New Construction", 
-   "Conn Plug": "5-15P", 
-   "FL Amps": "3 A"
-  }, 
-  "revit_type": "EF1A-FS 115V/60Hz/1Ph", 
-  "elec": {
-   "phase": 1, 
-   "volts": 115.0, 
-   "amps": 0.0, 
-   "nema": "5-15P", 
-   "kw": 0.36799999999999999
-  }, 
+  "revit_family": "QF_Hoshizaki_ER-FXA-FS_cat$2026$EF1A-FS 115V_60Hz_1Ph", 
+  "revit_type": "AEQ - HOSHIZAKI_EF1A", 
+  "synced_at": "2026-10-05T08:01:22", 
   "connectors": [
    {
     "domain": "DomainElectrical", 
     "z_aff_in": 76.900000000000006
    }
   ], 
-  "revit_family": "QF_Hoshizaki_ER-FXA-FS_cat$2026$EF1A-FS 115V_60Hz_1Ph"
- }, 
- "TABCO_FC3": {
-  "synced_at": "2026-10-05T00:01:21", 
-  "params": {
-   "Phase Created": "New Construction", 
-   "Phase Demolished": "None", 
-   "Right Drainboard": "1' - 8\"", 
-   "Left Drainboard": "1' - 8\"", 
-   "Indirect Waste Size": "2\"", 
-   "Waste Water Discharge Temperature": "0 °F", 
-   "Indirect Waste Connection Height": "0' - 0\"", 
-   "Indirect Waste Flow": "0 GPM"
-  }, 
-  "revit_type": "FC-3-2030-20RL", 
   "elec": {
-   "phase": null
+   "amps": 0.0, 
+   "nema": "5-15P", 
+   "kw": 0.36799999999999999, 
+   "volts": 115.0, 
+   "phase": 1
   }, 
-  "connectors": [
-   {
-    "domain": "DomainPiping", 
-    "system": "Sanitary", 
-    "size_in": 2.0, 
-    "z_aff_in": 19.100000000000001
-   }, 
-   {
-    "domain": "DomainPiping", 
-    "system": "Sanitary", 
-    "size_in": 2.0, 
-    "z_aff_in": 19.100000000000001
-   }, 
-   {
-    "domain": "DomainPiping", 
-    "system": "Sanitary", 
-    "size_in": 2.0, 
-    "z_aff_in": 19.100000000000001
-   }
-  ], 
-  "revit_family": "QF_ADVANCE_TABCO_FC_SERIES_3COMP_cat$2026$FC-3-2030-20RL"
- }, 
- "TRAULSEN_G22010": {
-  "synced_at": "2026-10-05T00:01:21", 
   "params": {
-   "Watermarked By": "http://revitwatermark.com", 
    "Phase": "1", 
-   "Conn Plug NEMA": "5-15P", 
+   "FL Amps": "3 A", 
+   "Volts as Text": "115/60/1", 
+   "Elec Conn Connection Height": "0' - 0\"", 
+   "Phase Created": "New Construction", 
+   "Conn Plug": "5-15P", 
+   "Min Ckt Ampacity": "0 A", 
    "Phase Demolished": "None", 
    "Volts": "115 V", 
-   "Elec Conn Connection Height": "7' - 0\"", 
-   "Electric Connection Type": "Cord and Plug", 
-   "Phase Created": "New Construction", 
-   "FL Amps": "11 A"
-  }, 
-  "revit_type": "G22010", 
-  "elec": {
-   "phase": 1, 
-   "amps": 11.0, 
-   "nema": "5-15P", 
-   "volts": 115.0
-  }, 
+   "Watts": "368 W"
+  }
+ }, 
+ "STS_R_RACK": {
+  "revit_family": "QF_STS_R_Rack$2026", 
+  "revit_type": "AEQ - STS_R_RACK", 
+  "synced_at": "2026-10-05T08:01:22", 
   "connectors": [
    {
     "domain": "DomainElectrical", 
-    "z_aff_in": 44.600000000000001
+    "z_aff_in": 58.0
+   }, 
+   {
+    "size_in": 0.375, 
+    "system": "SupplyHydronic", 
+    "domain": "DomainPiping", 
+    "z_aff_in": 58.0
+   }, 
+   {
+    "size_in": 0.5, 
+    "system": "DomesticColdWater", 
+    "domain": "DomainPiping", 
+    "z_aff_in": 58.0
+   }
+  ], 
+  "elec": {
+   "amps": 0.0, 
+   "nema": "NEMA 5-20P", 
+   "kw": 2.2999999999999998, 
+   "volts": 115.0, 
+   "phase": 1
+  }, 
+  "params": {
+   "Phase": "1", 
+   "FL Amps": "20 A", 
+   "Cold Water Connection Height": "0' - 0\"", 
+   "Elec Conn Connection Height": "0' - 0\"", 
+   "Phase Created": "New Construction", 
+   "Cold Water RI Height": "0' - 0\"", 
+   "Conn Plug": "NEMA 5-20P", 
+   "Cold Water Size": "1\"", 
+   "Min Ckt Ampacity": "0 A", 
+   "Phase Demolished": "None", 
+   "Volts": "115 V", 
+   "Watts": "2300 W", 
+   "Cold Water Temperature Recommended": "-460 °F"
+  }
+ }, 
+ "TRAULSEN_G22010": {
+  "revit_type": "AEQ - TRAULSEN_G22010", 
+  "elec": {
+   "amps": 11.0, 
+   "volts": 115.0, 
+   "nema": "5-15P", 
+   "phase": 1
+  }, 
+  "synced_at": "2026-10-05T08:02:52", 
+  "params": {
+   "FL Amps": "11 A", 
+   "Phase": "1", 
+   "Elec Conn Connection Height": "7' - 0\"", 
+   "Conn Plug NEMA": "5-15P", 
+   "Electric Connection Type": "Cord and Plug", 
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None", 
+   "Volts": "115 V", 
+   "Watermarked By": "http://revitwatermark.com"
+  }, 
+  "connectors": [
+   {
+    "z_aff_in": 44.600000000000001, 
+    "domain": "DomainElectrical"
    }
   ], 
   "revit_family": "QF_Refg_Traulsen_Frz_2Door_G-Series$2026$G22010"
+ }, 
+ "TS_B023002": {
+  "revit_type": "AEQ - TS_B023002", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }, 
+  "connectors": [], 
+  "revit_family": "AEQ_TS_B023002_AQSL_T_S"
+ }, 
+ "AEQ_FABSS_9630": {
+  "revit_family": "AEQ_AEQ_FABSS_9630_46ea0d8f", 
+  "revit_type": "AEQ - AEQ_FABSS_9630", 
+  "synced_at": "2026-10-05T08:01:22", 
+  "connectors": [], 
+  "elec": {
+   "phase": null
+  }, 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }
+ }, 
+ "ATOSA_AUF60SD": {
+  "revit_type": "AEQ - ATOSA_AUF60SD", 
+  "elec": {
+   "amps": 6.0, 
+   "volts": 115.0, 
+   "kw": 0.64400000000000002, 
+   "phase": 1
+  }, 
+  "synced_at": "2026-10-05T08:02:52", 
+  "params": {
+   "Phase": "1", 
+   "FL Amps": "6 A", 
+   "Elec Conn Connection Height": "0' - 0\"", 
+   "Phase Created": "New Construction", 
+   "Min Ckt Ampacity": "0 A", 
+   "Phase Demolished": "None", 
+   "Volts": "115 V", 
+   "Watts": "644 W"
+  }, 
+  "connectors": [
+   {
+    "z_aff_in": 7.5999999999999996, 
+    "domain": "DomainElectrical"
+   }
+  ], 
+  "revit_family": "QF_Hoshizaki_CRMR-CRMF_cat$2026$UF60A_115_60_1"
+ }, 
+ "FOLLETT_SG1650": {
+  "revit_family": "QF_IceBin_Follett_SG_Sngl_cat$2026$SG1650S-60", 
+  "revit_type": "AEQ - FOLLETT_SG1650", 
+  "synced_at": "2026-10-05T08:01:22", 
+  "connectors": [
+   {
+    "size_in": 1.0, 
+    "system": "Sanitary", 
+    "domain": "DomainPiping", 
+    "z_aff_in": 6.0
+   }
+  ], 
+  "elec": {
+   "phase": null
+  }, 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Indirect Waste Connection Height": "0' - 6\"", 
+   "Phase Demolished": "None", 
+   "Indirect Waste Size": "1\""
+  }
+ }, 
+ "ADVANCE_ELAG_24x72": {
+  "revit_family": "QF_Advance_ELAG-X_cat$2026$ELAG 24x72", 
+  "revit_type": "AEQ - ADVANCE_ELAG_24x72", 
+  "synced_at": "2026-10-05T08:01:22", 
+  "connectors": [], 
+  "elec": {
+   "phase": null
+  }, 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }
+ }, 
+ "METRO_TWS3030": {
+  "revit_type": "AEQ - METRO_TWS3030", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:52", 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }, 
+  "connectors": [], 
+  "revit_family": "AEQ_METRO_TWS3030_c9a20734"
+ }, 
+ "HOSHIZAKI_F2A": {
+  "revit_family": "QF_Hoshizaki_RXA-FXA_cat$2026$F2A-FS  115V_60Hz_1Ph", 
+  "revit_type": "AEQ - HOSHIZAKI_F2A", 
+  "synced_at": "2026-10-05T08:01:22", 
+  "connectors": [
+   {
+    "domain": "DomainElectrical", 
+    "z_aff_in": 69.299999999999997
+   }
+  ], 
+  "elec": {
+   "amps": 0.0, 
+   "nema": "5-15P", 
+   "kw": 1.0009999999999999, 
+   "volts": 115.0, 
+   "phase": 1
+  }, 
+  "params": {
+   "Phase": "1", 
+   "FL Amps": "9 A", 
+   "Volts as Text": "115/60/1", 
+   "Elec Conn Connection Height": "0' - 0\"", 
+   "Phase Created": "New Construction", 
+   "Conn Plug": "5-15P", 
+   "Min Ckt Ampacity": "0 A", 
+   "Phase Demolished": "None", 
+   "Volts": "115 V", 
+   "Watts": "1001 W"
+  }
+ }, 
+ "TRAULSEN_G10011": {
+  "revit_type": "AEQ - TRAULSEN_G10011", 
+  "elec": {
+   "amps": 6.0, 
+   "volts": 115.0, 
+   "nema": "5-15P", 
+   "phase": 1
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "FL Amps": "6 A", 
+   "Phase": "1", 
+   "Elec Conn Connection Height": "0' - 0\"", 
+   "Conn Plug NEMA": "5-15P", 
+   "Electric Connection Type": "Cord and Plug", 
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None", 
+   "Volts": "115 V", 
+   "Watermarked By": "http://revitwatermark.com"
+  }, 
+  "connectors": [
+   {
+    "z_aff_in": 44.600000000000001, 
+    "domain": "DomainElectrical"
+   }
+  ], 
+  "revit_family": "QF_Refg_Traulsen_Refrg_1Door_G-Series$2026$G10011"
+ }, 
+ "PERFECTFRY_PFA500": {
+  "revit_type": "AEQ - PERFECTFRY_PFA500", 
+  "elec": {
+   "amps": 29.0, 
+   "nema": "6-50", 
+   "kw": 6.0, 
+   "volts": 208.0, 
+   "phase": 1
+  }, 
+  "synced_at": "2026-10-05T08:02:52", 
+  "params": {
+   "FL Amps": "29 A", 
+   "Phase": "1", 
+   "Elec Conn Connection Height": "0' - 11\"", 
+   "Conn Plug NEMA": "6-50", 
+   "Electric Connection Type": "Cord & Plug", 
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None", 
+   "Volts": "208 V", 
+   "Watermarked By": "romanogatland.com", 
+   "Watts": "6000 W"
+  }, 
+  "connectors": [
+   {
+    "z_aff_in": 54.600000000000001, 
+    "domain": "DomainElectrical"
+   }
+  ], 
+  "revit_family": "QF_PerfectFryCompany_Fryer_PFAseries$2025$PFA570-208V"
+ }, 
+ "TRAULSEN_UHT48": {
+  "revit_type": "AEQ - TRAULSEN_UHT48", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }, 
+  "connectors": [], 
+  "revit_family": "AEQ_TRAULSEN_UHT48_4e31fa31"
+ }, 
+ "QUANTUM_2472": {
+  "revit_family": "AEQ_QUANTUM_2472_2472GY_R", 
+  "revit_type": "AEQ - QUANTUM_2472", 
+  "synced_at": "2026-10-05T08:01:22", 
+  "connectors": [], 
+  "elec": {
+   "phase": null
+  }, 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }
+ }, 
+ "ADVANCE_7PS65": {
+  "revit_type": "AEQ - ADVANCE_7PS65", 
+  "elec": {
+   "phase": null
+  }, 
+  "synced_at": "2026-10-05T08:02:51", 
+  "params": {
+   "Hot Water Temperature": "110 °F", 
+   "Cold Water Connection Height": "0' - 0\"", 
+   "Phase Created": "New Construction", 
+   "Direct Waste Size": "2\"", 
+   "Hot Water Connection Height": "0' - 0\"", 
+   "Direct Waste Connection Height": "-0' - 6\"", 
+   "Cold Water Flow": "0 GPM", 
+   "Cold Water RI Height": "0' - 0\"", 
+   "Hot Water Size": "1\"", 
+   "Hot Water RI Height": "0' - 0\"", 
+   "Hot Water Flow": "0 GPM", 
+   "Cold Water Size": "1\"", 
+   "Phase Demolished": "None", 
+   "Direct Waste Flow": "0 GPM", 
+   "Direct Waste RI Height": "0' - 0\""
+  }, 
+  "connectors": [
+   {
+    "size_in": 0.5, 
+    "system": "DomesticHotWater", 
+    "z_aff_in": 33.299999999999997, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "size_in": 0.5, 
+    "system": "DomesticColdWater", 
+    "z_aff_in": 33.299999999999997, 
+    "domain": "DomainPiping"
+   }, 
+   {
+    "size_in": 1.5, 
+    "system": "Sanitary", 
+    "z_aff_in": 28.600000000000001, 
+    "domain": "DomainPiping"
+   }
+  ], 
+  "revit_family": "QF_Advance_7-PS-65$2026"
+ }, 
+ "OVENTION_C2000": {
+  "revit_type": "AEQ - OVENTION_C2000", 
+  "elec": {
+   "amps": 44.0, 
+   "nema": "NEMA 6-50P", 
+   "kw": 9.1519999999999992, 
+   "volts": 208.0, 
+   "phase": 1
+  }, 
+  "synced_at": "2026-10-05T08:02:52", 
+  "params": {
+   "Phase": "1", 
+   "FL Amps": "44 A", 
+   "Phase Created": "New Construction", 
+   "Elec Conn Connection Height": "0' - 0\"", 
+   "Conn Plug": "NEMA 6-50P", 
+   "Min Ckt Ampacity": "0 A", 
+   "Phase Demolished": "None", 
+   "Volts": "208 V", 
+   "Watts": "9152 W"
+  }, 
+  "connectors": [
+   {
+    "z_aff_in": 40.0, 
+    "domain": "DomainElectrical"
+   }
+  ], 
+  "revit_family": "QF_OVENTION_CONVEYOR_C2000_cat$2025$C2000_208_60_1"
+ }, 
+ "AEQ_FABSS_4830": {
+  "revit_family": "AEQ_AEQ_FABSS_4830_084f1167", 
+  "revit_type": "AEQ - AEQ_FABSS_4830", 
+  "synced_at": "2026-10-05T08:01:22", 
+  "connectors": [], 
+  "elec": {
+   "phase": null
+  }, 
+  "params": {
+   "Phase Created": "New Construction", 
+   "Phase Demolished": "None"
+  }
  }
 }

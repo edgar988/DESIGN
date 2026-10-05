@@ -52,13 +52,14 @@ def main():
     doc = app.OpenDocumentFile(rvt)
     log = []
     try:
-        dxf = os.path.join(os.path.dirname(out_drive), st.get("layout_dxf", ""))   # store Drive folder
-        if os.path.isfile(dxf):
-            build.link_dxf(doc, dxf)
+        # no DXF underlay: walls and equipment are modelled from it exactly; a linked copy only doubles lines
         log.append(("walls", build.build_walls(doc, lay, st)))
-        placed, skipped = build.place_equipment(doc, lay, C.catalog(s), s)
+        fams, notes = build.prepare_families(app, doc, lay, C.catalog(s), s)
+        log.append(("families from DWG blocks", notes))
+        placed, skipped, pnotes = build.place_equipment(doc, lay, C.catalog(s), s, fams)
         log.append(("placed", len(placed)))
         log.append(("skipped", skipped))
+        log.append(("placement", pnotes))
         log.append(("synced", build.sync_family_data(doc, C.catalog(s), s)[1]))
         build.roughin_views(doc, lay, tk, s)
         build.interior_elevations(doc, lay, st, s)

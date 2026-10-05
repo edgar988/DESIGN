@@ -164,6 +164,193 @@ def _front_offset(doc, block_name, prod):
     return 0.0
 
 
+_SKIP_GEOM = {"TEXT", "MTEXT", "ATTDEF", "ATTRIB", "HATCH", "DIMENSION", "POINT", "SOLID", "WIPEOUT", "IMAGE",
+              "MLINE", "LEADER", "MULTILEADER", "INSERT", "3DFACE", "3DSOLID", "MESH", "REGION", "BODY", "SURFACE",
+              "TRACE", "VIEWPORT", "XLINE", "RAY"}
+
+
+MESH_FACE_CAP = 60000          # faces per block; denser blocks (wire shelving) are reported and boxed
+
+
+def _merge_planar(verts, tris, tol=1e-3):
+    """Triangles -> flat polygon faces: triangles in one plane (same outward normal) are merged and their
+    outline traced, so a drawing shows the object's real edges, not its triangulation. Returns
+    [[loop, ...], ...] per face (outer loop first, holes after; points as [x, y, z]). Triangles whose plane
+    group does not trace into clean loops are kept as they are."""
+    def key(p):
+        return (round(p[0] / tol), round(p[1] / tol), round(p[2] / tol))
+
+    ids, pts = {}, []
+    for p in verts:
+        k = key(p)
+        if k not in ids:
+            ids[k] = len(pts)
+            pts.append(p)
+    remap = [ids[key(p)] for p in verts]
+    groups = {}
+    for t in tris:
+        a, b, c = (remap[i] for i in t)
+        if len({a, b, c}) < 3:
+            continue
+        pa, pb, pc = pts[a], pts[b], pts[c]
+        ux, uy, uz = pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]
+        vx, vy, vz = pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2]
+        nx, ny, nz = uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
+        m = math.sqrt(nx * nx + ny * ny + nz * nz)
+        if m < 1e-9:
+            continue
+        nx, ny, nz = nx / m, ny / m, nz / m
+        d = nx * pa[0] + ny * pa[1] + nz * pa[2]
+        groups.setdefault((round(nx, 3), round(ny, 3), round(nz, 3), round(d, 2)), []).append((a, b, c))
+    faces = []
+    for (nx, ny, nz, _), ts in groups.items():
+        edges = {}
+        for a, b, c in ts:
+            for e in ((a, b), (b, c), (c, a)):
+                edges[e] = edges.get(e, 0) + 1
+        border = [e for e in edges if (e[1], e[0]) not in edges]
+        nxt = {}
+        clean = True
+        for a, b in border:
+            if a in nxt:
+                clean = False
+                break
+            nxt[a] = b
+        loops = []
+        while clean and nxt:
+            start = next(iter(nxt))
+            loop, cur = [start], nxt.pop(start)
+            while cur != start:
+                if cur not in nxt:
+                    clean = False
+                    break
+                loop.append(cur)
+                cur = nxt.pop(cur)
+            if len(loop) >= 3:
+                loops.append(loop)
+        if not clean or not loops:
+            faces.extend([[[pts[i] for i in t]] for t in ts])
+            continue
+        # 2D in the plane: outer loops run counter-clockwise about the normal, holes clockwise
+        ax = max(range(3), key=lambda i: abs((nx, ny, nz)[i]))
+        i0, i1 = [i for i in range(3) if i != ax]
+        sgn = 1.0 if (nx, ny, nz)[ax] > 0 else -1.0
+        if ax == 1:
+            sgn = -sgn
+
+        def area(lp):
+            return sgn * 0.5 * sum(pts[lp[k]][i0] * pts[lp[(k + 1) % len(lp)]][i1]
+                                   - pts[lp[(k + 1) % len(lp)]][i0] * pts[lp[k]][i1] for k in range(len(lp)))
+
+        def inside(p, lp):
+            x, y, hit = p[i0], p[i1], False
+            for k in range(len(lp)):
+                a, b = pts[lp[k]], pts[lp[(k + 1) % len(lp)]]
+                if (a[i1] > y) != (b[i1] > y) and x < (b[i0] - a[i0]) * (y - a[i1]) / (b[i1] - a[i1]) + a[i0]:
+                    hit = not hit
+            return hit
+
+        outers = [lp for lp in loops if area(lp) > 0]
+        holes = [lp for lp in loops if area(lp) <= 0]
+        if not outers:
+            faces.extend([[[pts[i] for i in t]] for t in ts])
+            continue
+        own = dict((id(o), []) for o in outers)
+        for h in holes:
+            host = next((o for o in outers if inside(pts[h[0]], o)), None)
+            if host is None:
+                clean = False
+                break
+            own[id(host)].append(h)
+        if not clean:
+            faces.extend([[[pts[i] for i in t]] for t in ts])
+            continue
+        for o in outers:
+            faces.append([[pts[i] for i in lp] for lp in [o] + own[id(o)]])
+    return faces
+
+
+def block_linework(doc, name, scale=1.0, flat=0.05):
+    """A block's geometry in its own coordinates (inches, relative to the block base point), nested blocks
+    expanded. 2D: [["L", x1, y1, x2, y2] | ["P", [[x, y], ...], is_arc]] (arcs, circles, ellipses, splines
+    and 2D polylines flattened to `flat` in). 3D (KCL blocks are polyface meshes): "meshes" =
+    [{"v": [[x, y, z], ...], "f": [[i, j, k], ...]}] triangulated. Also the plan outline box of everything,
+    of the 'body' (no arcs: door swings are arcs) and the 3D box. Revit families are built from this when
+    there is no KCL family, so plan, elevations and 3D show Edgar's block exactly, origin = base point."""
+    from ezdxf import disassemble, path as _path
+    from ezdxf.render import MeshBuilder
+    blk = doc.blocks.get(name)
+    if blk is None:
+        return None
+    bp = blk.block.dxf.base_point
+    curves, meshes, nfaces = [], [], 0
+
+    def tri(face):
+        return [[face[0], face[k], face[k + 1]] for k in range(1, len(face) - 1)]
+
+    for e in disassemble.recursive_decompose(blk):
+        t = e.dxftype()
+        mb = None
+        try:
+            if t == "POLYLINE" and (e.is_poly_face_mesh or e.is_polygon_mesh):
+                mb = MeshBuilder.from_polyface(e)
+            elif t == "MESH":
+                mb = MeshBuilder.from_mesh(e)
+            elif t == "3DFACE":
+                vs = [e.dxf.vtx0, e.dxf.vtx1, e.dxf.vtx2, e.dxf.vtx3]
+                if (vs[3] - vs[2]).magnitude < 1e-6:
+                    vs = vs[:3]
+                mb = MeshBuilder()
+                mb.add_face(vs)
+        except Exception:
+            mb = None
+        if mb is not None:
+            v = [[round((p.x - bp.x) * scale, 3), round((p.y - bp.y) * scale, 3), round((p.z - bp.z) * scale, 3)]
+                 for p in mb.vertices]
+            f = [t3 for face in mb.faces if len(face) >= 3 for t3 in tri(list(face))]
+            if v and f:
+                nfaces += len(f)
+                meshes.append({"v": v, "f": f})
+            continue
+        if t in _SKIP_GEOM:
+            continue
+        try:
+            if t == "LINE":
+                s, en = e.dxf.start, e.dxf.end
+                if abs(s.z - en.z) > 1e-6 or (s - en).magnitude < 1e-3:
+                    continue
+                curves.append(["L", (s.x - bp.x) * scale, (s.y - bp.y) * scale,
+                               (en.x - bp.x) * scale, (en.y - bp.y) * scale])
+                continue
+            p = _path.make_path(e)
+            pts = [((v.x - bp.x) * scale, (v.y - bp.y) * scale) for v in p.flattening(flat / max(scale, 1e-9))]
+        except Exception:
+            continue
+        if len(pts) >= 2:
+            curves.append(["P", [[round(x, 3), round(y, 3)] for x, y in pts], t in ("ARC", "CIRCLE", "ELLIPSE")])
+    if not curves and not meshes:
+        return None
+
+    def box(sel, ms=()):
+        xs = [v for c in sel for v in ((c[1], c[3]) if c[0] == "L" else [p[0] for p in c[1]])]
+        ys = [v for c in sel for v in ((c[2], c[4]) if c[0] == "L" else [p[1] for p in c[1]])]
+        xs += [p[0] for m in ms for p in m["v"]]
+        ys += [p[1] for m in ms for p in m["v"]]
+        return [round(min(xs), 3), round(min(ys), 3), round(max(xs), 3), round(max(ys), 3)] if xs else None
+
+    curves = [[c[0]] + [round(v, 3) for v in c[1:]] if c[0] == "L" else c for c in curves]
+    zs = [p[2] for m in meshes for p in m["v"]]
+    out = {"curves": curves, "bbox": box(curves, meshes),
+           "body_bbox": (box([], meshes) if meshes else None)
+           or box([c for c in curves if not (c[0] == "P" and c[2])]) or box(curves),
+           "z": [round(min(zs), 3), round(max(zs), 3)] if zs else None, "n_faces": nfaces}
+    if nfaces <= MESH_FACE_CAP:
+        # one merged face list per mesh piece (a door, a lid, a body panel): its real edges, not triangles
+        out["solids"] = [_merge_planar(m["v"], m["f"]) for m in meshes]
+        out["n_merged_faces"] = sum(len(s) for s in out["solids"])
+    return out
+
+
 def _hyperlink_product(e):
     """KCL blocks carry an AutoCAD hyperlink (their hover text): 'PDF Cutsheet for (Traulsen)-G10011'."""
     if not e.has_xdata("PE_URL"):
@@ -200,50 +387,117 @@ def _segments(entity, scale):
                 yield (a, b)
 
 
-def pair_walls(segs, status):
-    """Pair parallel faces into wall centerlines. Returns list of wall dicts."""
-    used = [False] * len(segs)
-    walls = []
-    for i, (a1, b1) in enumerate(segs):
+def _merge_collinear(segs, tol=0.25):
+    """Join pieces of one line (overlapping or touching collinear segments) so a wall drawn in pieces
+    is one wall."""
+    segs = [(a, b) for a, b in segs if (b - a).magnitude >= 0.5]
+    out, used = [], [False] * len(segs)
+    for i, (a, b) in enumerate(segs):
         if used[i]:
             continue
-        d1 = b1 - a1
-        L1 = d1.magnitude
-        if L1 < 1:
-            continue
-        u = d1.normalize()
+        u = (b - a).normalize()
         n = Vec2(-u.y, u.x)
+        lo, hi = 0.0, (b - a).magnitude
+        grew = True
+        while grew:
+            grew = False
+            for j, (c, d) in enumerate(segs):
+                if used[j] or j == i:
+                    continue
+                v = d - c
+                if abs(u.x * v.y - u.y * v.x) > tol * v.magnitude / 12.0 + 1e-9 or \
+                        abs((c - a).dot(n)) > tol or abs((d - a).dot(n)) > tol:
+                    continue
+                t0, t1 = sorted([(c - a).dot(u), (d - a).dot(u)])
+                if t0 <= hi + tol and t1 >= lo - tol:
+                    lo, hi = min(lo, t0), max(hi, t1)
+                    used[j] = grew = True
+        used[i] = True
+        out.append((a + u * lo, a + u * hi))
+    return out
+
+
+def _wall_face_side(a, b, centres, reach=72.0):
+    """For a wall drawn as one line (a room face): the unit normal pointing away from the room, i.e. away
+    from the side with the equipment. Ties go away from the middle of all the equipment."""
+    u = (b - a).normalize()
+    n = Vec2(-u.y, u.x)
+    L = (b - a).magnitude
+    score = 0.0
+    for c in centres:
+        t = (c - a).dot(u)
+        d = (c - a).dot(n)
+        if -12.0 <= t <= L + 12.0 and 0.5 < abs(d) <= reach:
+            score += 1.0 if d > 0 else -1.0
+    if score == 0 and centres:
+        mid = Vec2(sum(c.x for c in centres) / len(centres), sum(c.y for c in centres) / len(centres))
+        score = (mid - a).dot(n)
+    return -n if score > 0 else n
+
+
+def pair_walls(segs, status, centres=()):
+    """Walls from the drawn lines. Parallel lines 2"-14" apart are the two faces of a wall: the wall runs
+    where they overlap and whatever is left of either line goes back to be paired again or stand alone. A
+    line with no partner is a room face: a default-thickness wall built on the far side of it from the
+    equipment (so the face stays where it is drawn). Returns wall dicts (centerline, thickness)."""
+    pool = _merge_collinear(segs)
+    walls = []
+    while True:
         best = None
-        for j in range(i + 1, len(segs)):
-            if used[j]:
+        for i in range(len(pool)):
+            a1, b1 = pool[i]
+            L1 = (b1 - a1).magnitude
+            if L1 < 1:
                 continue
-            a2, b2 = segs[j]
-            d2 = b2 - a2
-            if d2.magnitude < 1:
+            u = (b1 - a1).normalize()
+            n = Vec2(-u.y, u.x)
+            for j in range(i + 1, len(pool)):
+                a2, b2 = pool[j]
+                d2 = b2 - a2
+                if d2.magnitude < 1:
+                    continue
+                ang = abs(math.atan2(u.x * d2.y - u.y * d2.x, u.dot(d2)))
+                if min(ang, math.pi - ang) > ANGLE_TOL:
+                    continue
+                off = (a2 - a1).dot(n)
+                if not (PAIR_MIN <= abs(off) <= PAIR_MAX):
+                    continue
+                t2a, t2b = sorted([(a2 - a1).dot(u), (b2 - a1).dot(u)])
+                lo, hi = max(0.0, t2a), min(L1, t2b)
+                if hi - lo < 3.0:
+                    continue
+                rank = (round(abs(off), 1), -(hi - lo))
+                if best is None or rank < best[0]:
+                    best = (rank, i, j, off, lo, hi)
+        if best is None:
+            break
+        _, i, j, off, lo, hi = best
+        a1, b1 = pool[i]
+        a2, b2 = pool[j]
+        u = (b1 - a1).normalize()
+        n = Vec2(-u.y, u.x)
+        mid = n * (off / 2.0)
+        walls.append({"start": list(a1 + u * lo + mid), "end": list(a1 + u * hi + mid),
+                      "thickness": round(abs(off), 3), "status": status, "paired": True})
+        rest = []
+        for k, (a, b) in enumerate(pool):
+            if k not in (i, j):
+                rest.append((a, b))
                 continue
-            ang = abs(math.atan2(u.x * d2.y - u.y * d2.x, u.dot(d2)))
-            ang = min(ang, math.pi - ang)
-            if ang > ANGLE_TOL:
-                continue
-            off = (a2 - a1).dot(n)
-            if not (PAIR_MIN <= abs(off) <= PAIR_MAX):
-                continue
-            t2a, t2b = sorted([(a2 - a1).dot(u), (b2 - a1).dot(u)])
-            lo, hi = max(0.0, t2a), min(L1, t2b)
-            if hi - lo < 0.5 * min(L1, t2b - t2a):
-                continue
-            if best is None or abs(off) < abs(best[1]):
-                best = (j, off, lo, hi)
-        if best:
-            j, off, lo, hi = best
-            used[i] = used[j] = True
-            mid = n * (off / 2.0)
-            walls.append({"start": list(a1 + u * lo + mid), "end": list(a1 + u * hi + mid),
-                          "thickness": round(abs(off), 3), "status": status, "paired": True})
-    for i, (a, b) in enumerate(segs):
-        if not used[i] and (b - a).magnitude >= 12:
-            walls.append({"start": list(a), "end": list(b), "thickness": DEFAULT_WALL_THK,
-                          "status": status, "paired": False})
+            # the parts of this line beyond the overlap [lo, hi] (measured along line i)
+            ta, tb = (a - a1).dot(u), (b - a1).dot(u)
+            s0, s1 = min(ta, tb), max(ta, tb)
+            base = a - u * ta                   # the line's point at t = 0 along u
+            for p0, p1 in ((s0, min(s1, lo)), (max(s0, hi), s1)):
+                if p1 - p0 >= 1.0:
+                    rest.append((base + u * p0, base + u * p1))
+        pool = rest
+    for a, b in pool:
+        if (b - a).magnitude >= 6.0:
+            out_n = _wall_face_side(a, b, list(centres))
+            off = out_n * (DEFAULT_WALL_THK / 2.0)
+            walls.append({"start": list(a + off), "end": list(b + off), "thickness": DEFAULT_WALL_THK,
+                          "status": status, "paired": False, "face": [list(a), list(b)]})
     return walls
 
 
@@ -260,11 +514,12 @@ def _pt_seg(p, a, e):
     return (p - (a + d * t)).magnitude
 
 
-def wall_behind(q, walls):
+def wall_behind(q, walls, back=None):
     """The wall an item backs onto, as (rough-in point, unit normal from the wall into the room), inches.
     Rough-ins are ~90% of the time on that wall (Edgar): the item's centre projected onto its room face.
-    The wall behind runs along the item's width (AutoQuotes width says which way that is); without AQ
-    data, the nearest wall in reach. None when no wall is within reach (island / floor items)."""
+    With `back` (the item's back direction as drawn) the wall must lie behind the item and run across
+    that direction; otherwise the wall along the item's width (AutoQuotes width), else the nearest wall in
+    reach. None when no wall is within reach (island / floor items)."""
     b = q.get("bbox") or [q["x"], q["y"], q["x"], q["y"]]
     c = Vec2((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0)
     along = None
@@ -284,7 +539,12 @@ def wall_behind(q, walls):
         if gap > ROUGHIN_REACH:
             continue
         u = (e - a).normalize()
-        score = (along is not None and abs(u.dot(along)) < 0.9, _pt_seg(c, a, e))
+        if back is not None:
+            foot = a + u * max(0.0, min((e - a).magnitude, (c - a).dot(u)))
+            behind = (foot - c).dot(back) > 0 and abs(u.dot(back)) < 0.3
+            score = (not behind, _pt_seg(c, a, e))
+        else:
+            score = (along is not None and abs(u.dot(along)) < 0.9, _pt_seg(c, a, e))
         if best is None or score < best[0]:
             best = (score, a, e, w["thickness"])
     if best is None:
@@ -523,14 +783,16 @@ def extract(path, store=None, catalog_path=None):
                        "item": ((prod or {}).get("item") or attribs.get("ITEM") or attribs.get("ITEMNO")
                                 or attribs.get("TAG")),
                        "x": round(ins.x, 3), "y": round(ins.y, 3), "rotation": round(rot, 3),
-                       "xscale": e.dxf.get("xscale", 1.0), "status": status,
+                       "xscale": e.dxf.get("xscale", 1.0), "yscale": e.dxf.get("yscale", 1.0),
+                       "geom_block": e.dxf.name, "status": status,
                        "attribs": attribs, "bbox": bbox}
                 if prod:
                     rec["aq"] = prod
                 elif link:
                     rec["kcl"] = link
                 rec["provided_by"] = provided_by(rec["item"])
-                rec["revit_rotation"] = round(rot + _front_offset(doc, e.dxf.name, prod), 3)
+                rec["front_offset"] = _front_offset(doc, e.dxf.name, prod)
+                rec["revit_rotation"] = round(rot + rec["front_offset"], 3)
                 if key is None:
                     out["unmatched"].setdefault(bname, 0)
                     out["unmatched"][bname] += 1
@@ -560,8 +822,10 @@ def extract(path, store=None, catalog_path=None):
 
     walk(msp)
 
+    centres = [Vec2((q["bbox"][0] + q["bbox"][2]) / 2.0, (q["bbox"][1] + q["bbox"][3]) / 2.0)
+               for q in out["equipment"] if q.get("bbox") and q["key"]]
     for status, segs in wall_segs.items():
-        out["walls"].extend(pair_walls(segs, status))
+        out["walls"].extend(pair_walls(segs, status, centres))
 
     _tag_items_from_text(out)
     if (store or {}).get("item_numbers") == "master":     # PH program: numbers from the master list
@@ -570,13 +834,34 @@ def extract(path, store=None, catalog_path=None):
             from_master(out, store, master)
     stack(out, items)
 
+    # block linework: the body outline of every item (placement checks) and, for items with no Revit family,
+    # the whole plan symbol, from which build.py makes the family
+    out["blocks"], cache = {}, {}
+    for q in out["equipment"]:
+        if not q["key"] or q["status"] == "demo" or q["layer"].upper().startswith("FS-ELEC"):
+            continue
+        if q["geom_block"] not in cache:
+            cache[q["geom_block"]] = block_linework(doc, q["geom_block"], scale)
+        g = cache[q["geom_block"]]
+        if g:
+            q["body_local"] = g["body_bbox"]
+            q["body_z"] = g["z"]
+            if not items.get(q["key"], {}).get("rfa"):
+                out["blocks"][q["geom_block"]] = g
+
     live = [w for w in out["walls"] if w["status"] != "demo"]
     for q in out["equipment"]:
         if q["key"] and q["status"] != "demo":
-            hit = wall_behind(q, live)
+            # the drawing's rotation is the truth (Edgar): revit_rotation = block rotation + the block's
+            # front convention, never a wall's. The rough-in goes on the wall behind the item's back.
+            r = math.radians(q["revit_rotation"])
+            back = Vec2(-math.sin(r), math.cos(r))          # family back (+Y) turned by the rotation
+            hit = wall_behind(q, live, back)
             q["roughin"] = hit[0] if hit else None
-            if hit:     # back to its wall, front into the room: how the drawing has it, whatever the block's axes
-                q["revit_rotation"] = round((math.degrees(math.atan2(hit[1][1], hit[1][0])) + 90.0) % 360.0, 3)
+            q["roughin_n"] = hit[1] if hit else None         # unit normal from that wall into the room
+            if hit and Vec2(hit[1]).dot(back) > 0.7:          # wall normal points the way the back does
+                out["warnings"].append("Item %s %s at (%.0f, %.0f) has its front against a wall as drawn: "
+                                       "check its rotation in the DWG." % (q.get("item"), q["key"], q["x"], q["y"]))
     out["items"] = item_table(out)
     check_package(out, store)
     stacked = {}

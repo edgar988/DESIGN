@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Link the survey DXF as an underlay and build existing / demo / new walls by phase."""
+"""Build existing / demo / new walls by phase, exactly on the faces drawn in the DWG (no DXF underlay: it only
+doubles the lines)."""
 __title__ = "3 Walls &\nUnderlay"
 from pyrevit import forms, script
 from aeq_cinemark import config as C, build, ui

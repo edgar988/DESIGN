@@ -162,7 +162,12 @@
       "gas": null,
       "heat": null,
       "verified": false,
-      "source": "Typical; confirm from family connectors"
+      "source": "Typical; confirm from family connectors",
+      "mount": {
+        "ref": "bowl_front_rim",
+        "aff_in": 35.0,
+        "source": "Edgar 2026-10-05: 35 in. AFF to the front edge of the bowl"
+      }
     },
     "HOSHIZAKI_UR48B": {
       "description": "Undercounter Refrigerator, 48 in.",
@@ -677,7 +682,17 @@
       "source": "No utilities; needs in-wall blocking",
       "used_in": [
         "GA-263"
-      ]
+      ],
+      "mount": {
+        "ref": "bottom",
+        "aff_in": 60.0,
+        "provisional": true,
+        "source": "provisional 60 in. AFF to the underside; asked Edgar 2026-10-05"
+      },
+      "shape": {
+        "kind": "shelf",
+        "thick_in": 1.5
+      }
     },
     "ATOSA_AUF60SD": {
       "description": "Undercounter Freezer, reach-in, 60 in.",
@@ -817,7 +832,13 @@
       "verified": true,
       "source": "No utilities",
       "stack": "base",
-      "height_in": 34
+      "height_in": 34,
+      "shape": {
+        "kind": "table",
+        "top_in": 34.0,
+        "splash_in": 2.0,
+        "source": "Metro cut sheet: 34-39 in. adjustable, 2 in. backsplash"
+      }
     },
     "ADVANCE_TFSS_365": {
       "description": "Work Table, stainless top, 36x60",
@@ -907,7 +928,17 @@
       "gas": null,
       "heat": null,
       "verified": true,
-      "source": "No utilities of its own: the sink's HW/CW rough-in serves it"
+      "source": "No utilities of its own: the sink's HW/CW rough-in serves it",
+      "mount": {
+        "ref": "bottom",
+        "aff_in": 44.0,
+        "provisional": true,
+        "source": "wall-mount faucet over the sink splash, provisional; follows the sink"
+      },
+      "shape": {
+        "kind": "box",
+        "height_in": 6.0
+      }
     },
     "TS_B023002": {
       "description": "Wall / Splash Mount Faucet",
@@ -924,7 +955,17 @@
       "gas": null,
       "heat": null,
       "verified": true,
-      "source": "No utilities of its own: the sink's HW/CW rough-in serves it"
+      "source": "No utilities of its own: the sink's HW/CW rough-in serves it",
+      "mount": {
+        "ref": "bottom",
+        "aff_in": 44.0,
+        "provisional": true,
+        "source": "wall-mount faucet over the sink splash, provisional; follows the sink"
+      },
+      "shape": {
+        "kind": "box",
+        "height_in": 6.0
+      }
     },
     "AEQ_FABSS_6036": {
       "description": "Work Table, stainless, 60x36 with 5 in. backsplash (AEQ fabricated)",
@@ -947,7 +988,7 @@
       "description": "Work Table, stainless, 48x30 with 5 in. backsplash (AEQ fabricated)",
       "mfr": "Aaron Equipment Co",
       "model": "FABSS 48x30",
-      "rfa": "QF_Advance_TFSS-TFLG_cat$2026$TFSS 30x48.rfa",
+      "rfa": null,
       "block_aliases": [],
       "category": "nonutility",
       "install": "set",
@@ -956,10 +997,11 @@
       "gas": null,
       "heat": null,
       "verified": true,
-      "source": "No utilities",
+      "source": "No utilities; Revit family built from the DWG block (the KCL TFSS/FSS family is only a stand-in and locks its manufacturer)",
       "rfa_note": "Advance TFSS 30x48 family as the same-size stand-in.",
       "stack": "base",
-      "height_in": 34
+      "height_in": 34,
+      "standin_rfa": "QF_Advance_TFSS-TFLG_cat$2026$TFSS 30x48.rfa"
     },
     "AEQ_FABSS_7230": {
       "description": "Work Table, stainless, 72x30 with 5 in. backsplash (AEQ fabricated)",
@@ -982,7 +1024,7 @@
       "description": "Work Table, stainless, 96x30 with 5 in. backsplash (AEQ fabricated)",
       "mfr": "Aaron Equipment Co",
       "model": "FABSS 96x30",
-      "rfa": "QF_Advance_FSS-FLG_cat$2026$FSS 30x96.rfa",
+      "rfa": null,
       "block_aliases": [],
       "category": "nonutility",
       "install": "set",
@@ -991,10 +1033,11 @@
       "gas": null,
       "heat": null,
       "verified": true,
-      "source": "No utilities",
+      "source": "No utilities; Revit family built from the DWG block (the KCL TFSS/FSS family is only a stand-in and locks its manufacturer)",
       "rfa_note": "Advance FSS 30x96 family as the same-size stand-in.",
       "stack": "base",
-      "height_in": 34
+      "height_in": 34,
+      "standin_rfa": "QF_Advance_FSS-FLG_cat$2026$FSS 30x96.rfa"
     },
     "AEQ_FABSS_8430": {
       "description": "Work Table, stainless, 84x30 with 5 in. backsplash (AEQ fabricated)",
@@ -1029,7 +1072,11 @@
       "heat": null,
       "verified": true,
       "source": "No utilities",
-      "height_in": 74
+      "height_in": 74,
+      "shape": {
+        "kind": "shelving",
+        "shelves": 4
+      }
     }
   }
 }

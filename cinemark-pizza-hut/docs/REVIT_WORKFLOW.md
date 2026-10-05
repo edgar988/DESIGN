@@ -58,4 +58,17 @@ Runs clean end to end: model, 13 walls, 4 families placed, KCL data synced, 17-s
 - [ ] The "photoreal render" is a realistic-style 3D export. Revit's API cannot drive the renderer; for a
       true render use Revit Render / Enscape on the QF502 view (saved camera + section box are set up).
 
+## Redo after Edgar's review, 2026-10-05
+
+Edgar rejected the first set (text-note tags, missing walls, crooked equipment in walls, hand sink on the floor,
+placeholder boxes). Rebuilt; see `docs/HANDOFF_GPT.md` 3b for the full list. In short:
+- [x] Walls exactly on the DWG faces (single-line walls kept and built off the room); no DXF underlay.
+- [x] Equipment at the DWG insertion + rotation; families from Edgar's blocks (`families.py`) when KCL has none.
+- [x] Hand sink rim at 35" A.F.F. (catalog `mount`); plan cut at 7'-0" so wall shelves show.
+- [x] Native AEQ tags (equipment bubble / by-others double bubble / serif utility key), QF002 tag format,
+      colour-coded connection symbols shown only on their trade's sheets, rough-in dimensions from wall faces.
+- [x] 1/4" plans, area sheets when the kitchen doesn't fit, north arrow + graphic scale, per-wall elevations.
+- [ ] Elevation rough-in heights shown graphically (now only in QF103 / A.F.F. column).
+- [ ] Key plan on area sheets; QF102 schedule also on QF101 where it fits (Edgar's R1 layout).
+
 Report anything that breaks: the fix goes into `lib/aeq_cinemark/build.py` once and holds for all stores.

@@ -216,6 +216,31 @@ def test_rooms_from_walls_close_doors_not_open_fronts():
     assert abs(rooms[0]["area_sf"] - inner) < 0.05 * inner
 
 
+def test_walls_keep_unpaired_runs_and_build_single_lines_off_the_room():
+    """TX-093's back wall: a long single line paired with a short parallel one over part of its length. The
+    overlap is a wall, the rest of the long line is NOT dropped (Edgar: 'WALL MISSING'), and a single line is
+    a room face: the wall body goes on the side away from the equipment."""
+    from ezdxf.math import Vec2
+    segs = [(Vec2(162.5, 63.9), Vec2(531.9, 63.9)), (Vec2(463.2, 74.6), Vec2(531.9, 74.6))]
+    walls = dxf_extract.pair_walls(segs, "exist", [Vec2(300, 40)])          # equipment below the line
+    paired = [w for w in walls if w["paired"]]
+    single = [w for w in walls if not w["paired"]]
+    assert len(paired) == 1 and abs(paired[0]["thickness"] - 10.7) < 0.05
+    assert len(single) == 1
+    s = single[0]
+    assert abs(min(s["start"][0], s["end"][0]) - 162.5) < 0.1 and abs(max(s["start"][0], s["end"][0]) - 463.2) < 0.1
+    assert s["start"][1] > 63.9                                             # body above the face, away from the room
+
+
+def test_merged_mesh_faces_drop_the_triangulation():
+    """A KCL block's box drawn as triangles comes back as 6 rectangles (its real edges)."""
+    v = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
+    quads = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
+    tris = [t for q in quads for t in ([q[0], q[1], q[2]], [q[0], q[2], q[3]])]
+    faces = dxf_extract._merge_planar(v, tris)
+    assert len(faces) == 6 and all(len(f) == 1 and len(f[0]) == 4 for f in faces)
+
+
 def test_schedule_skips_holidays():
     import datetime as dt
     h = sm.holidays(2026)
