@@ -262,7 +262,9 @@ def build(store, catalog, program, layout=None):
                 k = "indirect" if p.get("indirect") else "waste"
                 q_pl[k] += qty
                 mine[k] += qty
-            if water and loc:
+            if (store.get("plumbing") or {}).get("supply_lf_each"):    # an existing supply right there (NJ)
+                lf = float(store["plumbing"]["supply_lf_each"])
+            elif water and loc:
                 lf = manhattan_ft(water, loc) * rt["plumbing_factor"] + rt["plumbing_vertical_ft"]
             elif ref and loc:               # source taken ~40 ft away like the panel until one is drawn
                 lf = (rt.get("water_distance_ft", 20) + manhattan_ft(ref, loc) * rt["plumbing_factor"]

@@ -95,8 +95,16 @@ def build_lines(takeoff, store, cost_db, rates):
     if wall.get("lf"):                            # TX / NJ: wall across the old stand front
         h = wall.get("height_ft") or q["ceiling_ft"]
         add("con_partition", wall["lf"], "new wall, %s ft high" % h)
-        add("con_wall_finish", round(wall["lf"] * h * 2), "both sides")
+        faces = [wall.get("inside"), wall.get("outside")]
+        if any(faces):                            # NJ (Edgar): FRP on the kitchen side, painted outside
+            add("con_wall_finish", round(wall["lf"] * h * sum(1 for f in faces if f and f != "frp")),
+                "painted face(s) of the new wall")
+            add("con_frp", round(wall["lf"] * h * sum(1 for f in faces if f == "frp")), "new wall, kitchen side")
+        else:
+            add("con_wall_finish", round(wall["lf"] * h * 2), "both sides")
         add("con_cased_opening", wall.get("cased_openings", 0), "staff pass-through each side")
+    for w in scope.get("frp_walls") or []:        # existing walls Edgar has covered in FRP (NJ north wall)
+        add("con_frp", round(w["lf"] * (w.get("height_ft") or q["ceiling_ft"])), w.get("name", ""))
 
     # ELECTRICAL
     if es.get("new_subpanel", True):
@@ -133,7 +141,10 @@ def build_lines(takeoff, store, cost_db, rates):
     add("pl_supply_conn", pl["hw"] + pl["cw"])
     add("pl_supply_lf", pl["supply_lf"])
     add("pl_waste_conn", pl["waste"])
-    add("pl_indirect", pl["indirect"])
+    if plm.get("drain") == "wall":                # NJ: no floor cutting, waste to the existing wall drain
+        add("pl_indirect", pl["indirect"], desc="Indirect waste to the existing wall drain with air gap")
+    else:
+        add("pl_indirect", pl["indirect"])
     if not only:
         add("pl_floor_sink", plm.get("floor_sinks", 0))
         add("pl_underslab_lf", plm.get("underslab_lf", 0))

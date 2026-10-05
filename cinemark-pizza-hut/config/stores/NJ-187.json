@@ -1,7 +1,8 @@
 {
   "store_id": "NJ-187",
   "theatre_no": 187,
-  "theatre_name": "Cinemark 16 (folder: Somerset - list says SOMERDALE, VERIFY)",
+  "theatre_name": "Somerdale 16 and XD",
+  "_theatre_name_note": "Verified 2026-10-05 (web): Cinemark Somerdale 16 and XD, 711 Evesham Road, Somerdale NJ 08083. The Drive folder says Somerset; Cinemark's Somerset County theatre is a different one (Watchung).",
   "slug": "187-SOMERDALE",
   "address": "Cooper Towne Center, 711 Evesham, Somerdale, NJ 08083",
   "state": "NJ",
@@ -31,9 +32,12 @@
   "plumbing": {
     "hot_water_source": "VERIFY",
     "new_water_heater": false,
-    "floor_sinks": 2,
+    "floor_sinks": 0,
     "grease_interceptor": true,
-    "underslab_lf": 30
+    "underslab_lf": 0,
+    "drain": "wall",
+    "supply_lf_each": 10,
+    "_note": "Edgar 2026-10-05: no floor cutting - waste routes to the existing wall drain; water from the existing supply close by (10 LF per fixture assumed)."
   },
   "hvac": {
     "none": true,
@@ -84,13 +88,21 @@
       "provisional": true
     },
     "new_wall": {
-      "lf": 20,
+      "lf": 17.9,
       "height_ft": null,
       "cased_openings": 2,
-      "finish": "standard",
-      "provisional": true
+      "inside": "frp",
+      "outside": "paint",
+      "_note": "Edgar 2026-10-05: the south wall as drawn is the new wall at its actual length (DWG 174-389 in = 17.9 LF, a cased opening at each end); FRP on its north (kitchen) face, painted on its south face."
     },
-    "provisional_note": "Counter and wall lengths are placeholders (20 LF each) until measured; wall height taken as the ceiling height (VERIFY).",
+    "frp_walls": [
+      {
+        "name": "north wall",
+        "lf": 27.3,
+        "_note": "Edgar 2026-10-05: north wall covered in FRP, as drawn: dish wall 193 in + PH3 alcove 135 in. Full ceiling height."
+      }
+    ],
+    "provisional_note": "Counter lengths are placeholders (20 LF each) until measured; wall heights taken as the ceiling height (VERIFY).",
     "equipment_priced": true
   }
 }

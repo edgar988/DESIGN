@@ -1541,6 +1541,7 @@ def _dimension_runs(doc, view, runs, dim_type):
     from Autodesk.Revit.DB import ReferenceArray, FamilyInstanceReferenceType
     faces = {"X": None, "Y": None}
     made = 0
+    dims = []
     for side, wall_line, line, pts in runs:
         axis = "X" if side in ("N", "S") else "Y"
         if faces[axis] is None:
@@ -1576,13 +1577,56 @@ def _dimension_runs(doc, view, runs, dim_type):
               else Line.CreateBound(XYZ(line, lo, 0), XYZ(line, hi, 0)))
         try:
             if dim_type is not None:
-                doc.Create.NewDimension(view, ln, ra, dim_type)
+                dims.append(doc.Create.NewDimension(view, ln, ra, dim_type))
             else:
-                doc.Create.NewDimension(view, ln, ra)
+                dims.append(doc.Create.NewDimension(view, ln, ra))
             made += 1
         except Exception:
             pass
+    doc.Regenerate()
+    for d in dims:
+        _declutter(d, view)
     return made
+
+
+def _declutter(dim, view, char_in=0.065, height_in=0.11):
+    """Edgar: stack the dimensions so they don't run into each other. Going along the string, a figure that
+    would overlap the one before it on its side of the line flips to the other side (the drafter's zig-zag);
+    if that side is taken too, it slides along the line past its neighbour."""
+    try:
+        segs = [s for s in dim.Segments if s.IsTextPositionAdjustable()]
+        crv = dim.Curve
+        d, p0 = crv.Direction.Normalize(), crv.Origin
+    except Exception:
+        return
+    if len(segs) < 2:
+        return
+    sc = view.Scale
+    cw, th, gap = char_in / 12.0 * sc, height_in / 12.0 * sc, 0.04 / 12.0 * sc
+    nrm = XYZ(-d.Y, d.X, 0)
+    # where Revit sets a figure that fits: just off the line on one side. Revit throws one that does not fit
+    # somewhere far off, so every figure starts again from its own segment's midpoint
+    offs = sorted((s.TextPosition - s.Origin).DotProduct(nrm) for s in segs)
+    near = [o for o in offs if abs(o) < 2.0 * th] or [th * 0.6]
+    side = 1.0 if sorted(near)[len(near) // 2] >= 0 else -1.0
+    s0 = sorted(abs(o) for o in near)[len(near) // 2]
+    taken = {1: [], -1: []}
+    for sg in segs:
+        mid = sg.Origin
+        w = len((sg.ValueString or "").strip()) * cw
+        along = (mid - p0).DotProduct(d)
+        lo, hi = along - w / 2.0 - gap, along + w / 2.0 + gap
+        hit = lambda k: [s for s in taken[k] if lo < s[1] and hi > s[0]]
+        if not hit(1):
+            sg.TextPosition = mid + nrm.Multiply(side * s0)
+            taken[1].append((lo, hi))
+        elif not hit(-1):                       # the drafter's zig-zag: under the line
+            sg.TextPosition = mid - nrm.Multiply(side * (s0 + th))
+            taken[-1].append((lo, hi))
+        else:                                   # both sides taken: slide along past the neighbour
+            shift = max(s[1] for s in hit(1)) - lo
+            sg.TextPosition = mid + nrm.Multiply(side * s0) + d.Multiply(shift)
+            taken[1].append((lo + shift, hi + shift))
 
 
 def _dim_type(doc):
@@ -1604,11 +1648,12 @@ def _dim_type(doc):
         p = t.LookupParameter("Tick Mark")
         if tick is not None and p is not None and not p.IsReadOnly:
             p.Set(tick.Id)
-        try:                                    # 10" not 0'-10" (as on the Davie FL set), nearest 1/8"
+        try:                                    # 10" not 0'-10" (as on the Davie FL set)
             from Autodesk.Revit.DB import FormatOptions, UnitTypeId
             fo = FormatOptions(UnitTypeId.FeetFractionalInches)
-            fo.Accuracy = 1.0 / 96.0
-            for prop in ("SuppressZeroFeet", "SuppressLeadingZeros"):
+            fo.Accuracy = 1.0 / 12.0            # whole inches, as on the Davie FL rough-in plans
+            # 2'-7 1/8" not 2' - 7 1/8": short figures so neighbouring segments don't run into each other
+            for prop in ("SuppressZeroFeet", "SuppressLeadingZeros", "SuppressSpaces"):
                 if hasattr(fo, prop):
                     setattr(fo, prop, True)
             t.SetUnitsFormatOptions(fo)
@@ -1660,7 +1705,11 @@ def roughin_views(doc, layout, takeoff, s):
                 else:
                     v = doc.GetElement(base.Duplicate(ViewDuplicateOption.Duplicate))
                 sheet_no = num + (letters[k] if multi else "")
+                # the title block's sheet title holds two lines: "FOODSERVICE EQUIPMENT PLAN - AREA A" spilled
+                # onto a third over the sheet number, so a long area title abbreviates EQUIPMENT
                 name = title + (" - AREA %s" % letters[k] if multi else "")
+                if multi and len(name) > 30:
+                    name = name.replace("EQUIPMENT", "EQUIP.")
                 v.Name = _unique_name(doc, ViewPlan, "%s - %s" % (sheet_no, name)) if multi else v.Name
                 if v.ViewTemplateId != ElementId.InvalidElementId:
                     # take the AEQ view template's settings, then let go of it: each area plan keeps its

@@ -82,9 +82,12 @@ def section_text(sec, store, est):
     if sec == "PLUMBING":
         n_sup = sum(l["qty"] for l in est["sections"][sec]["lines"] if l.get("assembly") == "pl_supply_conn")
         parts = [t for k, t in (
-            ("pl_supply_conn", "water supply connection%s with shutoff%s" % (("s", "s") if n_sup > 1 else ("", ""))),
+            ("pl_supply_conn", "water supply connection%s with shutoff%s%s" % (
+                ("s" if n_sup > 1 else ""), ("s" if n_sup > 1 else ""),
+                " from the existing supply" if (store.get("plumbing") or {}).get("supply_lf_each") else "")),
             ("pl_waste_conn", "direct waste"),
-            ("pl_indirect", "indirect waste to the %sfloor sink" % ("" if "pl_floor_sink" in asm else "existing ")),
+            ("pl_indirect", "indirect waste to the existing wall drain" if (store.get("plumbing") or {}).get("drain") == "wall"
+             else "indirect waste to the %sfloor sink" % ("" if "pl_floor_sink" in asm else "existing ")),
             ("pl_floor_sink", "floor sinks with slab saw-cut and patch"),
             ("pl_grease_interceptor", "point-of-use grease interceptor"),
             ("pl_mixing_valve", "mixing valve at the hand sink"), ("pl_backflow", "dish machine backflow preventer"),
@@ -116,16 +119,22 @@ def section_text(sec, store, est):
         return out
     if sec == "CONSTRUCTION & FINISHES":
         out = []
+        wall = scope.get("new_wall") or {}
+        faced = bool(wall.get("inside") or wall.get("outside"))
+        frp_walls = [w.get("name") for w in scope.get("frp_walls") or [] if w.get("name")]
         if "con_cased_opening" in asm:
-            out.append("New partition wall with a cased opening on either side for staff to pass in and out; "
-                       "standard finish.")
+            out.append("New partition wall with a cased opening on either side for staff to pass in and out; %s." % (
+                "FRP on the kitchen side, painted on the outside" if faced else "standard finish"))
         elif "con_partition" in asm:
             out.append("New partitions per the layout.")
+        if frp_walls:
+            out.append("FRP wall panels on the %s." % " and ".join(frp_walls))
         if "con_blocking" in asm:
             out.append("In-wall blocking for wall-hung sinks and shelving.")
         fin = [t for k, t in (("con_frp", "FRP wall panels"), ("con_act_washable", "washable lay-in ceiling"),
                               ("con_floor_quarry", "sanitary flooring"), ("con_floor_epoxy", "sanitary flooring"),
-                              ("con_cove_base", "cove base")) if k in asm]
+                              ("con_cove_base", "cove base")) if k in asm
+               and not (k == "con_frp" and (faced or frp_walls))]      # already said where the FRP goes
         if fin:
             fin = sorted(set(fin), key=fin.index)
             out.append("Kitchen finishes: %s." % (", ".join(fin[:-1]) + " and " + fin[-1] if len(fin) > 1 else fin[0]))
