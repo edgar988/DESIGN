@@ -79,6 +79,28 @@ def build(est, store, ntp=None):
               if permits else t_sub)
     t_lead = task("Owner equipment procurement & delivery (by owner)", ntp, lead_wk * 5, "owner")
     start_site = _next_wd(_wd_add(t_perm["end"], 1))
+    if sch.get("site_days"):
+        # Edgar's day count (GA-263: "a 4 day job"): a rough-in trip, then the set trip once the owner's
+        # equipment is in; the first trip takes the larger half
+        n2 = max(1, int(sch["site_days"]) // 2)
+        n1 = max(1, int(sch["site_days"]) - n2)
+        work = ["mobilize", "demolition" if "DEMOLITION" in est["sections"] else "",
+                "electrical & plumbing rough-in", "HVAC" if "HVAC" in est["sections"] else ""]
+        work = [w for w in work if w]
+        name = ", ".join(work[:-1]) + " and " + work[-1]
+        t1 = task(name[0].upper() + name[1:], start_site, n1)
+        after = t1
+        if permits:
+            after = task("Rough-in inspections (AHJ)", _wd_add(t1["end"], 1), 2, "insp")
+        t2 = task("Equipment set, final connections, start-up, punch list & turnover",
+                  max(_wd_add(after["end"], 1), _next_wd(t_lead["end"] + dt.timedelta(days=1))), n2)
+        task("Final inspections & health department" if permits else "Health department (by owner)",
+             _wd_add(t2["end"], 1), 3 if permits else 1, "insp")
+        return {"ntp": ntp, "site_start": start_site, "turnover": t2["end"], "tasks": tasks,
+                "site_working_days": n1 + n2,
+                "calendar_weeks": round(((t2["end"] - ntp).days + 1) / 7.0, 1),
+                "note": "Two trips: rough-in, then equipment set once the owner's equipment is delivered "
+                        "(%d wk lead assumed)." % lead_wk}
     t_mob = task("Mobilize, protection & site verification", start_site, 1)
     t_demo = task("Demolition & make-safe", _wd_add(t_mob["end"], 1), days("DEMOLITION"))
     rough = max(days("ELECTRICAL", max(1, crew - 1)), days("PLUMBING", max(1, crew - 1)))

@@ -267,7 +267,8 @@ def travel_and_supervision(lines, store, rates):
     field_hrs = sum(l["hrs"] for l in lines)
     crew = store.get("crew_size") or rates["crew_size_default"]
     hpd = rates["hours_per_day"]
-    site_days = max(4, math.ceil(field_hrs / (crew * hpd)))
+    # Edgar's day count when he gives one (GA-263: a 4 day job), else from the field hours
+    site_days = (store.get("schedule") or {}).get("site_days") or max(4, math.ceil(field_hrs / (crew * hpd)))
     tr = store.get("travel", {})
     miles = tr.get("one_way_miles", 0)
     rooms = math.ceil(crew / rates.get("crew_per_room", 1))

@@ -73,8 +73,14 @@
   "schedule": {
     "work_window": "day",
     "permit_weeks": 3,
-    "equipment_lead_weeks": 6
+    "equipment_lead_weeks": 6,
+    "site_days": 4,
+    "_site_days_note": "Edgar 2026-10-05: a 4 day job on site (rough-in trip + equipment set trip)."
   },
+  "item_overrides": {
+    "197D": "X2"
+  },
+  "_item_overrides_note": "Edgar 2026-10-05: the hand sink (block 197D, 7-PS-65) is existing - X2, not new item 1.",
   "overrides": {
     "_note": "Edgar's quote review 2026-10-05: these section sells are the customer's numbers. Electrical held at the R0 figure.",
     "section_sell": {
