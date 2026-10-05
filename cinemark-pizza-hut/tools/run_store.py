@@ -78,8 +78,12 @@ def run(store_id, dxf=None, rev="R0", ntp=None, outdir=None, today=None):
         print("  %-28s %12s" % (sec, "${:,.0f}".format(e["customer_sections"][sec])))
     print("  %-28s %12s   (true cost ${:,.0f}, margin %.1f%%, %s)".format(e["true_cost"]) % (
         "TOTAL", "${:,.0f}".format(e["total"]), e["margin_pct"], e["markup_check"]))
-    print("  schedule: on site %s, turnover %s (%d site days)" % (
-        s["site_start"], s["turnover"], s["site_working_days"]))
+    if s.get("relative"):
+        print("  schedule: %d working days on site, %d maximum (no dates)" % (
+            s["site_working_days"], s["max_working_days"]))
+    else:
+        print("  schedule: on site %s, turnover %s (%d site days)" % (
+            s["site_start"], s["turnover"], s["site_working_days"]))
     if t["unverified"]:
         print("  UNVERIFIED (sync family data before issuing):", ", ".join(t["unverified"]))
     print("  ->", pdf)

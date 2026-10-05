@@ -75,7 +75,8 @@
     "permit_weeks": 3,
     "equipment_lead_weeks": 6,
     "site_days": 4,
-    "_site_days_note": "Edgar 2026-10-05: a 4 day job on site (rough-in trip + equipment set trip)."
+    "max_site_days": 6,
+    "_site_days_note": "Edgar 2026-10-05: literally a 4 day job, no more than 6 working days; no start date on the quote."
   },
   "item_overrides": {
     "197D": "X2"

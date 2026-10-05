@@ -70,8 +70,9 @@ def section_text(sec, store, est):
     hv = store.get("hvac") or {}
     permits = scope.get("permits", True)
     if sec == "GENERAL CONDITIONS":
-        out = ["Mobilization for rough-in and for equipment set / finish; protection of adjacent theatre areas, "
-               "dust barriers and walk-off mats."]
+        trips = sum(l["qty"] for l in est["sections"][sec]["lines"] if l.get("assembly") == "gc_mobilize")
+        out = ["Mobilization %s; protection of adjacent theatre areas, dust barriers and walk-off mats." % (
+            "of crew, tools and equipment (one trip)" if trips == 1 else "for rough-in and for equipment set / finish")]
         tail = [t for k, t in (("gc_permit_allow", "permits and inspections (allowance)"),
                                ("gc_dumpster", "debris removal"), ("gc_final_clean", "final construction clean"))
                 if k in asm]
@@ -304,12 +305,18 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
     s.append(CondPageBreak(3.2 * inch))
     s.append(Paragraph("SCHEDULE", Q.sechead))
     permits = (store.get("scope") or {}).get("permits", True)
-    s.append(Paragraph("Notice to proceed %s · on site %s · turnover %s · about %d working days on "
-                       "site, %.1f calendar weeks overall. %s Dates move with %sowner equipment "
-                       "delivery." % (_fmt_date(sched["ntp"]), _fmt_date(sched["site_start"]),
-                                      _fmt_date(sched["turnover"]), sched["site_working_days"],
-                                      sched["calendar_weeks"], sched["note"],
-                                      "permit issue and " if permits else ""), Q.base))
+    if sched.get("relative"):               # Edgar's day count, no dates
+        s.append(Paragraph(" ".join(x for x in (
+            "About %d working days on site, %d working days maximum." % (sched["site_working_days"],
+                                                                         sched["max_working_days"]),
+            sched["note"], "Start date to be scheduled with Cinemark.") if x), Q.base))
+    else:
+        s.append(Paragraph("Notice to proceed %s · on site %s · turnover %s · about %d working days on "
+                           "site, %.1f calendar weeks overall. %s Dates move with %sowner equipment "
+                           "delivery." % (_fmt_date(sched["ntp"]), _fmt_date(sched["site_start"]),
+                                          _fmt_date(sched["turnover"]), sched["site_working_days"],
+                                          sched["calendar_weeks"], sched["note"],
+                                          "permit issue and " if permits else ""), Q.base))
     if gantt_png and os.path.exists(gantt_png):
         from PIL import Image as PILImage
         iw, ih = PILImage.open(gantt_png).size

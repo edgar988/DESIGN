@@ -50,6 +50,29 @@ def _next_wd(d):
     return d
 
 
+def _days_only(est, n, cap):
+    """Edgar's day count (GA-263: "literally only 4 days ... no more than 6 working days", no start date): the
+    site work laid out by working day, Day 1 to Day n, with the days up to the cap shown as allowance. No
+    calendar dates. The schedule only - it does not reprice anything."""
+    n, cap = max(3, n), max(n, cap)
+    secs = est["sections"]
+    tasks = []
+
+    def task(name, first, days, kind="site"):
+        tasks.append({"name": name, "start": first, "end": first + days - 1, "days": days, "kind": kind})
+
+    task("Mobilize, protection%s" % (", demolition & make-safe" if "DEMOLITION" in secs else ""), 1, 1)
+    task("Electrical & plumbing rough-in", 1, n - 2)
+    if "HVAC" in secs:
+        task("HVAC: split system, line sets, crane pick", 2, max(1, n - 3))
+    task("Equipment set & final connections", n - 1, 1)
+    task("Start-up, commissioning, punch list & turnover", n, 1)
+    if cap > n:
+        task("Allowance (%d working days maximum)" % cap, n + 1, cap - n, "allow")
+    return {"relative": True, "tasks": tasks, "site_working_days": n, "max_working_days": cap,
+            "ntp": None, "site_start": None, "turnover": None, "calendar_weeks": None, "note": ""}
+
+
 def build(est, store, ntp=None):
     crew = est["labor"]["crew"]
     hpd = 10
@@ -80,27 +103,7 @@ def build(est, store, ntp=None):
     t_lead = task("Owner equipment procurement & delivery (by owner)", ntp, lead_wk * 5, "owner")
     start_site = _next_wd(_wd_add(t_perm["end"], 1))
     if sch.get("site_days"):
-        # Edgar's day count (GA-263: "a 4 day job"): a rough-in trip, then the set trip once the owner's
-        # equipment is in; the first trip takes the larger half
-        n2 = max(1, int(sch["site_days"]) // 2)
-        n1 = max(1, int(sch["site_days"]) - n2)
-        work = ["mobilize", "demolition" if "DEMOLITION" in est["sections"] else "",
-                "electrical & plumbing rough-in", "HVAC" if "HVAC" in est["sections"] else ""]
-        work = [w for w in work if w]
-        name = ", ".join(work[:-1]) + " and " + work[-1]
-        t1 = task(name[0].upper() + name[1:], start_site, n1)
-        after = t1
-        if permits:
-            after = task("Rough-in inspections (AHJ)", _wd_add(t1["end"], 1), 2, "insp")
-        t2 = task("Equipment set, final connections, start-up, punch list & turnover",
-                  max(_wd_add(after["end"], 1), _next_wd(t_lead["end"] + dt.timedelta(days=1))), n2)
-        task("Final inspections & health department" if permits else "Health department (by owner)",
-             _wd_add(t2["end"], 1), 3 if permits else 1, "insp")
-        return {"ntp": ntp, "site_start": start_site, "turnover": t2["end"], "tasks": tasks,
-                "site_working_days": n1 + n2,
-                "calendar_weeks": round(((t2["end"] - ntp).days + 1) / 7.0, 1),
-                "note": "Two trips: rough-in, then equipment set once the owner's equipment is delivered "
-                        "(%d wk lead assumed)." % lead_wk}
+        return _days_only(est, int(sch["site_days"]), int(sch.get("max_site_days") or sch["site_days"]))
     t_mob = task("Mobilize, protection & site verification", start_site, 1)
     t_demo = task("Demolition & make-safe", _wd_add(t_mob["end"], 1), days("DEMOLITION"))
     rough = max(days("ELECTRICAL", max(1, crew - 1)), days("PLUMBING", max(1, crew - 1)))
@@ -150,8 +153,33 @@ def gantt_png(sched, path, title=""):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
 
-    colors = {"pre": "#8A8F98", "owner": "#C9CDD3", "site": "#C1121F", "insp": "#222222"}
+    colors = {"pre": "#8A8F98", "owner": "#C9CDD3", "site": "#C1121F", "insp": "#222222", "allow": "#E8C4C7"}
     tasks = sched["tasks"]
+    if sched.get("relative"):               # working days, no dates
+        cap = sched["max_working_days"]
+        fig, ax = plt.subplots(figsize=(10, 0.36 * len(tasks) + 1.0), dpi=160)
+        for i, t in enumerate(tasks):
+            ax.barh(i, t["days"], left=t["start"] - 0.5, height=0.55, color=colors.get(t["kind"], "#C1121F"),
+                    edgecolor="none")
+        ax.set_yticks(range(len(tasks)))
+        ax.set_yticklabels([t["name"] for t in tasks], fontsize=7.5)
+        ax.invert_yaxis()
+        ax.set_xlim(0.5, cap + 0.5)
+        ax.set_xticks(range(1, cap + 1))
+        ax.set_xticklabels(["Day %d" % d for d in range(1, cap + 1)], fontsize=7)
+        ax.grid(axis="x", color="#E5E5E5", linewidth=0.6)
+        ax.set_axisbelow(True)
+        for sp in ("top", "right", "left"):
+            ax.spines[sp].set_visible(False)
+        ax.tick_params(axis="y", length=0)
+        from matplotlib.patches import Patch
+        ax.legend(handles=[Patch(color=colors["site"], label="Site work (SSG)"),
+                           Patch(color=colors["allow"], label="Allowance")],
+                  fontsize=6.5, loc="upper right", frameon=False, ncol=2)
+        fig.tight_layout()
+        fig.savefig(path, bbox_inches="tight")
+        plt.close(fig)
+        return path
     fig, ax = plt.subplots(figsize=(10, 0.36 * len(tasks) + 1.2), dpi=160)
     for i, t in enumerate(tasks):
         s = mdates.date2num(t["start"])
