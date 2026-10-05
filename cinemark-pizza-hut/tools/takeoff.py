@@ -225,7 +225,11 @@ def build(store, catalog, program, layout=None):
             brk, poles = breaker_for(e)
             asm = connection_assembly(e)
             # up from the panel to the ceiling, over, and back down to the rough-in (Edgar)
-            aff_ft = (rd["direct_connect_jbox"] if e.get("conn") == "direct" else rd["receptacle_cord_under_counter"]) / 12.0
+            # refrigeration plugs at 78" A.F.F. on every job (Edgar); other cords under the counter
+            aff_in = (rd["direct_connect_jbox"] if e.get("conn") == "direct"
+                      else rd.get("receptacle_refrigeration", 78) if it.get("category") == "refrigeration"
+                      else rd["receptacle_cord_under_counter"])
+            aff_ft = aff_in / 12.0
             up_down = max(0.0, ceil_ft - rt.get("panel_top_ft", 6)) + max(0.0, ceil_ft - aff_ft)
             if panel and loc:
                 run = manhattan_ft(panel, loc) * rt["electrical_factor"] + up_down
@@ -238,8 +242,7 @@ def build(store, catalog, program, layout=None):
                                  "volts": e.get("volts"), "phase": e.get("phase"), "amps": e.get("amps"),
                                  "breaker_a": brk, "poles": poles, "conn": e.get("conn"),
                                  "nema": e.get("nema"), "assembly": asm, "home_run_lf": round(run, 1),
-                                 "height_aff": rd["direct_connect_jbox"] if e.get("conn") == "direct"
-                                 else rd["receptacle_cord_under_counter"],
+                                 "height_aff": aff_in,
                                  "breaker_basis": "125% nameplate - VERIFY MOCP on data plate"})
                 ckt += poles
                 q_el["branch_lf"] += run

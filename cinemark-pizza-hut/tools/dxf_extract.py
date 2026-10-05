@@ -143,25 +143,28 @@ def aq_products(doc):
     return out
 
 
-def _front_offset(doc, block_name, prod):
+def _front_offset(doc, block_name, prod, true_name=None):
     """Degrees to add to a block's rotation so a Revit family (front toward -Y, like KCL blocks) faces the
-    same way. Many AQ blocks are drawn with their width along local Y and the front toward +X: that is
-    +90. Decided from AQ's width against the block's unrotated outline; 0 when that can't tell. Only for
-    free-standing items: an item against a wall faces away from it (see wall_behind)."""
+    same way. AQ's width along the block's local Y means front toward +X: +90; along local X: 0. When the
+    width matches neither (the outline includes a door, a handle...), AutoQuotes' own blocks (AQSL_*) are
+    taken as front toward +X, as on the FC-3, 7-PS-65, Follett SG1650 and ACP MXP22 (Edgar: item 4 faced plan
+    east, should turn 90 deg CCW); other blocks (KCL) face -Y."""
+    aq_block = (true_name or block_name or "").upper().startswith("AQSL_")
     w = (prod or {}).get("width")
-    if not w:
-        return 0.0
-    try:
-        from ezdxf import bbox as _bb
-        ext = _bb.extents(doc.blocks[block_name])
-    except Exception:
-        return 0.0
-    if not ext.has_data:
-        return 0.0
-    dx, dy = abs(ext.size.x - w), abs(ext.size.y - w)
-    if dy <= 2.0 < dx:
-        return 90.0
-    return 0.0
+    ext = None
+    if w:
+        try:
+            from ezdxf import bbox as _bb
+            ext = _bb.extents(doc.blocks[block_name])
+        except Exception:
+            ext = None
+    if ext is not None and ext.has_data:
+        dx, dy = abs(ext.size.x - w), abs(ext.size.y - w)
+        if dy <= 2.0 < dx:
+            return 90.0
+        if dx <= 2.0 < dy:
+            return 0.0
+    return 90.0 if aq_block else 0.0
 
 
 _SKIP_GEOM = {"TEXT", "MTEXT", "ATTDEF", "ATTRIB", "HATCH", "DIMENSION", "POINT", "SOLID", "WIPEOUT", "IMAGE",
@@ -791,7 +794,7 @@ def extract(path, store=None, catalog_path=None):
                 elif link:
                     rec["kcl"] = link
                 rec["provided_by"] = provided_by(rec["item"])
-                rec["front_offset"] = _front_offset(doc, e.dxf.name, prod)
+                rec["front_offset"] = _front_offset(doc, e.dxf.name, prod, bname)
                 rec["revit_rotation"] = round(rot + rec["front_offset"], 3)
                 if key is None:
                     out["unmatched"].setdefault(bname, 0)

@@ -298,6 +298,12 @@ def tag_families(app, doc, out_dir):
                         bg.Set(0)                       # opaque: lines behind the number don't run through it
                     if style == "text":                 # QF002: a serif utility-tag font so I reads apart from 1
                         lt.get_Parameter(BuiltInParameter.TEXT_FONT).Set("Times New Roman")
+                        bx = lt.get_Parameter(BuiltInParameter.TEXT_BOX_VISIBILITY)
+                        if bx is not None and not bx.IsReadOnly:
+                            bx.Set(1)                   # boxed, sized to the text (Edgar; Davie FL set)
+                        off = lt.get_Parameter(BuiltInParameter.LEADER_OFFSET_SHEET)
+                        if off is not None and not off.IsReadOnly:
+                            off.Set(0.03125 / 12.0)     # box close round the text (1/32"): tight rows
             if style == "text":
                 fd.Delete(List[ElementId]([e.Id for e in lines]))
             elif style == "double":
@@ -316,13 +322,18 @@ def tag_families(app, doc, out_dir):
             made.append(name)
         finally:
             fd.Close(False)
+    from Autodesk.Revit.DB import ElementType
+    dot = next((x for x in FilteredElementCollector(doc).OfClass(ElementType)
+                if getattr(x, "FamilyName", "") == "Arrowhead" and Element.Name.__get__(x) == 'Dot Filled 1/16"'), None)
     t = Transaction(doc, "AEQ tag types")
     t.Start()
     for s in FilteredElementCollector(doc).OfClass(FamilySymbol):
         if s.Family.Name in (TAG_EQUIP, TAG_EQUIP_OTHERS, TAG_UTIL):
             p = s.get_Parameter(BuiltInParameter.LEADER_ARROWHEAD)
             if p is not None and not p.IsReadOnly:
-                p.Set(ElementId.InvalidElementId)          # no arrowhead: the leader just meets the item
+                # equipment leaders end in a small dot on the item (Davie FL set); utility leaders just meet
+                # their symbol
+                p.Set(dot.Id if (dot is not None and s.Family.Name != TAG_UTIL) else ElementId.InvalidElementId)
             if not s.IsActive:
                 s.Activate()
     t.Commit()

@@ -67,6 +67,7 @@ def main():
         build.equipment_schedule(doc)
         build.roughin_schedule_drafting(doc, tk)
         build.make_sheets(doc, s)
+        log.append(("sheets", build.SHEET_NOTES))
         pdf, imgs = build.export_pdf_and_render(doc, s, st)
         for f in [pdf] + imgs:
             if os.path.isfile(f):

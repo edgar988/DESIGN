@@ -161,6 +161,21 @@ def room_bbox(layout, margin_in=36.0):
 
 
 # ------------------------------------------------------- 1. new store model
+def _cover_note(doc, lines):
+    """QF001 PROJECT INFORMATION: the project itself in place of the template's how-to notes (Edgar 10/05:
+    no template instructions and no Highland Rim on the cover, just AEQ drawing standards)."""
+    cover = next((x for x in FilteredElementCollector(doc).OfClass(ViewSheet) if x.SheetNumber == "QF001"), None)
+    if cover is None:
+        return
+    notes = [n for n in FilteredElementCollector(doc, cover.Id).OfClass(TextNote)
+             if re.search(r"Template basis|Set project|Highland Rim|Native sheets", n.Text or "")]
+    if notes:
+        notes.sort(key=lambda n: -n.Coord.Y)
+        notes[0].Text = "\r".join(lines)
+        for n in notes[1:]:
+            doc.Delete(n.Id)
+
+
 def new_store_model(app, s):
     """Create <outputs>/<store>/<store>.rvt from the AEQ 11x17 template and fill Project Information."""
     st = C.store(s)
@@ -170,13 +185,16 @@ def new_store_model(app, s):
     prog = C.read_json(os.path.join(s["repo_root"], "config", "program.json"))
     with _Tx(doc, "AEQ: project information"):
         pi = doc.ProjectInformation
-        _set(pi, BuiltInParameter.PROJECT_NAME, "Cinemark #%d %s - Pizza Hut Kitchen" % (   # wraps to 2 lines in the AEQ title block
-            st["theatre_no"], st["theatre_name"].split(" (")[0]))
-        _set(pi, BuiltInParameter.PROJECT_NUMBER, "SSG-2026-CNK-PH01-%03d" % st["theatre_no"])
+        name = "Cinemark #%d %s - Pizza Hut Kitchen" % (st["theatre_no"], st["theatre_name"].split(" (")[0])
+        number = "SSG-2026-CNK-PH01-%03d" % st["theatre_no"]
+        _set(pi, BuiltInParameter.PROJECT_NAME, name)       # wraps to 2 lines in the AEQ title block
+        _set(pi, BuiltInParameter.PROJECT_NUMBER, number)
         _set(pi, BuiltInParameter.PROJECT_ADDRESS, st["address"])
         _set(pi, BuiltInParameter.CLIENT_NAME, prog["customer"]["name"])
         _set(pi, BuiltInParameter.PROJECT_ISSUE_DATE, datetime.date.today().strftime("%m/%d/%y"))
         _set(pi, BuiltInParameter.PROJECT_STATUS, "Tier 2 Rough-In Package %s" % s.get("rev", "R0"))
+        _cover_note(doc, [name, st["address"], "Owner: " + prog["customer"]["name"], "Project No. " + number,
+                          "", "Drawn to AEQ foodservice drawing standards."])
     path = os.path.join(C.store_out(s), "%s_PH.rvt" % s["store_id"])
     opts = SaveAsOptions()
     opts.OverwriteExistingFile = True
@@ -320,9 +338,9 @@ def _placeholder(doc, q, it, lvl, phase):
     return ds
 
 
-REMARK = {"OWNER": "BY OWNER (PH): RECEIVED AT AEQ NASHVILLE, SET & CONNECTED BY AEQ",
-          "EXISTING": "EXISTING: RELOCATED, NEW UTILITIES",
-          "AEQ": "SUPPLIED & INSTALLED BY AEQ"}
+REMARK = {"OWNER": "BY OWNER - SET & CONNECTED BY AEQ",
+          "EXISTING": "EXISTING - RELOCATE, NEW UTILITIES",
+          "AEQ": "AEQ - SUPPLY & INSTALL"}
 _NOT_BODY = re.compile(r"clear|service|swing|access|zone|hidden|invisible|envelope", re.I)
 
 
@@ -423,6 +441,42 @@ def _body_box(doc, inst):
         return (bb.Min.X, bb.Min.Y, bb.Min.Z, bb.Max.X, bb.Max.Y, bb.Max.Z) if bb else None
     return (min(p.X for p in pts), min(p.Y for p in pts), min(p.Z for p in pts),
             max(p.X for p in pts), max(p.Y for p in pts), max(p.Z for p in pts))
+
+
+def _stand_z(doc, base, fp, share=0.25):
+    """Height a countertop unit stands at on its base: the highest upward-facing flat face of the base's
+    body (no clearance zones) under at least a quarter of the unit's footprint. Not the bounding box (an
+    invisible clearance zone floated X3 4" up) nor edge points (the ACP sank into the freezer)."""
+    from Autodesk.Revit.DB import PlanarFace
+    opt = Options()
+    opt.DetailLevel = ViewDetailLevel.Fine
+    area = max((fp[3] - fp[0]) * (fp[4] - fp[1]), 1e-6)
+    best = [None]
+
+    def walk(geo):
+        for go in geo:
+            if isinstance(go, GeometryInstance):
+                walk(go.GetInstanceGeometry())
+            elif isinstance(go, Solid) and go.Faces.Size:
+                st = doc.GetElement(go.GraphicsStyleId)
+                if st is not None and _NOT_BODY.search(_name(st) or ""):
+                    continue
+                for f in go.Faces:
+                    if not isinstance(f, PlanarFace) or f.FaceNormal.Z < 0.99:
+                        continue
+                    pts = [p for loop in f.EdgeLoops for e in loop for p in e.Tessellate()]
+                    if not pts:
+                        continue
+                    x0, y0 = max(min(p.X for p in pts), fp[0]), max(min(p.Y for p in pts), fp[1])
+                    x1, y1 = min(max(p.X for p in pts), fp[3]), min(max(p.Y for p in pts), fp[4])
+                    if x1 > x0 and y1 > y0 and (x1 - x0) * (y1 - y0) >= share * area:
+                        z = pts[0].Z
+                        if best[0] is None or z > best[0]:
+                            best[0] = z
+    geo = base.get_Geometry(opt)
+    if geo is not None:
+        walk(geo)
+    return best[0]
 
 
 def _back(q):
@@ -548,17 +602,7 @@ def place_equipment(doc, layout, catalog, s, block_fams=None):
                 continue
             base = made.get(q["on"])
             tb = _body_box(doc, top)
-            z = None
-            if base is not None and tb is not None:
-                # the base's top surface under this unit (inset 3": a backsplash or rim at the edge is
-                # not what it stands on)
-                ins = 3.0 * FT
-                zs = [p.Z for p in _solid_pts(doc, base)
-                      if tb[0] + ins <= p.X <= tb[3] - ins and tb[1] + ins <= p.Y <= tb[4] - ins]
-                z = max(zs) if zs else None
-                if z is None:
-                    bb_base = base.get_BoundingBox(None)
-                    z = bb_base.Max.Z if bb_base else None
+            z = _stand_z(doc, base, tb) if (base is not None and tb is not None) else None
             if z is None:
                 z = lvl.Elevation + (items.get(by_handle.get(q["on"], {}).get("key"), {}).get("height_in") or 34.0) * FT
             if tb is not None:
@@ -699,6 +743,9 @@ def _crop(view, x0, y0, x1, y1):
     view.CropBoxActive = True
     view.CropBoxVisible = False
     view.CropBox = bb
+    p = view.get_Parameter(BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE)
+    if p is not None and not p.IsReadOnly:     # the crop is grown round the tags already; the annotation
+        p.Set(0)                               # crop's own offset only made the viewport bigger
 
 
 def _qf_plan(doc, num, title, lvl, phase):
@@ -836,6 +883,21 @@ def _seg_hits_box(p, q, b):
     return True
 
 
+def _stagger_clear(near, far, gap, g, depth):
+    """Two staggered tag rows (Davie FL): does every far-row leader pass between the near-row tags? near,
+    far: _spread items; g: wall to near row; depth: a row's depth across the wall. Leaders run straight from
+    the rough-in on the wall line to the near edge of their tag."""
+    pn, pf = _spread(near, gap), _spread(far, gap)
+    spans = [(p - lo - 0.5 * gap, p + hi + 0.5 * gap) for p, (_, lo, hi) in zip(pn, near)]
+    reach = g + 1.2 * depth
+    for p, (t, _, _) in zip(pf, far):
+        a, b = t + (p - t) * g / reach, t + (p - t) * (g + depth) / reach
+        lo, hi = min(a, b), max(a, b)
+        if any(lo < s1 and hi > s0 for s0, s1 in spans):
+            return False
+    return True
+
+
 def _clear_of(placed, row, side, gap):
     """Where a row of tags goes to clear the tags already placed (another wall's row at a corner).
     row: [(text bbox, move, leader target)]; returns the extra move as an XYZ. The row first steps out,
@@ -882,19 +944,20 @@ def _clear_of(placed, row, side, gap):
 
 
 class _TagRows(object):
-    """Native Revit tags (IndependentTag) in one view, one clean row per wall just outside it. Each tag sits
-    square to its target so its leader runs straight; only tags that would overlap (stacked or close-set
-    equipment) are spread apart, as little as needed, and get an angled leader. Rows meeting at a corner
-    step out or slide so no tag or leader crosses another tag. Leaders have no arrowhead (AEQ tag types)
-    and end on the item / connection symbol."""
+    """Native Revit tags (IndependentTag) in one view, in clean rows: one row per wall line. Each tag sits
+    square to its target so its leader runs straight; tags that would overlap are pushed apart as little as
+    needed (angled leaders only for close-set or stacked equipment). With stagger (rough-in plans, after the
+    Davie FL set), a crowded row splits into two rows of abutting boxes instead of fanning out. Rows meeting
+    at a corner step out or slide so no tag or leader crosses another tag."""
 
-    def __init__(self, doc, view, gap_ft=1.0):
+    def __init__(self, doc, view, gap_ft=1.0, tag_gap=None, stagger=False, elbow_ft=None):
         self.doc, self.view, self.g = doc, view, gap_ft
+        self.tag_gap, self.stagger, self.elbow = tag_gap, stagger, elbow_ft
         self.queue = []
 
     def add(self, element, symbol, target, end, side, anchor=None):
         """target: where the tag wants to sit along its row (item centre / rough-in); end: the leader end
-        point; side: which way the row's wall faces out; anchor: the wall point the row is measured from."""
+        point; side: which way the row lies from its wall line; anchor: the wall point the row is measured from."""
         self.queue.append((element, symbol, target, end, side, anchor or target))
 
     def place(self):
@@ -915,6 +978,7 @@ class _TagRows(object):
         boxes = []
         for side in ("N", "S", "E", "W"):
             ax = side in ("N", "S")
+            out = 1.0 if side in ("N", "E") else -1.0
             perp = (lambda pt: pt.Y) if ax else (lambda pt: pt.X)
             rows = []
             for m in sorted([m for m in made if m[2] == side], key=lambda m: perp(m[3])):
@@ -924,34 +988,62 @@ class _TagRows(object):
                     rows.append([m])
             for row_ms in rows:
                 row_ms.sort(key=lambda m: m[1].X if ax else m[1].Y)
-                items = []
-                for tag, target, _, _, _, bb in row_ms:
-                    hp = tag.TagHeadPosition
-                    lo, hi = (hp.X - bb.Min.X, bb.Max.X - hp.X) if ax else (hp.Y - bb.Min.Y, bb.Max.Y - hp.Y)
-                    items.append((target.X if ax else target.Y, lo, hi))
                 h = max(m[5].Max.Y - m[5].Min.Y for m in row_ms)
-                pos = _spread(items, 0.6 * h)
+                gap = self.tag_gap if self.tag_gap is not None else 0.6 * h
                 walls = [perp(m[3]) for m in row_ms]
-                row = {"N": max(walls) + self.g, "S": min(walls) - self.g,
-                       "E": max(walls) + self.g, "W": min(walls) - self.g}[side]
-                moves = []
-                for (tag, target, _, _, _, bb), p in zip(row_ms, pos):
-                    hp = tag.TagHeadPosition
-                    across = {"N": row - bb.Min.Y, "S": row - bb.Max.Y, "E": row - bb.Min.X,
-                              "W": row - bb.Max.X}[side]
-                    moves.append(XYZ(p - hp.X, across, 0) if ax else XYZ(across, p - hp.Y, 0))
-                shift = _clear_of(boxes, [(m[5], d, m[4]) for m, d in zip(row_ms, moves)], side, 0.3 * h)
-                for (tag, _, _, _, _, bb), d in zip(row_ms, moves):
-                    d = d + shift
-                    tag.TagHeadPosition = tag.TagHeadPosition + d
-                    boxes.append((bb.Min.X + d.X, bb.Min.Y + d.Y, bb.Max.X + d.X, bb.Max.Y + d.Y))
+                base = (max(walls) if out > 0 else min(walls)) + out * self.g
+
+                def items_of(ms):
+                    its = []
+                    for tag, target, _, _, _, bb in ms:
+                        hp = tag.TagHeadPosition
+                        lo, hi = (hp.X - bb.Min.X, bb.Max.X - hp.X) if ax else (hp.Y - bb.Min.Y, bb.Max.Y - hp.Y)
+                        its.append((target.X if ax else target.Y, lo, hi))
+                    return its
+
+                subrows = [row_ms]
+                its = items_of(row_ms)
+                pos = _spread(its, gap)
+                depth = max((m[5].Max.Y - m[5].Min.Y) if ax else (m[5].Max.X - m[5].Min.X) for m in row_ms)
+                reach = max(abs(p - i[0]) for p, i in zip(pos, its))
+                if self.stagger and len(row_ms) > 2 and reach > 0.5 * gap:
+                    two = [row_ms[0::2], row_ms[1::2]]
+                    if _stagger_clear(items_of(two[0]), items_of(two[1]), gap, self.g, depth):
+                        subrows = two
+                    else:
+                        # rough-ins closer than half a tag: a second row's leaders would cut the first
+                        # row's tags, so one row fanned over them, stepped out so no leader runs flatter
+                        # than about 45 degrees past its elbow
+                        e = (self.elbow.get(side, 0.0) if isinstance(self.elbow, dict) else self.elbow) or 0.0
+                        base += out * min(max(0.0, reach - (self.g - e)), 3.0)
+                for k, sub in enumerate(subrows):
+                    its = items_of(sub)
+                    pos = _spread(its, gap)
+                    row = base + out * k * depth * 1.2
+                    moves = []
+                    for (tag, target, _, _, _, bb), p in zip(sub, pos):
+                        hp = tag.TagHeadPosition
+                        across = {"N": row - bb.Min.Y, "S": row - bb.Max.Y, "E": row - bb.Min.X,
+                                  "W": row - bb.Max.X}[side]
+                        moves.append(XYZ(p - hp.X, across, 0) if ax else XYZ(across, p - hp.Y, 0))
+                    shift = _clear_of(boxes, [(m[5], d, m[4]) for m, d in zip(sub, moves)], side, 0.3 * h)
+                    for (tag, _, _, _, _, bb), d in zip(sub, moves):
+                        d = d + shift
+                        tag.TagHeadPosition = tag.TagHeadPosition + d
+                        boxes.append((bb.Min.X + d.X, bb.Min.Y + d.Y, bb.Max.X + d.X, bb.Max.Y + d.Y))
         doc.Regenerate()
-        for tag, _, _, _, end, _ in made:
+        for tag, _, side, _, end, _ in made:
             try:
                 tag.HasLeader = True
                 tag.LeaderEndCondition = LeaderEndCondition.Free
                 ref = list(tag.GetTaggedReferences())[0]
                 tag.SetLeaderEnd(ref, XYZ(end.X, end.Y, 0))
+                if self.elbow:
+                    # Davie FL: the leader leaves the rough-in square to the wall, along its witness line past
+                    # the dimension string, and only then turns to its tag, so it never crosses a figure
+                    o = {"N": (0, 1), "S": (0, -1), "E": (1, 0), "W": (-1, 0)}[side]
+                    e = self.elbow.get(side, 0.0) if isinstance(self.elbow, dict) else self.elbow
+                    tag.SetLeaderElbow(ref, XYZ(end.X + o[0] * e, end.Y + o[1] * e, 0))
             except Exception:
                 pass
         pts = boxes + [(m[4].X, m[4].Y, m[4].X, m[4].Y) for m in made]
@@ -960,9 +1052,26 @@ class _TagRows(object):
                 max(b[2] for b in pts) + pad, max(b[3] for b in pts) + pad)
 
 
-def _grow_crop(view, bbox_in, ext_ft, pad_ft=1.0):
+def _frame(layout, area, pad_in=6.0):
+    """The drawing itself (walls, rooms, equipment) with a 6" pad, inside the area crop: a plan prints no
+    bigger than it needs to (the QF101 plan fits under its schedule)."""
+    pts = [p for w in layout.get("walls", []) for p in (w["start"], w["end"])]
+    pts += [p for r in layout.get("rooms", []) for p in r["polygon"]]
+    for q in layout.get("equipment", []):
+        b = q.get("bbox")
+        if b and q.get("status") != "demo":
+            pts += [[b[0], b[1]], [b[2], b[3]]]
+    pts = [p for p in pts if area[0] <= p[0] <= area[2] and area[1] <= p[1] <= area[3]]
+    if not pts:
+        return list(area)
+    return [max(area[0], min(p[0] for p in pts) - pad_in), max(area[1], min(p[1] for p in pts) - pad_in),
+            min(area[2], max(p[0] for p in pts) + pad_in), min(area[3], max(p[1] for p in pts) + pad_in)]
+
+
+def _grow_crop(view, bbox_in, ext_ft, pad_ft=0.1):
     """Crop = the room frame, grown to hold the callouts (Revit sizes a viewport by its annotations too)."""
     if ext_ft is None:
+        _crop(view, *bbox_in)
         return
     x0, y0, x1, y1 = bbox_in
     _crop(view, min(x0, (ext_ft[0] - pad_ft) * 12.0), min(y0, (ext_ft[1] - pad_ft) * 12.0),
@@ -1127,9 +1236,7 @@ def _group_roughins(rows, reach_ft=2.0, oc_in=8.0):
                 pos = mid + (k - (len(cl) - 1) / 2.0) * oc_in / 12.0
                 r["point"] = XYZ(pos, r["point"].Y, 0) if along_x else XYZ(r["point"].X, pos, 0)
                 r["dim_first"] = k == 0
-                if k:
-                    r["remarks"] = '%d" FROM %s%s' % (int(oc_in * k), first["tag"],
-                                                       ("; " + r["remarks"]) if r["remarks"] else "")
+
 
 
 def _set_text(el, name, value):
@@ -1404,10 +1511,10 @@ def _perp_faces(doc, axis):
 
 
 def _dimension_runs(doc, view, runs, dim_type):
-    """QF002 note 4: dimension rough-ins from finished wall faces. runs: [(side, wall-face coordinate ft,
-    dimension-line coordinate ft, [(along-wall coordinate ft, marker)])] - one string per run, from the nearest
-    wall face before the first connection (a wall running across this one) through every connection's
-    centreline."""
+    """QF002 note 4 / Edgar / the Davie FL set: every rough-in dimensioned from a finished wall face - one
+    continuous string per wall run, every rough-in its own segment, just in front of the wall. runs: [(side,
+    wall-face coordinate ft, dimension-line coordinate ft, [(along-wall coordinate ft, marker)])]. The string
+    starts at the nearest wall running across this one at either end of the run."""
     from Autodesk.Revit.DB import ReferenceArray, FamilyInstanceReferenceType
     faces = {"X": None, "Y": None}
     made = 0
@@ -1424,12 +1531,16 @@ def _dimension_runs(doc, view, runs, dim_type):
         a = min(after, key=lambda f: f[0]) if after else None
         if b is None and a is None:
             continue
-        # from whichever wall face is nearer (the nearest corner of the run)
         use = b if (a is None or (b is not None and first - b[0] <= a[0] - last)) else a
         ra = ReferenceArray()
         if use is b:
             ra.Append(use[2])
-        for _, m in pts:
+        seen = set()
+        for along, m in pts:
+            key = round(along, 3)
+            if key in seen:
+                continue
+            seen.add(key)
             refs = list(m.GetReferences(FamilyInstanceReferenceType.CenterLeftRight))
             if refs:
                 ra.Append(refs[0])
@@ -1438,10 +1549,8 @@ def _dimension_runs(doc, view, runs, dim_type):
         if ra.Size < 2:
             continue
         lo, hi = (use[0], last + 0.5) if use is b else (first - 0.5, use[0])
-        if axis == "X":
-            ln = Line.CreateBound(XYZ(lo, line, 0), XYZ(hi, line, 0))
-        else:
-            ln = Line.CreateBound(XYZ(line, lo, 0), XYZ(line, hi, 0))
+        ln = (Line.CreateBound(XYZ(lo, line, 0), XYZ(hi, line, 0)) if axis == "X"
+              else Line.CreateBound(XYZ(line, lo, 0), XYZ(line, hi, 0)))
         try:
             if dim_type is not None:
                 doc.Create.NewDimension(view, ln, ra, dim_type)
@@ -1454,12 +1563,37 @@ def _dimension_runs(doc, view, runs, dim_type):
 
 
 def _dim_type(doc):
-    """The template's AEQ architectural dimension type (3/32" Arial)."""
-    from Autodesk.Revit.DB import DimensionType
-    for t in FilteredElementCollector(doc).OfClass(DimensionType):
-        if _name(t).startswith("AEQ - Architectural"):
-            return t
-    return None
+    """The template's AEQ architectural dimensions (3/32" Arial) with a small 3/64" diagonal tick (Edgar: the
+    ticks were too big): "AEQ - Rough-In - 3/32 inch", made once."""
+    from Autodesk.Revit.DB import DimensionType, ElementType
+    types = list(FilteredElementCollector(doc).OfClass(DimensionType))
+    name = "AEQ - Rough-In - 3/32 inch"
+    t = next((x for x in types if _name(x) == name), None)
+    if t is not None:
+        return t
+    src = next((x for x in types if _name(x).startswith("AEQ - Architectural")), None)
+    if src is None:
+        return None
+    try:
+        t = src.Duplicate(name)
+        tick = next((x for x in FilteredElementCollector(doc).OfClass(ElementType)
+                     if getattr(x, "FamilyName", "") == "Arrowhead" and _name(x) == 'Diagonal 3/64"'), None)
+        p = t.LookupParameter("Tick Mark")
+        if tick is not None and p is not None and not p.IsReadOnly:
+            p.Set(tick.Id)
+        try:                                    # 10" not 0'-10" (as on the Davie FL set), nearest 1/8"
+            from Autodesk.Revit.DB import FormatOptions, UnitTypeId
+            fo = FormatOptions(UnitTypeId.FeetFractionalInches)
+            fo.Accuracy = 1.0 / 96.0
+            for prop in ("SuppressZeroFeet", "SuppressLeadingZeros"):
+                if hasattr(fo, prop):
+                    setattr(fo, prop, True)
+            t.SetUnitsFormatOptions(fo)
+        except Exception:
+            pass
+        return t
+    except Exception:
+        return src
 
 def roughin_views(doc, layout, takeoff, s):
     """Every QF plan, per plan area (plan_areas: one, or A / B... when the kitchen does not fit at 1/4"),
@@ -1489,7 +1623,13 @@ def roughin_views(doc, layout, takeoff, s):
                 if inst is not None:
                     insts[q["handle"]] = inst
         room = room_bbox(layout, 0.0)
+        demo = any(x.get("status") == "demo" for x in (layout.get("walls") or []) + layout["equipment"])
         for num, title in QF_PLANS:
+            if num == "QF111" and not demo:     # nothing to take out: no demolition plan (Edgar 10/05)
+                old = _view_named(doc, ViewPlan, num + " ")
+                if old is not None:
+                    doc.Delete(old.Id)
+                continue
             base = _qf_plan(doc, num, title, lvl, nc)
             for k, area in enumerate(areas):
                 if k == 0:
@@ -1515,29 +1655,31 @@ def roughin_views(doc, layout, takeoff, s):
         for sheet_no, name, v, area in out:
             num = sheet_no[:5]
             if num in ("QF202", "QF302"):
+                # Davie FL (TPHD) layout: equipment halftone; boxed utility tags in a row inside the room in
+                # front of the wall, straight leaders down to the symbols; between them and the wall one
+                # continuous dimension string from the wall corner with every rough-in on it
                 elec = num == "QF302"
-                tags = _TagRows(doc, v, gap_ft=2.0)       # beyond the dimension string
-                dims, first = {}, set()
+                _halftone_equipment(doc, v)
+                # elbow past the dimension figures. side = which way the room lies from the wall; Revit sets
+                # the figures above / left of a string: on the wall side for a north (S) or west (E) wall,
+                # on the room side for a south (N) or east (W) wall
+                tags = _TagRows(doc, v, gap_ft=2.75, tag_gap=0.05, stagger=True,
+                                elbow_ft={"S": 1.75, "E": 1.75, "N": 2.3, "W": 2.3})
+                dims = {}
                 for r in rows:
                     if r["svc"].startswith("E") != elec or r.get("marker") is None or not _inside(area, r["point"]):
                         continue
-                    inst = insts.get(r.get("handle"))
-                    vb = inst.get_BoundingBox(v) if inst is not None else None
-                    fb = (vb.Min.X, vb.Min.Y, vb.Max.X, vb.Max.Y) if vb else None
-                    side, anchor = _tag_side(layout, r["point"], r["centre"], room, front_box=fb)
-                    tags.add(r["marker"], sym_ut, r["point"], r["point"], side, anchor)
+                    n = r["normal"]
+                    side = (("N" if n[1] > 0 else "S") if abs(n[1]) >= abs(n[0]) else ("E" if n[0] > 0 else "W"))
+                    tags.add(r["marker"], sym_ut, r["point"], r["point"], side, r["point"])
                     ax = side in ("N", "S")
-                    perp = r["point"].Y if ax else r["point"].X          # the wall face the connection is on
-                    row = anchor.Y if ax else anchor.X                   # where its tag row is measured from
-                    # one string per wall face, beyond the deepest item on it (rows differ with item depth)
-                    d = dims.setdefault((side, int(round(perp * 6.0))), [side, perp, row, []])
-                    d[2] = max(d[2], row) if side in ("N", "E") else min(d[2], row)
-                    if r.get("dim_first"):          # one witness per rough-in group: the rest are 8" O.C. (QF103)
-                        d[3].append((r["point"].X if ax else r["point"].Y, r["marker"]))
-                runs = [(sd, wall, row + (0.9 if sd in ("N", "E") else -0.9), pts)
-                        for sd, wall, row, pts in dims.values() if pts]
+                    perp = r["point"].Y if ax else r["point"].X
+                    d = dims.setdefault((side, int(round(perp * 6.0))), [side, perp, []])
+                    d[2].append((r["point"].X if ax else r["point"].Y, r["marker"]))
+                runs = [(sd, wall, wall + (1.25 if sd in ("N", "E") else -1.25), pts)
+                        for sd, wall, pts in dims.values() if pts]
                 _dimension_runs(doc, v, runs, dt)
-                _grow_crop(v, area, tags.place())
+                _grow_crop(v, _frame(layout, area), tags.place())
             elif num == "QF101":
                 tags = _TagRows(doc, v, gap_ft=1.0)
                 for q in layout["equipment"]:
@@ -1555,7 +1697,9 @@ def roughin_views(doc, layout, takeoff, s):
                                     else (_side(c, room), c))
                     sym = sym_eq if (q.get("provided_by") or "AEQ") == "AEQ" else sym_other
                     tags.add(inst, sym, c, _leader_end(bb, side, c), side, anchor)
-                _grow_crop(v, area, tags.place())
+                _grow_crop(v, _frame(layout, area), tags.place())
+            else:
+                _crop(v, *_frame(layout, area))
     del PLAN_SHEETS[:]
     PLAN_SHEETS.extend((n, nm, v) for n, nm, v, _ in out)
     return list(PLAN_SHEETS)
@@ -1768,7 +1912,7 @@ def equipment_schedule(doc):
             cats[_id_int(inst.Category.Id)] = inst.Category.Id
     if not cats:
         return None
-    tpl = _view_named(doc, ViewSchedule, "AEQ - QF102")
+    tpl = _view_named(doc, ViewSchedule, "AEQ - QF102") or _view_named(doc, ViewSchedule, EQUIP_SCHED_TITLE)
     if tpl is not None and list(cats) == [_id_int(tpl.Definition.CategoryId)]:
         with _Tx(doc, "AEQ: equipment schedule by item"):
             _by_item(tpl)
@@ -1887,10 +2031,11 @@ def _rows(vps, width, gap):
     return rows
 
 
-def _place(doc, sh, views, s, rescale=True):
-    """Viewports for views on sheet sh, packed in rows and centred in the drawing area. rescale: step the
-    views down the standard scales until they fit (plans keep the scale roughin_views fitted)."""
-    x0, y0, x1, y1 = [a / 12.0 for a in _area(s)]
+def _place(doc, sh, views, s, rescale=True, area=None):
+    """Viewports for views on sheet sh, packed in rows and centred in the drawing area (or area, inches).
+    rescale: step the views down the standard scales until they fit (plans keep the scale roughin_views
+    fitted). Returns True when they fit."""
+    x0, y0, x1, y1 = [a / 12.0 for a in (area or _area(s))]
     gx, gy = 0.5 / 12.0, 0.6 / 12.0               # gy leaves room for the view title under each row
     on_sheet = dict((_id_int(p.ViewId), p) for p in FilteredElementCollector(doc, sh.Id).OfClass(Viewport))
     vps = []
@@ -1905,9 +2050,13 @@ def _place(doc, sh, views, s, rescale=True):
         vp = Viewport.Create(doc, sh.Id, v.Id, XYZ((x0 + x1) / 2.0, (y0 + y1) / 2.0, 0))
         if vp_type is not None:
             vp.ChangeTypeId(vp_type)
+        try:                                # title line under the title only (Davie FL set), not the view's
+            vp.LabelLineLength = TITLE_W    # full width, so it stays clear of the north arrow and scale
+        except Exception:
+            pass
         vps.append(vp)
     if not vps:
-        return
+        return False
     while True:
         doc.Regenerate()
         rows = _rows(vps, x1 - x0, gx)
@@ -1928,6 +2077,7 @@ def _place(doc, sh, views, s, rescale=True):
             p.SetBoxCenter(XYZ(x + pw / 2.0, y - h / 2.0, 0))
             x += pw + gx
         y -= h + gy
+    return fits
 
 
 def _scale_marks(sc):
@@ -1997,11 +2147,85 @@ def _pack(views, s, title_in=0.6, gap_in=0.5):
     return sheets
 
 
+EQUIP_SCHED_TITLE = "EQUIPMENT SCHEDULE"
+# schedule columns in inches by field name / heading (Edgar 10/05: ITEM and QTY narrow, MANUFACTURER and
+# MODEL tighter, REMARKS wide enough that no remark wraps) so it fits over the plan on QF101
+SCHED_COLS = [(("mark", "item"), 0.45), (("count", "qty", "quantity"), 0.4), (("description",), 4.4),
+              (("manufacturer", "mfr"), 1.5), (("model",), 1.4), (("comments", "remarks"), 2.75)]
+DROP_SHEETS = ("QF501",)        # drafting standards: not for the customer (Edgar 10/05)
+SHEET_NOTES = []                # layout fallbacks from the last make_sheets run, for the build log
+
+
+def _equip_schedule(doc):
+    for prefix in (SCHED_SHEET[0] + " ", "AEQ - QF102", EQUIP_SCHED_TITLE):
+        vs = _view_named(doc, ViewSchedule, prefix)
+        if vs is not None:
+            return vs
+    return None
+
+
+# QF103 the same way: every column as wide as its longest entry, so no row wraps
+UTIL_COLS = [(("item",), 0.45), (("tag",), 0.6), (("svc",), 0.35), (("size",), 0.65), (("description",), 2.85),
+             (("loc",), 0.5), (("a.f.f", "aff"), 0.55), (("service to",), 2.0), (("hp",), 0.4), (("kw",), 0.45),
+             (("amps",), 0.5), (("v",), 0.45), (("ph",), 0.35), (("remarks",), 1.75)]
+
+
+def _fit_schedule(doc, vs, cols=None, title=EQUIP_SCHED_TITLE):
+    """Column widths by heading (else field name) and the schedule's title (its name shows as the title)."""
+    d = vs.Definition
+    for i in range(d.GetFieldCount()):
+        f = d.GetField(i)
+        w = None
+        for n in ((f.ColumnHeading or "").strip().lower(), f.GetName().lower()):
+            w = next((w for keys, w in (cols or SCHED_COLS) if any(n.startswith(k) for k in keys)), None)
+            if w is not None:
+                break
+        if w is not None:
+            f.GridColumnWidth = w / 12.0
+    for prop in ("InsertBlankRowBeforeData", "BlankRowBeforeData"):    # no empty row under the headings
+        if hasattr(d, prop):
+            try:
+                setattr(d, prop, False)
+            except Exception:
+                pass
+    if not vs.Name.startswith(title):                   # the schedule's title row shows its name
+        vs.Name = _unique_name(doc, ViewSchedule, title)
+
+
+def _schedule_over_plan(doc, sh, vs, v, s):
+    """Edgar's QF101-R1 layout: the equipment schedule across the top of the drawing area, the plan centred
+    in the room left under it. False (sheet left as it was) when the plan does not fit under it."""
+    x0, y0, x1, y1 = _area(s)
+    for si in list(FilteredElementCollector(doc).OfClass(ScheduleSheetInstance)):
+        if si.ScheduleId == vs.Id:
+            doc.Delete(si.Id)
+    si = ScheduleSheetInstance.Create(doc, sh.Id, vs.Id, XYZ(x0 / 12.0, y1 / 12.0, 0))
+    doc.Regenerate()
+    bb = si.get_BoundingBox(sh)
+    w = bb.Max.X - bb.Min.X
+    si.Point = XYZ((x0 + x1) / 24.0 - w / 2.0, y1 / 12.0 - 0.05 / 12.0, 0)
+    doc.Regenerate()
+    bb = si.get_BoundingBox(sh)
+    top = bb.Min.Y * 12.0 - 0.2
+    for bottom in (y0 + 0.45, y0):              # clear of the graphic scale if there is room for it
+        if _place(doc, sh, [v], s, rescale=False, area=[x0, bottom, x1, top]):
+            return True
+    vp = next((p for p in FilteredElementCollector(doc, sh.Id).OfClass(Viewport) if p.ViewId == v.Id), None)
+    SHEET_NOTES.append("schedule %.2f x %.2f in (top %.2f, bottom %.2f); plan viewport %s in, crop %.2f x %.2f in;"
+                       " room %.2f in" % ((bb.Max.X - bb.Min.X) * 12, (bb.Max.Y - bb.Min.Y) * 12, bb.Max.Y * 12,
+                                          bb.Min.Y * 12, "%.2f x %.2f" % tuple(x * 12 for x in _size(vp)) if vp
+                                          else "?", _print_size(v)[0], _print_size(v)[1], top - y0))
+    doc.Delete(si.Id)
+    _place(doc, sh, [v], s, rescale=False)
+    return False
+
+
 def make_sheets(doc, s):
     """Lay the build onto the template's QF sheets: each plan (per area: QF101A, QF101B... when split) on its
-    sheet with a north arrow and graphic scale; the per-wall interior elevations at 1/4" on QF403 (QF404...
-    when they need more room); QF502 3D; and an equipment schedule built here (if any) in place of the
-    template's on QF102. Returns the sheets touched."""
+    sheet with a north arrow and graphic scale, the equipment schedule over the QF101 plan when both fit
+    (else on QF102); the per-wall interior elevations at 1/4" on QF403 (QF404... when they need more room);
+    QF502 3D. Sheets with nothing for this store go: QF102 when its schedule moved, QF111 without demolition,
+    QF501. Returns the sheets touched."""
     tb = _titleblock(doc, s.get("titleblock_name"))
     sheets = dict((sh.SheetNumber, sh) for sh in FilteredElementCollector(doc).OfClass(ViewSheet))
     made = []
@@ -2020,6 +2244,7 @@ def make_sheets(doc, s):
         made.append(sheets[num])
         return sheets[num]
 
+    del SHEET_NOTES[:]
     with _Tx(doc, "AEQ: QF sheets"):
         plans = list(PLAN_SHEETS)
         if not plans:                           # button 6 on its own: the QF plans by their view names
@@ -2029,6 +2254,10 @@ def make_sheets(doc, s):
                 if not v.IsTemplate and m and m.group(1)[:5] in nums:
                     plans.append((m.group(1), m.group(2), v))
             plans.sort(key=lambda x: x[0])
+        es = _equip_schedule(doc)
+        if es is not None:
+            _fit_schedule(doc, es)
+        on_plan = False
         taken = set()
         for sheet_no, name, v in plans:
             if v is None:
@@ -2040,8 +2269,16 @@ def make_sheets(doc, s):
                 sheets[sheet_no] = sh0
                 taken.add(base)
             sh = sheet(sheet_no, name)
-            _place(doc, sh, [v], s, rescale=False)
+            if sheet_no == QF_PLANS[0][0] and es is not None:
+                on_plan = _schedule_over_plan(doc, sh, es, v, s)
+            else:
+                _place(doc, sh, [v], s, rescale=False)
             _north_and_scale(doc, sh, v.Scale, s)
+        planned = set(n[:5] for n, _, v in plans if v is not None)
+        drop = list(DROP_SHEETS) + ([SCHED_SHEET[0]] if on_plan else []) + [n for n in ("QF111",) if n not in planned]
+        for num in drop:
+            if num in sheets:
+                doc.Delete(sheets.pop(num).Id)
         elevs = [v for v in FilteredElementCollector(doc).OfClass(View)
                  if not v.IsTemplate and v.Name.startswith(ELEV_SHEET[0] + " - ELEVATION")]
         if elevs:
@@ -2057,12 +2294,11 @@ def make_sheets(doc, s):
         if v3 is not None:
             _set_scale(doc, v3, int(s.get("plan_scale", 48)))
             _place(doc, sheet(*VIEW3D_SHEET), [v3], s)
-        es = _view_named(doc, ViewSchedule, SCHED_SHEET[0] + " ")      # built here: template's didn't fit
-        if es is not None:
+        if es is not None and not on_plan:
             sh = sheet(*SCHED_SHEET)
             pt = XYZ(0.55 / 12.0, 10.25 / 12.0, 0)
             placed = False
-            for si in FilteredElementCollector(doc, sh.Id).OfClass(ScheduleSheetInstance):
+            for si in list(FilteredElementCollector(doc, sh.Id).OfClass(ScheduleSheetInstance)):
                 if si.ScheduleId == es.Id:
                     placed = True
                 elif doc.GetElement(si.ScheduleId).Name.startswith("AEQ - QF102"):
@@ -2070,6 +2306,11 @@ def make_sheets(doc, s):
                     doc.Delete(si.Id)
             if not placed:
                 ScheduleSheetInstance.Create(doc, sh.Id, es.Id, pt)
+        ush = sheets.get(UTIL_SHEET[0])
+        if ush is not None:
+            for si in FilteredElementCollector(doc, ush.Id).OfClass(ScheduleSheetInstance):
+                if not si.IsTitleblockRevisionSchedule:
+                    _fit_schedule(doc, doc.GetElement(si.ScheduleId), UTIL_COLS, UTIL_SHEET[1])
     return made
 
 

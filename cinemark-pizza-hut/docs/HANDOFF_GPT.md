@@ -127,6 +127,17 @@ Done and checked sheet by sheet (images), GA-263 and TX-093 rebuilt, saved to Dr
 Open: NJ-187 (room copy), wall shelf height, DWG gaps (TX X5 bins ~4" and PH3 ~1.4" off the wall in the DWG),
 stand-in family sizes (Atosa / PerfectFry / ACP), KCL families for the items built from blocks if Edgar prefers.
 
+Round 2 on GA-263 (Edgar's notes, 2026-10-05; his Davie FL TPHD set is the reference for tags and dims):
+- Equipment schedule on QF101 over the plan (columns sized by heading, no wrapped remarks); QF102 dropped when
+  it fits. QF103 condensed the same way. Plan crops = the drawing + 6" + the tags (no 5 ft margins).
+- No QF111 without demolition; no QF501; cover note = project info + "AEQ foodservice drawing standards".
+- Refrigeration plugs 78" A.F.F. everywhere (`program.json` rough_in_defaults.receptacle_refrigeration).
+- QF202 / QF302: one continuous dimension string per wall, each rough-in its own segment, 3/64" ticks, inches only;
+  boxed utility tags in a row (two staggered rows when their leaders clear, else one fanned row); leaders run up
+  the witness line past the string (elbow) before turning to the tag. Equipment halftone.
+- Stacked items stand on the base's top face (`_stand_z`); AQSL block fronts from the block extents (item 4).
+Still open: X1.2 / X1.3 T&S faucets need KCL blocks (the DWG's AQ 2D blocks give boxes in elevation).
+
 ## 4. What Edgar rejected on 2026-10-05, and why it happened
 
 His words: "I hate the way the tags are set up - the arrow on the leader is way too big, and the numbers don't seem to

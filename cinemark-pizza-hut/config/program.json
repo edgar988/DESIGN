@@ -27,7 +27,7 @@
     "_note": "DXF $INSUNITS overrides. All internal geometry is in inches."
   },
   "rough_in_defaults": {
-    "_note": "Inches AFF, used until '0 Sync Family Data' pulls connector heights from the family. AEQ program defaults - confirm against each spec sheet.",
+    "_note": "Inches AFF, used until '0 Sync Family Data' pulls connector heights from the family. AEQ program defaults - confirm against each spec sheet. Refrigeration plugs (reach-ins, undercounters, prep tables, freezers) 78 in. AFF on every job (Edgar 2026-10-05).",
     "receptacle_cord_under_counter": 18,
     "receptacle_cord_countertop": 48,
     "receptacle_cord_floor_unit": 24,
@@ -36,7 +36,8 @@
     "cw_hw_supply_hand_sink": 22,
     "waste_wall_sink": 18,
     "floor_sink": 0,
-    "point_of_connection_ft": 5
+    "point_of_connection_ft": 5,
+    "receptacle_refrigeration": 78
   },
   "routing": {
     "_note": "Home-run length = (|dx|+|dy| from panel or plumbing source) * factor + vertical allowance. Manhattan distance mimics ceiling runs.",
