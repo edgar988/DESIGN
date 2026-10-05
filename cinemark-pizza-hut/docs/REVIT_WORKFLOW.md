@@ -46,6 +46,9 @@ Runs clean end to end: model, 13 walls, 4 families placed, KCL data synced, 17-s
 - [x] Rough-ins: numbered tags only on the plans (E1/E2, P7-P11 at one fixture), one clean row per wall just
       outside the room, leaders square to the wall; only tags for close-set or stacked equipment spread
       apart and angle. Details are in the QF103 schedule. Items without a family still get rough-ins.
+      A wall with equipment wholly behind it (two lines back to back, TX-093's middle wall) takes its row on
+      the item's own side, past the equipment fronts. Rows meeting at a corner step out or slide along their
+      wall so no tag or leader crosses another tag (checked on GA-263 and TX-093, 2026-10-05).
 - [ ] Elevation tags: the utility markers show at their A.F.F. in QF403 but carry no tag text yet.
 - [x] Master item numbers on Marks, QF101 item tags (clean rows) and QF102 / QF103.
 - [x] Countertop units sit on their base (top of the base family, or 34 in. for a table with no family).

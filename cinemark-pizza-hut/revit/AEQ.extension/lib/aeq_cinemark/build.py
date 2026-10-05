@@ -559,6 +559,42 @@ def _side(p, bbox_in, centre=None):
     return min(d, key=d.get)
 
 
+_FLIP = {"N": "S", "S": "N", "E": "W", "W": "E"}
+
+
+def _tag_side(layout, p, c, room, reach_in=36.0):
+    """(side, anchor) for a tag on the rough-in at p of the item centred at c. Normally the row goes just
+    outside the item's wall. A wall with equipment right behind it (two lines of equipment back to back,
+    TX-093's middle wall) has no room there: the row goes on the item's own side, past its front, and the
+    leader runs square back through it."""
+    side = _side(p, room, c)
+    if abs(p.X - c.X) < 1e-6 and abs(p.Y - c.Y) < 1e-6:
+        return side, p
+    px, py, cx, cy = p.X * 12.0, p.Y * 12.0, c.X * 12.0, c.Y * 12.0
+    own, others = None, []
+    for q in layout["equipment"]:
+        b = q.get("bbox")
+        if q["status"] == "demo" or not b or q["layer"].upper().startswith("FS-ELEC"):
+            continue
+        if own is None and abs((b[0] + b[2]) / 2.0 - cx) < 0.5 and abs((b[1] + b[3]) / 2.0 - cy) < 0.5:
+            own = b
+        else:
+            others.append(b)
+    if own is None:
+        return side, p
+    band = {"N": (own[0], py + 1, own[2], py + reach_in), "S": (own[0], py - reach_in, own[2], py - 1),
+            "E": (px + 1, own[1], px + reach_in, own[3]), "W": (px - reach_in, own[1], px - 1, own[3])}[side]
+    # behind = wholly past the wall face (an outline drawn a little through the wall is not behind it)
+    beyond = {"N": lambda b: b[1] > py, "S": lambda b: b[3] < py,
+              "E": lambda b: b[0] > px, "W": lambda b: b[2] < px}[side]
+    if not any(beyond(b) and b[0] < band[2] and b[2] > band[0] and b[1] < band[3] and b[3] > band[1]
+               for b in others):
+        return side, p
+    front = {"N": XYZ(p.X, own[1] / 12.0, 0), "S": XYZ(p.X, own[3] / 12.0, 0),
+             "E": XYZ(own[0] / 12.0, p.Y, 0), "W": XYZ(own[2] / 12.0, p.Y, 0)}[side]
+    return _FLIP[side], front
+
+
 def _text_type(doc, want):
     types = list(FilteredElementCollector(doc).OfClass(TextNoteType))
     hit = next((t for t in types if want and want.lower() in _name(t).lower()), None)
@@ -581,6 +617,70 @@ def _spread(items, gap):
         if not moved:
             break
     return pos
+
+
+def _seg_hits_box(p, q, b):
+    """Does the segment p-q (x, y) cross the box b (x0, y0, x1, y1)? (Liang-Barsky)"""
+    t0, t1 = 0.0, 1.0
+    dx, dy = q[0] - p[0], q[1] - p[1]
+    for pp, qq in ((-dx, p[0] - b[0]), (dx, b[2] - p[0]), (-dy, p[1] - b[1]), (dy, b[3] - p[1])):
+        if abs(pp) < 1e-12:
+            if qq < 0:
+                return False
+        else:
+            t = qq / pp
+            if pp < 0:
+                t0 = max(t0, t)
+            else:
+                t1 = min(t1, t)
+            if t0 > t1:
+                return False
+    return True
+
+
+def _clear_of(placed, row, side, gap):
+    """Where a row of tags goes to clear the tags already placed (another wall's row at a corner).
+    row: [(text bbox, move, leader target)]; returns the extra move as an XYZ. The row first steps out,
+    away from its wall; if its leaders would then cross a placed tag it slides along the wall instead, as
+    little as it can, and those leaders angle."""
+    out = {"N": (0, 1), "S": (0, -1), "E": (1, 0), "W": (-1, 0)}[side]
+    along = (abs(out[1]), abs(out[0]))
+
+    def boxes(sx, sy):
+        return [(bb.Min.X + d.X + sx, bb.Min.Y + d.Y + sy, bb.Max.X + d.X + sx, bb.Max.Y + d.Y + sy, t)
+                for bb, d, t in row]
+
+    def text_hit(bx, b):
+        return bx[0] < b[2] + gap and bx[2] > b[0] - gap and bx[1] < b[3] + gap and bx[3] > b[1] - gap
+
+    def lead_hit(bx, b):
+        near = {"N": ((bx[0] + bx[2]) / 2.0, bx[1]), "S": ((bx[0] + bx[2]) / 2.0, bx[3]),
+                "E": (bx[0], (bx[1] + bx[3]) / 2.0), "W": (bx[2], (bx[1] + bx[3]) / 2.0)}[side]
+        return _seg_hits_box((bx[4].X, bx[4].Y), near, b)
+
+    def clean(sx, sy):
+        return not any(text_hit(bx, b) or lead_hit(bx, b) for bx in boxes(sx, sy) for b in placed)
+
+    total = 0.0
+    for _ in range(20):
+        need = 0.0
+        for bx in boxes(out[0] * total, out[1] * total):
+            for b in placed:
+                if text_hit(bx, b):
+                    need = max(need, {"N": b[3] + gap - bx[1], "S": bx[3] - (b[1] - gap),
+                                      "E": b[2] + gap - bx[0], "W": bx[2] - (b[0] - gap)}[side])
+        if need <= 1e-6:
+            break
+        total += need
+    if not placed or clean(out[0] * total, out[1] * total):
+        return XYZ(out[0] * total, out[1] * total, 0)
+    step = max(max(bb.Max.X - bb.Min.X, bb.Max.Y - bb.Min.Y) for bb, d, t in row) / 4.0
+    for k in range(1, 25):
+        for sgn in (1, -1):
+            sx, sy = along[0] * sgn * k * step, along[1] * sgn * k * step
+            if clean(sx, sy):
+                return XYZ(sx, sy, 0)
+    return XYZ(out[0] * total, out[1] * total, 0)
 
 
 class _Callouts(object):
@@ -643,15 +743,20 @@ class _Callouts(object):
                 walls = [perp(m[3]) for m in row_ms]
                 row = {"N": max(walls) + self.g, "S": min(walls) - self.g,
                        "E": max(walls) + self.g, "W": min(walls) - self.g}[side]
+                moves = []
                 for (n, target, _, _, bb), a, p in zip(row_ms, anchors, pos):
                     # along the wall: anchor to its spot; across: the text's near edge on the row
                     across = {"N": row - bb.Min.Y, "S": row - bb.Max.Y, "E": row - bb.Min.X,
                               "W": row - bb.Max.X}[side]
-                    d = XYZ(p - a.X, across, 0) if ax else XYZ(across, p - a.Y, 0)
+                    moves.append(XYZ(p - a.X, across, 0) if ax else XYZ(across, p - a.Y, 0))
+                # a row that lands on tags already placed (another wall's row at a corner) steps out, whole
+                shift = _clear_of(boxes, [(m[4], d, m[1]) for m, d in zip(row_ms, moves)], side, 0.3 * h)
+                for (n, target, _, _, bb), d, p in zip(row_ms, moves, pos):
+                    d = d + shift
                     n.Coord = n.Coord + d
                     boxes.append((bb.Min.X + d.X, bb.Min.Y + d.Y, bb.Max.X + d.X, bb.Max.Y + d.Y))
                     if ax:
-                        wanted.append((n, p))
+                        wanted.append((n, p + shift.X))
         doc.Regenerate()
         for n, p in wanted:                 # the attach point can shift as a tag moves: square it up once more
             r = p - list(n.GetLeaders())[0].Anchor.X
@@ -865,7 +970,8 @@ def roughin_views(doc, layout, takeoff, s):
                     at.setdefault(key, (r["point"], [], r["centre"]))[1].append(r["tag"])
             tags = _Callouts(doc, view, tn, frame, gap_ft=0.75)
             for p, names, ctr in at.values():
-                tags.add(p, _tag_text(names), _side(p, room, ctr))
+                side, anchor = _tag_side(layout, p, ctr, room)
+                tags.add(p, _tag_text(names), side, anchor=anchor)
             _grow_crop(view, bbox, tags.place())
         # QF101: item numbers in the same clean rows, leaders to each item's centre
         v_eq = views["QF101"]
@@ -877,7 +983,11 @@ def roughin_views(doc, layout, takeoff, s):
                 continue
             c = _centre(q)
             w = _pt(q["roughin"]) if q.get("roughin") else None
-            items.add(c, str(q["item"]), _side(w, room, c) if w else _side(c, room), anchor=w)
+            if w:
+                side, anchor = _tag_side(layout, w, c, room)
+                items.add(c, str(q["item"]), side, anchor=anchor)
+            else:
+                items.add(c, str(q["item"]), _side(c, room))
         _grow_crop(v_eq, bbox, items.place())
     return [views[n] for n, _ in QF_PLANS]
 
