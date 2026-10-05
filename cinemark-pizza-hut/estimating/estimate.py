@@ -217,16 +217,23 @@ def price_list(path):
         except (TypeError, ValueError):
             return 0.0
 
+    def sell(r):
+        # never below the manufacturer's MAP (Edgar): the list's Sell can sit under it (Atosa AUF60SD)
+        s, m = num(r[col["Sell"]]), num(r[col["Map"]]) if "Map" in col else 0.0
+        return max(s, m), (m if m > s else None)
+
     for r in rows:
         n = r[col["ItemNo"]]
         if n not in (None, ""):
             n = str(n).strip()
             n = "X" + n[1:] if n[:1] == "E" else n          # existing items E# are X# on the drawings
-            cur = out[n] = {"sell": num(r[col["Sell"]]), "net": num(r[col["Net"]]), "mfr": r[col["Mfr"]],
+            s, raised = sell(r)
+            cur = out[n] = {"sell": s, "map_raised": raised, "net": num(r[col["Net"]]), "mfr": r[col["Mfr"]],
                             "model": r[col["Model"]], "category": r[col["Category"]], "adds": []}
         elif cur is not None and num(r[col["Sell"]]) > 0:
+            s, raised = sell(r)
             cur["adds"].append({"spec": ((r[col["Spec"]] or "").split(" - Authorization")[0]).strip(),
-                                "sell": num(r[col["Sell"]]), "net": num(r[col["Net"]])})
+                                "sell": s, "map_raised": raised, "net": num(r[col["Net"]])})
     return out
 
 
@@ -258,8 +265,9 @@ def equipment_lines(takeoff, program):
                                else "Item %s: %s" % (item, part["spec"])),
                       "spec": part.get("spec"), "hrs": 0, "mat": round(part["net"] * qty, 2), "sub": 0, "eqp": 0,
                       "cost": round(part["net"] * qty, 2), "sell": round(part["sell"] * qty, 2), "fixed": True,
-                      "basis": "PH master list sell %.2f, net %.2f%s" % (
-                          part["sell"], part["net"], "" if part["net"] else " (no net in the list - cost unknown)"),
+                      "basis": "PH master list sell %.2f%s, net %.2f%s" % (
+                          part["sell"], " (raised to MAP)" if part.get("map_raised") else "", part["net"],
+                          "" if part["net"] else " (no net in the list - cost unknown)"),
                       "note": ""})
     return L, warn
 
