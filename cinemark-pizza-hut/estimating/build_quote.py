@@ -98,8 +98,8 @@ def section_text(sec, store, est):
     if sec == "TRAVEL & SUPERVISION" and not permits:
         return ["Project management, coordination and submittals; crew travel, lodging and per diem."]
     if sec == "EQUIPMENT":
-        return ["Equipment supplied by Aaron Equipment Co. (items and prices listed below), at Pizza Hut master "
-                "equipment list pricing; set and connected under Equipment Set & Start-Up."]
+        return ["Furnished by Aaron Equipment Co. at Pizza Hut master equipment list pricing, itemized below; "
+                "set and connected under Equipment Set &amp; Start-Up."]
     if sec == "DEMOLITION":
         out = []
         if "demo_lump_sum" in asm:
@@ -247,14 +247,25 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
 
     s.append(Paragraph("PRICING", Q.sechead))
     rows = []
-    for sec in est["section_order"]:
+    descs = dict((str(r.get("item")), r) for r in takeoff["schedule"])
+    for n, sec in enumerate(est["section_order"], 1):
         detail = (scope_detail(est["sections"][sec]["lines"])
                   if sec not in ("TRAVEL & SUPERVISION", "EQUIPMENT") else "")
-        rows.append(("<b>%s</b><br/>%s%s" % (
+        head = "<b>%s</b><br/>%s%s" % (
             SECTION_NAME.get(sec) or sec.title().replace("&", "&amp;").replace("Hvac", "HVAC"),
             " ".join(section_text(sec, store, est)),
-            ("<br/><font color='#666666'>Includes: %s.</font>" % detail) if detail else ""),
-            est["customer_sections"][sec]))
+            ("<br/><font color='#666666'>Includes: %s.</font>" % detail) if detail else "")
+        if sec != "EQUIPMENT":
+            rows.append((head, est["customer_sections"][sec]))
+            continue
+        # AEQ equipment itemized (Edgar): one line per item - quantity, price each, extended
+        rows.append((head, None))
+        for k, l in enumerate(est["sections"][sec]["lines"], 1):
+            r = descs.get(str(l["item"])) or {}
+            name = ("Item %s: %s %s, %s" % (l["item"], r.get("mfr", ""), r.get("model", ""), r.get("description", ""))
+                    if r and not l.get("spec") else l["desc"])
+            rows.append(("%s<br/><font color='#666666'>%s ea @ ${:,.2f}</font>".format(l["sell"] / l["qty"]) % (
+                name.replace("&", "&amp;"), format(l["qty"], "g")), l["sell"], "%d.%d" % (n, k)))
     s.append(Q.price_table(rows, "TOTAL · LUMP SUM, ALL TRAVEL INCLUDED", est["total"]))
     s.append(Paragraph("Section amounts include receiving, coordination, supervision and travel as allocated. "
                        "Survey, design and rough-in drawings are billed under the program proposal (Tier 2) "
@@ -277,19 +288,11 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
         for src, head, note in EQUIPMENT_HEADS:
             rows = [r for r in takeoff["schedule"] if (r.get("provided_by") or "AEQ") == src]
             if rows:
-                if src == "AEQ" and priced:         # on the quote at the master list sell, each priced
-                    s.append(Paragraph("SUPPLIED BY AARON EQUIPMENT CO.: FURNISHED, SET &amp; CONNECTED",
-                                       Q.sechead))
-                    out = []
-                    order = lambda it: [float(x) for x in re.findall(r"\d+(?:\.\d+)?", str(it[0]))] or [0]
-                    for item, text in sorted(_eq_items(rows), key=order):
-                        p = priced.get(str(item))
-                        if p:
-                            adds = "; ".join(p["adds"]).replace("&", "&amp;")
-                            text += "%s · ${:,.2f}".format(p["sell"]) % ((", incl. %s" % adds) if adds else "")
-                        out.append(text)
-                    s.extend(Q.bullets(out))
-                    continue
+                if src == "AEQ" and priced:         # itemized with its prices in the pricing table above
+                    rest = [r for r in rows if str(r.get("item")) not in priced]
+                    if not rest:
+                        continue
+                    rows = rest
                 s.append(Paragraph(head, Q.sechead))
                 s.extend(Q.bullets(_eq(rows)))
                 if note:

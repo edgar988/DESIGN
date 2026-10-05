@@ -86,12 +86,20 @@ def panels(left_title, left_rows, right_title, right_rows):
 
 
 def price_table(rows, total_label, total_value):
-    """rows: [(desc_html, amount)]"""
+    """rows: [(desc_html, amount)], numbered 1, 2...; a row (desc_html, amount, label) carries its own number
+    (8.1 under section 8), and an amount of None leaves the cell empty (a section itemized below it)."""
     data = [[Paragraph("#", wh), Paragraph("Description", wh), Paragraph("Amount", whr)]]
-    for i, (d, a) in enumerate(rows, 1):
-        data.append([Paragraph(str(i), base), Paragraph(d, base), Paragraph(money(a), right)])
+    n = 0
+    for row in rows:
+        d, a = row[0], row[1]
+        if len(row) > 2:
+            label = row[2]
+        else:
+            n += 1
+            label = str(n)
+        data.append([Paragraph(label, base), Paragraph(d, base), Paragraph(money(a), right) if a is not None else ""])
     data.append(["", Paragraph(total_label, tot), Paragraph(money(total_value), tot)])
-    t = Table(data, colWidths=[0.3 * inch, CW - 1.55 * inch, 1.25 * inch], repeatRows=1)
+    t = Table(data, colWidths=[0.4 * inch, CW - 1.65 * inch, 1.25 * inch], repeatRows=1)
     st = [("BACKGROUND", (0, 0), (-1, 0), DARK), ("VALIGN", (0, 0), (-1, -1), "TOP"),
           ("TOPPADDING", (0, 0), (-1, -1), 3.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
           ("LINEABOVE", (0, -1), (-1, -1), 0.9, DARK)]

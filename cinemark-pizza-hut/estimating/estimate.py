@@ -204,7 +204,7 @@ def build_lines(takeoff, store, cost_db, rates):
 def price_list(path):
     """The PH master equipment list's AutoQuotes export (Drive): {item no.: sell, net, model, priced add-ons}.
     Rows without an item number belong to the item above; the ones carrying a sell (an extended warranty,
-    a module) are part of that item's price."""
+    a module) are that item's priced add-ons, each its own quote line."""
     from openpyxl import load_workbook
     ws = load_workbook(path, data_only=True).worksheets[0]     # (read_only sees no rows: no dimension record)
     rows = ws.iter_rows(values_only=True)
@@ -225,9 +225,8 @@ def price_list(path):
             cur = out[n] = {"sell": num(r[col["Sell"]]), "net": num(r[col["Net"]]), "mfr": r[col["Mfr"]],
                             "model": r[col["Model"]], "category": r[col["Category"]], "adds": []}
         elif cur is not None and num(r[col["Sell"]]) > 0:
-            cur["sell"] += num(r[col["Sell"]])
-            cur["net"] += num(r[col["Net"]])
-            cur["adds"].append(((r[col["Spec"]] or "").split(" - Authorization")[0]).strip())
+            cur["adds"].append({"spec": ((r[col["Spec"]] or "").split(" - Authorization")[0]).strip(),
+                                "sell": num(r[col["Sell"]]), "net": num(r[col["Net"]])})
     return out
 
 
@@ -253,13 +252,15 @@ def equipment_lines(takeoff, program):
             warn.append("item %s: no sell in the equipment price list" % item)
             continue
         qty = n[item]
-        L.append({"section": "EQUIPMENT", "assembly": "eq_supply", "item": item, "qty": qty, "unit": "ea",
-                  "desc": "Item %s: %s %s, %s" % (item, p["mfr"], p["model"], p["category"]),
-                  "adds": p["adds"], "hrs": 0, "mat": round(p["net"] * qty, 2), "sub": 0, "eqp": 0,
-                  "cost": round(p["net"] * qty, 2), "sell": round(p["sell"] * qty, 2), "fixed": True,
-                  "basis": "PH master list sell %.2f, net %.2f%s" % (
-                      p["sell"], p["net"], "" if p["net"] else " (no net in the list - cost unknown)"),
-                  "note": "; ".join(p["adds"])})
+        for k, part in enumerate([p] + p["adds"]):      # the item, then each priced add-on on its own line
+            L.append({"section": "EQUIPMENT", "assembly": "eq_supply", "item": item, "qty": qty, "unit": "ea",
+                      "desc": ("Item %s: %s %s, %s" % (item, p["mfr"], p["model"], p["category"]) if k == 0
+                               else "Item %s: %s" % (item, part["spec"])),
+                      "spec": part.get("spec"), "hrs": 0, "mat": round(part["net"] * qty, 2), "sub": 0, "eqp": 0,
+                      "cost": round(part["net"] * qty, 2), "sell": round(part["sell"] * qty, 2), "fixed": True,
+                      "basis": "PH master list sell %.2f, net %.2f%s" % (
+                          part["sell"], part["net"], "" if part["net"] else " (no net in the list - cost unknown)"),
+                      "note": ""})
     return L, warn
 
 
