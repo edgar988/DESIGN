@@ -2,6 +2,7 @@
 """Customer construction quote PDF + INTERNAL estimate workbook for one store."""
 import datetime as dt
 import os
+import re
 
 from reportlab.lib.units import inch
 from reportlab.platypus import CondPageBreak, Image, KeepTogether, Paragraph, Spacer, Table, TableStyle
@@ -67,6 +68,38 @@ def section_text(sec, store, est):
         return [scope["text"][sec]]
     asm = set(l.get("assembly") for l in est["sections"][sec]["lines"])
     hv = store.get("hvac") or {}
+    permits = scope.get("permits", True)
+    if sec == "GENERAL CONDITIONS":
+        out = ["Mobilization for rough-in and for equipment set / finish; protection of adjacent theatre areas, "
+               "dust barriers and walk-off mats."]
+        tail = [t for k, t in (("gc_permit_allow", "permits and inspections (allowance)"),
+                               ("gc_dumpster", "debris removal"), ("gc_final_clean", "final construction clean"))
+                if k in asm]
+        if tail:
+            out.append(tail[0][0].upper() + ", ".join(tail)[1:] + ".")
+        return out
+    if sec == "PLUMBING":
+        n_sup = sum(l["qty"] for l in est["sections"][sec]["lines"] if l.get("assembly") == "pl_supply_conn")
+        parts = [t for k, t in (
+            ("pl_supply_conn", "water supply connection%s with shutoff%s" % (("s", "s") if n_sup > 1 else ("", ""))),
+            ("pl_waste_conn", "direct waste"),
+            ("pl_indirect", "indirect waste to the %sfloor sink" % ("" if "pl_floor_sink" in asm else "existing ")),
+            ("pl_floor_sink", "floor sinks with slab saw-cut and patch"),
+            ("pl_grease_interceptor", "point-of-use grease interceptor"),
+            ("pl_mixing_valve", "mixing valve at the hand sink"), ("pl_backflow", "dish machine backflow preventer"),
+            ("pl_water_heater", "new water heater")) if k in asm]
+        only = [str(i) for i in (scope.get("plumbing_items") or [])]
+        names = ["%s (item %s)" % (r["description"].split(",")[0].lower(), r["item"])
+                 for r in est.get("items", []) if str(r.get("item")) in only]
+        lead = ("Plumbing for the new %s only: " % " and ".join(names)) if names else ""
+        body = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else "".join(parts)
+        text = lead + body
+        return [text[0].upper() + text[1:] + ", per the plumbing rough-in schedule."] if text else []
+    if sec == "TRAVEL & SUPERVISION" and not permits:
+        return ["Project management, coordination and submittals; crew travel, lodging and per diem."]
+    if sec == "EQUIPMENT":
+        return ["Equipment supplied by Aaron Equipment Co. (items and prices listed below), at Pizza Hut master "
+                "equipment list pricing; set and connected under Equipment Set & Start-Up."]
     if sec == "DEMOLITION":
         out = []
         if "demo_lump_sum" in asm:
@@ -130,6 +163,8 @@ def section_text(sec, store, est):
         return out
     return SCOPE_TEXT.get(sec, [])
 
+
+SECTION_NAME = {"EQUIPMENT": "Equipment Supplied by Aaron Equipment Co."}
 
 EQUIPMENT_HEADS = [
     ("OWNER", "OWNER-FURNISHED EQUIPMENT (PH): RECEIVED, DELIVERED, SET &amp; CONNECTED", None),
@@ -213,9 +248,10 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
     s.append(Paragraph("PRICING", Q.sechead))
     rows = []
     for sec in est["section_order"]:
-        detail = scope_detail(est["sections"][sec]["lines"]) if sec != "TRAVEL & SUPERVISION" else ""
+        detail = (scope_detail(est["sections"][sec]["lines"])
+                  if sec not in ("TRAVEL & SUPERVISION", "EQUIPMENT") else "")
         rows.append(("<b>%s</b><br/>%s%s" % (
-            sec.title().replace("&", "&amp;").replace("Hvac", "HVAC"),
+            SECTION_NAME.get(sec) or sec.title().replace("&", "&amp;").replace("Hvac", "HVAC"),
             " ".join(section_text(sec, store, est)),
             ("<br/><font color='#666666'>Includes: %s.</font>" % detail) if detail else ""),
             est["customer_sections"][sec]))
@@ -224,19 +260,36 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
                        "Survey, design and rough-in drawings are billed under the program proposal (Tier 2) "
                        "and are not included here.", Q.sub))
 
-    def _eq(rows):
+    def _eq_items(rows):
         n = {}                                  # one line per item: blocks of the same item add up
         for r in rows:
             k = (r.get("item"), r["mfr"], r["model"], r["description"])
             n[k] = n.get(k, 0) + r["qty"]
-        return [("%s(%d) %s %s, %s" % (("Item %s: " % k[0]) if k[0] else "", q, k[1], k[2], k[3])).replace("&", "&amp;")
-                for k, q in n.items()]
+        return [(k[0], ("%s(%d) %s %s, %s" % (("Item %s: " % k[0]) if k[0] else "", q, k[1], k[2], k[3]))
+                 .replace("&", "&amp;")) for k, q in n.items()]
+
+    def _eq(rows):
+        return [t for _, t in _eq_items(rows)]
 
     s.append(CondPageBreak(2.5 * inch))
+    priced = dict((l["item"], l) for l in (est["sections"].get("EQUIPMENT") or {}).get("lines", []))
     if any(r.get("provided_by") for r in takeoff["schedule"]):     # numbered from the PH master list
         for src, head, note in EQUIPMENT_HEADS:
             rows = [r for r in takeoff["schedule"] if (r.get("provided_by") or "AEQ") == src]
             if rows:
+                if src == "AEQ" and priced:         # on the quote at the master list sell, each priced
+                    s.append(Paragraph("SUPPLIED BY AARON EQUIPMENT CO.: FURNISHED, SET &amp; CONNECTED",
+                                       Q.sechead))
+                    out = []
+                    order = lambda it: [float(x) for x in re.findall(r"\d+(?:\.\d+)?", str(it[0]))] or [0]
+                    for item, text in sorted(_eq_items(rows), key=order):
+                        p = priced.get(str(item))
+                        if p:
+                            adds = "; ".join(p["adds"]).replace("&", "&amp;")
+                            text += "%s · ${:,.2f}".format(p["sell"]) % ((", incl. %s" % adds) if adds else "")
+                        out.append(text)
+                    s.extend(Q.bullets(out))
+                    continue
                 s.append(Paragraph(head, Q.sechead))
                 s.extend(Q.bullets(_eq(rows)))
                 if note:
@@ -247,11 +300,13 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
 
     s.append(CondPageBreak(3.2 * inch))
     s.append(Paragraph("SCHEDULE", Q.sechead))
+    permits = (store.get("scope") or {}).get("permits", True)
     s.append(Paragraph("Notice to proceed %s · on site %s · turnover %s · about %d working days on "
-                       "site, %.1f calendar weeks overall. %s Dates move with permit issue and owner equipment "
+                       "site, %.1f calendar weeks overall. %s Dates move with %sowner equipment "
                        "delivery." % (_fmt_date(sched["ntp"]), _fmt_date(sched["site_start"]),
                                       _fmt_date(sched["turnover"]), sched["site_working_days"],
-                                      sched["calendar_weeks"], sched["note"]), Q.base))
+                                      sched["calendar_weeks"], sched["note"],
+                                      "permit issue and " if permits else ""), Q.base))
     if gantt_png and os.path.exists(gantt_png):
         from PIL import Image as PILImage
         iw, ih = PILImage.open(gantt_png).size
@@ -273,6 +328,14 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
                                            "the existing panel, assumed to have spare capacity and breaker spaces.")
     if not has_hvac:
         excl[excl.index(EXCLUSIONS[6])] = "HVAC: none included; the area stays on the theatre's existing system."
+    if not permits:
+        excl.insert(1, "Permits, plan review and inspections: not included.")
+    if "CONSTRUCTION & FINISHES" in ((store.get("scope") or {}).get("omit_sections") or []):
+        excl.insert(2, "Construction and finishes (walls, ceiling, flooring, FRP): existing to remain, not "
+                       "included.")
+    if priced:
+        excl[0] = ("Pizza Hut program equipment and smallwares: owner-furnished; AEQ-supplied equipment as "
+                   "priced above.")
     s.append(KeepTogether([Paragraph("EXCLUSIONS / ASSUMPTIONS", Q.sechead)] + Q.bullets(
         excl + ["Work performed during normal business hours with the kitchen area vacated; theatre "
                       "remains open." if store.get("schedule", {}).get("work_window", "day") == "day"
@@ -359,6 +422,7 @@ def build_internal_xlsx(path, store, takeoff, est, sched):
           [[t["name"], t["start"], t["end"], t["days"], t["kind"]] for t in sched["tasks"]], [62, 12, 12, 7, 8])
     flags = [["Unverified catalog entry", k] for k in takeoff["unverified"]]
     flags += [["Takeoff warning", w] for w in takeoff["warnings"]]
+    flags += [["Estimate warning", w] for w in est.get("warnings", [])]
     for r in takeoff["schedule"]:
         flags += [["Equipment flag " + r["key"], f] for f in r["flags"]]
     flags += [["Store note", n] for n in store.get("notes", [])]

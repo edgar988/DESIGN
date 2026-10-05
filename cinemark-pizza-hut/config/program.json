@@ -6,6 +6,8 @@
     "quote_prefix": "SSG-2026-CNK-PH",
     "validity_days": 60
   },
+  "equipment_price_list": "G:\\Shared drives\\AARON EQUIPMENT CO SHARED DRIVE\\CINEMARK\\PIZZA HUT\\PH MASTER EQUIPMENT LIST - W PRICING.xlsx",
+  "_equipment_price_list_note": "AutoQuotes export of the PH master list: the Sell column is what AEQ-supplied equipment goes on a quote at (stores with scope.equipment_priced), Net is its internal cost.",
   "customer": {
     "name": "Cinemark USA, Inc.",
     "address": "3900 Dallas Parkway, Plano, TX 75093",

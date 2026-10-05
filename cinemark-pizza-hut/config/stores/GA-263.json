@@ -75,9 +75,19 @@
     "permit_weeks": 3,
     "equipment_lead_weeks": 6
   },
-  "overrides": {},
+  "overrides": {
+    "_note": "Edgar's quote review 2026-10-05: these section sells are the customer's numbers. Electrical held at the R0 figure.",
+    "section_sell": {
+      "DEMOLITION": 2500,
+      "ELECTRICAL": 28500,
+      "HVAC": 16000,
+      "EQUIPMENT SET & START-UP": 3700,
+      "TRAVEL & SUPERVISION": 9500
+    }
+  },
   "notes": [
-    "GA is the calibration store: QF101-R1 + heat load already issued. The pipeline's heat load must reproduce 61,106 Btu/h design for this package."
+    "GA is the calibration store: QF101-R1 + heat load already issued. The pipeline's heat load must reproduce 61,106 Btu/h design for this package.",
+    "Edgar 2026-10-05 quote review: no permits or inspections; demolition $2,500; construction & finishes removed (all existing); electrical as is; plumbing for the new dishwasher only (no mixing valve, backflow or slab cutting); HVAC $16,000; equipment set $3,700; travel & supervision $9,500; AEQ equipment on the quote at the master list sell."
   ],
   "package": "from_dxf",
   "issued_package": [
@@ -158,9 +168,13 @@
       "Remodel of an old storage room (closed room).",
       "All utilities priced new, run from a panel ~40 ft from the work: up, over at the ceiling and back down (Edgar, construction narrative 10-2026).",
       "HVAC: see hvac.note.",
-      "Not much demo: about $8,000 including dumpsters."
+      "Not much demo: $2,500 (Edgar, quote review 10-05-2026; was about $8,000 including dumpsters)."
     ],
-    "demo_lump_sum": 8000,
-    "demo_note": "Edgar: about $8,000 of demo in the old storage room, dumpsters included (taken as sell)"
+    "demo_lump_sum": 2500,
+    "demo_note": "Edgar 10-05: demolition $2,500 (taken as sell)",
+    "permits": false,
+    "omit_sections": ["CONSTRUCTION & FINISHES"],
+    "plumbing_items": ["5"],
+    "equipment_priced": true
   }
 }

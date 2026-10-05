@@ -71,33 +71,51 @@ def build(est, store, ntp=None):
         tasks.append(t)
         return t
 
+    permits = (store.get("scope") or {}).get("permits", True)   # GA-263: no permits / inspections by AEQ
+    finishes = "CONSTRUCTION & FINISHES" in est["sections"]
+    asm = set(l.get("assembly") for s in est["sections"].values() for l in s["lines"])
     t_sub = task("Contract / NTP, submittals & equipment release", ntp, 5, "pre")
-    t_perm = task("Permit drawings, plan review & permits", _wd_add(t_sub["end"], 1), permit_wk * 5, "pre")
+    t_perm = (task("Permit drawings, plan review & permits", _wd_add(t_sub["end"], 1), permit_wk * 5, "pre")
+              if permits else t_sub)
     t_lead = task("Owner equipment procurement & delivery (by owner)", ntp, lead_wk * 5, "owner")
     start_site = _next_wd(_wd_add(t_perm["end"], 1))
     t_mob = task("Mobilize, protection & site verification", start_site, 1)
     t_demo = task("Demolition & make-safe", _wd_add(t_mob["end"], 1), days("DEMOLITION"))
     rough = max(days("ELECTRICAL", max(1, crew - 1)), days("PLUMBING", max(1, crew - 1)))
-    t_rough = task("Electrical & plumbing rough-in (incl. underslab, floor sinks)",
-                   _wd_add(t_demo["end"], 1), rough)
-    t_insp = task("Rough-in inspections (AHJ)", _wd_add(t_rough["end"], 1), 2, "insp")
-    t_close = task("Partitions, blocking, FRP & ceiling grid", _wd_add(t_insp["end"], 1),
-                   max(2, math.ceil(days("CONSTRUCTION & FINISHES") * 0.6)))
-    t_hvac = task("HVAC: mini-splits, line sets, ductwork, exhaust", t_close["start"],
-                  days("HVAC", 2, 2))
-    t_floor = task("Flooring & base, ceiling tile, trims",
-                   _wd_add(max(t_close["end"], t_hvac["end"]), 1),
-                   max(2, math.ceil(days("CONSTRUCTION & FINISHES") * 0.4)))
+    t_rough = task("Electrical & plumbing rough-in%s" % (
+        " (incl. underslab, floor sinks)" if asm & {"pl_floor_sink", "pl_underslab_lf"} else ""),
+        _wd_add(t_demo["end"], 1), rough)
+    t_insp = task("Rough-in inspections (AHJ)", _wd_add(t_rough["end"], 1), 2, "insp") if permits else t_rough
+    if finishes:
+        t_close = task("Partitions, blocking, FRP & ceiling grid", _wd_add(t_insp["end"], 1),
+                       max(2, math.ceil(days("CONSTRUCTION & FINISHES") * 0.6)))
+        hvac_start = t_close["start"]
+    else:
+        t_close, hvac_start = None, _wd_add(t_insp["end"], 1)
+    t_hvac = task("HVAC: mini-splits, line sets, ductwork, exhaust", hvac_start, days("HVAC", 2, 2))
+    if finishes:
+        t_floor = task("Flooring & base, ceiling tile, trims",
+                       _wd_add(max(t_close["end"], t_hvac["end"]), 1),
+                       max(2, math.ceil(days("CONSTRUCTION & FINISHES") * 0.4)))
+    else:
+        t_floor = t_hvac
     eq_ready = max(_wd_add(t_floor["end"], 1), _next_wd(t_lead["end"] + dt.timedelta(days=1)))
     t_set = task("Equipment set, final connections & lighting trim", eq_ready,
                  days("EQUIPMENT SET & START-UP", crew, 2))
     t_start = task("Start-up, commissioning & HVAC balance (Hobart start-up by Hobart)",
                    _wd_add(t_set["end"], 1), 1)
-    t_final = task("Final inspections & health department", _wd_add(t_start["end"], 1), 3, "insp")
+    t_final = task("Final inspections & health department" if permits else "Health department (by owner)",
+                   _wd_add(t_start["end"], 1), 3, "insp")
     t_punch = task("Punch list, clean & turnover", _wd_add(t_final["end"], 1), 1)
 
-    site_wd = sum(1 for i in range((t_punch["end"] - start_site).days + 1)
-                  if _working(start_site + dt.timedelta(days=i)))
+    # days the crew actually works on site (the rough-in trip and the set trip), not the wait between them
+    # for owner equipment
+    on_site = set()
+    for t in tasks:
+        if t["kind"] == "site":
+            on_site.update(t["start"] + dt.timedelta(days=i) for i in range((t["end"] - t["start"]).days + 1)
+                           if _working(t["start"] + dt.timedelta(days=i)))
+    site_wd = len(on_site)
     return {"ntp": ntp, "site_start": start_site, "turnover": t_punch["end"], "tasks": tasks,
             "site_working_days": site_wd,
             "calendar_weeks": round(((t_punch["end"] - ntp).days + 1) / 7.0, 1),

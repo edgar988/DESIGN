@@ -13,12 +13,13 @@ scope text.
 import json
 import math
 import os
+import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
 SECTION_ORDER = ["GENERAL CONDITIONS", "DEMOLITION", "CONSTRUCTION & FINISHES", "ELECTRICAL",
-                 "PLUMBING", "HVAC", "EQUIPMENT SET & START-UP", "TRAVEL & SUPERVISION"]
+                 "PLUMBING", "HVAC", "EQUIPMENT SET & START-UP", "TRAVEL & SUPERVISION", "EQUIPMENT"]
 
 
 def _load(name):
@@ -124,17 +125,23 @@ def build_lines(takeoff, store, cost_db, rates):
     add("el_hvac_circuit", n_hvac_ckts)
 
     # PLUMBING
+    only = [str(i) for i in (scope.get("plumbing_items") or [])]
+    if only:            # Edgar (GA-263): plumbing for these items only - their own connections, nothing added
+        by = q.get("plumbing_by_item") or {}
+        pl = dict((k, sum((by.get(i) or {}).get(k, 0) for i in only))
+                  for k in ("hw", "cw", "waste", "indirect", "supply_lf"))
     add("pl_supply_conn", pl["hw"] + pl["cw"])
     add("pl_supply_lf", pl["supply_lf"])
     add("pl_waste_conn", pl["waste"])
     add("pl_indirect", pl["indirect"])
-    add("pl_floor_sink", plm.get("floor_sinks", 0))
-    add("pl_underslab_lf", plm.get("underslab_lf", 0))
-    add("pl_grease_interceptor", 1 if plm.get("grease_interceptor") else 0)
-    hand_sinks = sum(r["qty"] for r in takeoff["schedule"] if r["key"] == "ADVANCE_7PS65")
-    add("pl_mixing_valve", hand_sinks)
-    add("pl_backflow", 1 if any(r["key"] == "HOBART_LXNR" for r in takeoff["schedule"]) else 0)
-    add("pl_water_heater", 1 if plm.get("new_water_heater") else 0)
+    if not only:
+        add("pl_floor_sink", plm.get("floor_sinks", 0))
+        add("pl_underslab_lf", plm.get("underslab_lf", 0))
+        add("pl_grease_interceptor", 1 if plm.get("grease_interceptor") else 0)
+        hand_sinks = sum(r["qty"] for r in takeoff["schedule"] if r["key"] == "ADVANCE_7PS65")
+        add("pl_mixing_valve", hand_sinks)
+        add("pl_backflow", 1 if any(r["key"] == "HOBART_LXNR" for r in takeoff["schedule"]) else 0)
+        add("pl_water_heater", 1 if plm.get("new_water_heater") else 0)
 
     # HVAC
     if hv.get("system_cost"):                     # Edgar's system (GA: 5 t, 2 x 2.5 t heads, $7,200 cost)
@@ -187,9 +194,73 @@ def build_lines(takeoff, store, cost_db, rates):
     add("gc_protection", 1)
     if not lump:                                  # a demo lump sum includes the dumpsters
         add("gc_dumpster", 1 + (1 if q["room_sf"] > 400 or q["demo_partition_lf"] > 20 else 0))
-    add("gc_permit_allow", 1)
+    if scope.get("permits", True):                # GA-263: no permits or inspections in AEQ's scope
+        add("gc_permit_allow", 1)
     add("gc_final_clean", q["room_sf"])
-    return L
+    omit = set(scope.get("omit_sections") or [])  # GA-263: construction & finishes all existing
+    return [ln for ln in L if ln["section"] not in omit]
+
+
+def price_list(path):
+    """The PH master equipment list's AutoQuotes export (Drive): {item no.: sell, net, model, priced add-ons}.
+    Rows without an item number belong to the item above; the ones carrying a sell (an extended warranty,
+    a module) are part of that item's price."""
+    from openpyxl import load_workbook
+    ws = load_workbook(path, data_only=True).worksheets[0]     # (read_only sees no rows: no dimension record)
+    rows = ws.iter_rows(values_only=True)
+    col = dict((h, i) for i, h in enumerate(next(rows)))
+    out, cur = {}, None
+
+    def num(v):
+        try:
+            return float(v or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    for r in rows:
+        n = r[col["ItemNo"]]
+        if n not in (None, ""):
+            n = str(n).strip()
+            n = "X" + n[1:] if n[:1] == "E" else n          # existing items E# are X# on the drawings
+            cur = out[n] = {"sell": num(r[col["Sell"]]), "net": num(r[col["Net"]]), "mfr": r[col["Mfr"]],
+                            "model": r[col["Model"]], "category": r[col["Category"]], "adds": []}
+        elif cur is not None and num(r[col["Sell"]]) > 0:
+            cur["sell"] += num(r[col["Sell"]])
+            cur["net"] += num(r[col["Net"]])
+            cur["adds"].append(((r[col["Spec"]] or "").split(" - Authorization")[0]).strip())
+    return out
+
+
+def equipment_lines(takeoff, program):
+    """EQUIPMENT: AEQ-supplied items (item numbers without PH / X) at the master list's sell, exactly - no
+    markup, contingency or rounding (Edgar, 2026-10-05). Net cost from the same list, internal only."""
+    path = program.get("equipment_price_list") or ""
+    if not os.path.isfile(path):
+        return [], ["equipment price list not found: %s" % path]
+    prices = price_list(path)
+    master = dict((m["item"], m.get("key")) for m in _load("master_items.json")["items"])
+    L, warn = [], []
+    n = {}
+    for r in takeoff["schedule"]:
+        if (r.get("provided_by") or "AEQ") == "AEQ" and r.get("item"):
+            if master.get(str(r["item"])) != r["key"]:        # not the master list's numbering: no price
+                warn.append("item %s (%s) is not master item %s - not priced" % (r["item"], r["key"], r["item"]))
+                continue
+            n[str(r["item"])] = n.get(str(r["item"]), 0) + r["qty"]
+    for item in sorted(n, key=lambda i: [float(x) for x in re.findall(r"\d+(?:\.\d+)?", i)] or [0]):
+        p = prices.get(item)
+        if p is None or not p["sell"]:
+            warn.append("item %s: no sell in the equipment price list" % item)
+            continue
+        qty = n[item]
+        L.append({"section": "EQUIPMENT", "assembly": "eq_supply", "item": item, "qty": qty, "unit": "ea",
+                  "desc": "Item %s: %s %s, %s" % (item, p["mfr"], p["model"], p["category"]),
+                  "adds": p["adds"], "hrs": 0, "mat": round(p["net"] * qty, 2), "sub": 0, "eqp": 0,
+                  "cost": round(p["net"] * qty, 2), "sell": round(p["sell"] * qty, 2), "fixed": True,
+                  "basis": "PH master list sell %.2f, net %.2f%s" % (
+                      p["sell"], p["net"], "" if p["net"] else " (no net in the list - cost unknown)"),
+                  "note": "; ".join(p["adds"])})
+    return L, warn
 
 
 def travel_and_supervision(lines, store, rates):
@@ -262,6 +333,10 @@ def estimate(takeoff, store, program=None, cost_db=None):
     lines = build_lines(takeoff, store, cost_db, rates)
     tlines, meta = travel_and_supervision(lines, store, rates)
     lines += tlines
+    warnings = []
+    if (store.get("scope") or {}).get("equipment_priced"):     # AEQ's own equipment on the quote too
+        eq, warnings = equipment_lines(takeoff, program)
+        lines += eq
 
     sections = {}
     for l in lines:
@@ -270,35 +345,47 @@ def estimate(takeoff, store, program=None, cost_db=None):
         s["sell"] += l["sell"]
         s["hrs"] += l["hrs"]
         s["lines"].append(l)
+        if l.get("fixed"):
+            s["fixed"] = True
     sub_sell = sum(s["sell"] for s in sections.values())
     sub_cost = sum(s["cost"] for s in sections.values())
-    cont = sub_sell * rates["contingency_pct"]
 
-    # overrides: Edgar's numbers win, by section, then total
+    # Edgar's section numbers are the customer's numbers, exactly; equipment goes at its list sell. The
+    # contingency and the rounding of the total go only into the sections still priced from the build.
     ov = store.get("overrides", {}) or {}
     for sec, val in (ov.get("section_sell") or {}).items():
         if sec in sections:
             sections[sec]["sell_override"] = float(val)
-    sec_sell = {k: v.get("sell_override", v["sell"]) for k, v in sections.items()}
-    raw_total = sum(sec_sell.values()) + cont
+    ordered = [s for s in SECTION_ORDER if s in sections]
+    fixed = dict((s, round(sections[s]["sell"], 2)) for s in ordered if sections[s].get("fixed"))
+    fixed.update((s, sections[s]["sell_override"]) for s in ordered if "sell_override" in sections[s])
+    free = [s for s in ordered if s not in fixed]
+    free_sell = sum(sections[s]["sell"] for s in free)
+    cont = free_sell * rates["contingency_pct"]
+    listed = sum(v for s, v in fixed.items() if sections[s].get("fixed"))      # price-list sells, to the cent
     round_to = ov.get("round_to", 100)
-    total = float(ov["total_sell"]) if ov.get("total_sell") else math.ceil(raw_total / round_to) * round_to
-    # distribute contingency + rounding pro-rata into sections so the customer
-    # sees clean section numbers that add to the total
-    scale = total / sum(sec_sell.values()) if sec_sell else 1
-    ordered = [s for s in SECTION_ORDER if s in sec_sell]
-    cust = {}
+    if ov.get("total_sell"):
+        total = float(ov["total_sell"])
+    else:
+        total = math.ceil((sum(fixed.values()) - listed + free_sell + cont) / round_to) * round_to + listed
+    # contingency + rounding pro-rata into the free sections, so the customer sees clean section numbers
+    # that add to the total
+    cust = dict(fixed)
+    scale = (total - sum(fixed.values())) / free_sell if free_sell else 1
     acc = 0
-    for s in ordered[:-1]:
-        cust[s] = round(sec_sell[s] * scale / 50.0) * 50
+    for s in free[:-1]:
+        cust[s] = round(sections[s]["sell"] * scale / 50.0) * 50
         acc += cust[s]
-    if ordered:
-        cust[ordered[-1]] = round(total - acc, 2)
+    if free:
+        cust[free[-1]] = round(total - sum(fixed.values()) - acc, 2)
+    total = round(sum(cust.values()), 2)
 
     margin = (total - sub_cost) / total if total else 0
     return {"store_id": store["store_id"], "lines": lines, "sections": sections,
             "section_order": ordered, "customer_sections": cust,
             "subtotal_sell": round(sub_sell, 2), "contingency": round(cont, 2),
             "total": round(total, 2), "true_cost": round(sub_cost, 2), "margin_pct": round(margin * 100, 1),
-            "labor": meta, "rates_used": rates,
+            "labor": meta, "rates_used": rates, "warnings": warnings,
+            "items": [{"item": r.get("item"), "key": r["key"], "description": r["description"]}
+                      for r in takeoff["schedule"]],
             "markup_check": "OK" if margin >= 0.25 else "LOW MARGIN - review before issue"}

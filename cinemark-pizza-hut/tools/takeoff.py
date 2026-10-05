@@ -189,6 +189,7 @@ def build(store, catalog, program, layout=None):
     sched, circuits = [], []
     q_el = {"branch_lf": 0.0}
     q_pl = {"hw": 0, "cw": 0, "waste": 0, "indirect": 0, "supply_lf": 0.0}
+    pl_by_item = {}                 # the same per item number, for a store that plumbs only some items
     sens = lat = 0.0
     conn_kw = 0.0
     counts = {"plug": 0, "plumbed": 0, "set": 0}
@@ -251,14 +252,16 @@ def build(store, catalog, program, layout=None):
             if e.get("nema") == "VERIFY" or e.get("amps") is None:
                 warn.append("%s: electrical data incomplete (NEMA/amps) - sync family or confirm spec." % r["key"])
         if p:
+            mine = pl_by_item.setdefault(str(r.get("item")), {"hw": 0, "cw": 0, "waste": 0, "indirect": 0,
+                                                              "supply_lf": 0.0})
             for k in ("hw", "cw"):
                 if p.get(k):
                     q_pl[k] += qty
+                    mine[k] += qty
             if p.get("waste"):
-                if p.get("indirect"):
-                    q_pl["indirect"] += qty
-                else:
-                    q_pl["waste"] += qty
+                k = "indirect" if p.get("indirect") else "waste"
+                q_pl[k] += qty
+                mine[k] += qty
             if water and loc:
                 lf = manhattan_ft(water, loc) * rt["plumbing_factor"] + rt["plumbing_vertical_ft"]
             elif ref and loc:               # source taken ~40 ft away like the panel until one is drawn
@@ -267,6 +270,7 @@ def build(store, catalog, program, layout=None):
             else:
                 lf = 30.0
             q_pl["supply_lf"] += lf * qty
+            mine["supply_lf"] += lf * qty
             row["plumb"] = ", ".join("%s %s" % (k.upper(), v) for k, v in p.items()
                                      if v and k in ("hw", "cw", "waste")) + (
                 " (indirect)" if p.get("indirect") else "")
@@ -308,6 +312,8 @@ def build(store, catalog, program, layout=None):
                        "connected_kw": round(conn_kw, 1),
                        "connected_amps_208_3ph": round(conn_kw * 1000 / (208 * math.sqrt(3)), 1)},
         "plumbing": {k: (round(v) if isinstance(v, float) else v) for k, v in q_pl.items()},
+        "plumbing_by_item": {i: {k: (round(v) if isinstance(v, float) else v) for k, v in d.items()}
+                             for i, d in pl_by_item.items()},
     }
 
     # ---- heat load (GA 263 M1 method) -----------------------------------
