@@ -26,7 +26,15 @@ store file a `layer_map` saying which standard layer each one stands for, e.g.
 A drawing holding more than one copy of the plan gets a `plan_window` (`[x0, y0, x1, y1]`, inches): only
 what lies inside it is read (TX-093 reads the lower copy, the one with the equipment).
 
-Item numbers (from AutoQuotes) say who provides each item: plain number = AEQ supplies and installs,
+PH stores (`"item_numbers": "master"` in the store file) are numbered from the Pizza Hut master list,
+`config/master_items.json` (from Edgar's AutoQuotes master; refresh with `python tools/master_items.py
+--refresh "<master xlsx>"`): each block is matched by model, by the master's equivalents (any FC-3 = X1, a
+PFA570 block = X3, UR48B / UF60A = the 60 in. Atosa, item 6) or, for table stand-ins, by footprint (fab
+worktables 2.1-2.5). A model that fits two numbers (7-PS-65: new 1 / existing X2) takes the lower rank and is
+reported; `item_overrides` (`{"<block handle>": "X2"}`) settles it per store. Items not on the master list
+carry no number and are reported. Countertop units (ACP, PerfectFry, Ovention) are set on the base under them.
+
+Item numbers say who provides each item: plain number = AEQ supplies and installs,
 `X` (`E` in older drawings) = existing, relocated with new utilities, `PH` = provided by the owner, received
 at AEQ Nashville, utilities and install by AEQ. Blocks AutoQuotes has not linked are identified from their
 KCL hyperlink (`PDF Cutsheet for (Traulsen)-G10011`); a block whose AutoQuotes model and hyperlink disagree

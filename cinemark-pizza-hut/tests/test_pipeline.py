@@ -22,9 +22,15 @@ def load(*p):
 CAT, PROG = load("config", "families.json"), load("config", "program.json")
 
 
+def ga263_issued():
+    """GA-263 priced from the package issued 09-2026 (the heat-load calibration), not its new drawing."""
+    st = load("config", "stores", "GA-263.json")
+    return dict(st, package=st["issued_package"])
+
+
 def test_ga263_heat_load_reproduces_issued_report():
     """GA 263 M1 (09/22/26): 39.4 kW, added 55,551, design 61,106 Btu/h, 5.09 t, 2 x 2.5 t, ~2,470 cfm."""
-    t = tk.build(load("config", "stores", "GA-263.json"), CAT, PROG)
+    t = tk.build(ga263_issued(), CAT, PROG)
     h = t["heat_load"]
     assert h["connected_kw"] == 39.4
     assert abs(h["design_total"] - 61106) / 61106 < 0.002
@@ -76,6 +82,30 @@ def test_plan_window_reads_only_that_part_of_the_drawing(tmp_path):
     assert len(dxf_extract.extract(p, store)["walls"]) == 2
     walls = dxf_extract.extract(p, dict(store, plan_window=[-50, -50, 200, 200]))["walls"]
     assert len(walls) == 1 and abs(walls[0]["start"][1]) < 1
+
+
+def test_master_numbers_by_model_size_and_swap(tmp_path):
+    """Master numbering (Edgar): by model (G10011 -> PH2), by the master's equivalents (UR48B is the 60 in.
+    Atosa, item 6), by footprint for table stand-ins (TFSS 48x30 -> fab table 2.2); a 7-PS-65 fits new 1 and
+    existing X2, takes 1 and is reported; a store item_override wins."""
+    doc = ezdxf.new("R2018")
+    doc.header["$INSUNITS"] = 1
+    msp = doc.modelspace()
+    for name, (w, d) in {"G10011": (30, 35), "UR48B": (48, 30), "TFSS-304": (48, 30), "7-PS-65": (17, 17)}.items():
+        make_sample_dxf.rect_block(doc, name, w, d, attribs=())
+    refs = {n: msp.add_blockref(n, (100 * i, 0)) for i, n in enumerate(("G10011", "UR48B", "TFSS-304", "7-PS-65"))}
+    p = str(tmp_path / "m.dxf")
+    doc.saveas(p)
+    lay = dxf_extract.extract(p, {"item_numbers": "master"})
+    got = dict((q["block"], (q["item"], q["key"], q["provided_by"])) for q in lay["equipment"])
+    assert got["G10011"] == ("PH2", "TRAULSEN_G10011", "OWNER")
+    assert got["UR48B"] == ("6", "ATOSA_AUF60SD", "AEQ")
+    assert got["TFSS-304"] == ("2.2", "AEQ_FABSS_4830", "AEQ")
+    assert got["7-PS-65"] == ("1", "ADVANCE_7PS65", "AEQ")
+    assert any(w.startswith("Item 1 chosen") and "X2" in w for w in lay["warnings"])
+    over = {"item_numbers": "master", "item_overrides": {refs["7-PS-65"].dxf.handle: "X2"}}
+    q = next(q for q in dxf_extract.extract(p, over)["equipment"] if q["block"] == "7-PS-65")
+    assert (q["item"], q["provided_by"]) == ("X2", "EXISTING")
 
 
 def test_item_prefix_sets_who_provides_it():
@@ -142,7 +172,7 @@ def test_takeoff_and_estimate_from_dxf(tmp_path):
 
 def test_customer_outputs_carry_no_internal_numbers(tmp_path):
     from estimating import build_quote as bq
-    store = load("config", "stores", "GA-263.json")
+    store = ga263_issued()
     t = tk.build(store, CAT, PROG)
     e = em.estimate(t, store, PROG)
     s = sm.build(e, store)

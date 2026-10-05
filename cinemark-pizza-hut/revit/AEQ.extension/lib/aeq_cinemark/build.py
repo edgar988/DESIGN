@@ -265,18 +265,52 @@ def _nearest_wall(doc, p):
     return best
 
 
+def _needs_placeholder(it):
+    """Floor equipment worth a placeholder box when there is no family (not accessories or wall shelves)."""
+    return bool(it.get("stack") or it.get("height_in") or it.get("category") in ("refrigeration", "cooking"))
+
+
+def _placeholder(doc, q, it, lvl, phase):
+    """No family yet: a box at the drawn footprint (catalog height_in, else 34 in.) so the item shows in
+    plans, elevations and 3D, with its Mark and catalog key like a placed family."""
+    b = [v * FT for v in q["bbox"]]
+    z = lvl.Elevation
+    pts = [XYZ(b[0], b[1], z), XYZ(b[2], b[1], z), XYZ(b[2], b[3], z), XYZ(b[0], b[3], z)]
+    loop = CurveLoop.Create(List[Curve]([Line.CreateBound(pts[i], pts[(i + 1) % 4]) for i in range(4)]))
+    solid = GeometryCreationUtilities.CreateExtrusionGeometry(List[CurveLoop]([loop]), XYZ.BasisZ,
+                                                              (it.get("height_in") or 34.0) * FT)
+    ds = DirectShape.CreateElement(doc, ElementId(BuiltInCategory.OST_SpecialityEquipment))
+    ds.ApplicationId, ds.ApplicationDataId = "AEQ", "placeholder"
+    ds.SetShape(List[GeometryObject]([solid]))
+    _set(ds, BuiltInParameter.ALL_MODEL_MARK, q.get("item") or "")
+    _set(ds, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS, q["key"])
+    _set(ds, BuiltInParameter.PHASE_CREATED, phase.Id)
+    return ds
+
+
 def place_equipment(doc, layout, catalog, s):
+    """Each item's family from CAD TEMPLATES at its drawn spot (a placeholder box where there is no family
+    yet), then countertop units set on the base under them."""
     items = catalog["items"]
     lvl = _level(doc)
     nc = _phase(doc, "New Construction")
-    placed, skipped = [], []
+    placed, skipped, made = [], [], {}
     with _Tx(doc, "AEQ: place equipment"):
+        old = [d.Id for d in FilteredElementCollector(doc).OfClass(DirectShape)
+               if d.ApplicationId == "AEQ" and d.ApplicationDataId == "placeholder"]
+        if old:
+            doc.Delete(List[ElementId](old))
         for q in layout["equipment"]:
             if q["status"] == "demo" or not q["key"]:
                 continue
             it = items.get(q["key"], {})
             if not it.get("rfa"):
-                skipped.append((q["key"], "no .rfa in catalog"))
+                if q.get("bbox") and _needs_placeholder(it):
+                    made[q["handle"]] = _placeholder(doc, q, it, lvl, nc)
+                    placed.append((q["key"], _id_int(made[q["handle"]].Id)))
+                    skipped.append((q["key"], "no family: placeholder box"))
+                else:
+                    skipped.append((q["key"], "no .rfa in catalog"))
                 continue
             try:
                 sym = _symbol_for(doc, s, it["rfa"], it.get("type_name"))
@@ -310,6 +344,20 @@ def place_equipment(doc, layout, catalog, s):
             _set(inst, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS, q["key"])
             _set(inst, BuiltInParameter.PHASE_CREATED, nc.Id)
             placed.append((q["key"], _id_int(inst.Id)))
+            made[q["handle"]] = inst
+        doc.Regenerate()
+        by_handle = dict((q["handle"], q) for q in layout["equipment"])
+        for q in layout["equipment"]:          # ACP / PerfectFry / Ovention onto the base under them
+            top = made.get(q["handle"])
+            if top is None or not q.get("on"):
+                continue
+            base = made.get(q["on"])
+            bb_base = base.get_BoundingBox(None) if base is not None else None
+            z = bb_base.Max.Z if bb_base else lvl.Elevation + (
+                items.get(by_handle.get(q["on"], {}).get("key"), {}).get("height_in") or 34.0) * FT
+            bb = top.get_BoundingBox(None)
+            if bb:
+                ElementTransformUtils.MoveElement(doc, top.Id, XYZ(0, 0, z - bb.Min.Z))
     return placed, skipped
 
 
@@ -745,10 +793,13 @@ def _tag_text(names):
     return "/".join("%s-%s" % (r[0], r[-1]) if len(r) > 2 else "/".join(r) for r in runs)
 
 
-def _clear_aeq_notes(doc, view):
-    """Drop rough-in tags from an earlier run (button 5 re-run) so they are not doubled."""
+_ITEM_TAG = re.compile(r"^(PH|X|E)?\d+(\.\d+)?$")
+
+
+def _clear_aeq_notes(doc, view, pattern=_AEQ_TAG):
+    """Drop tags from an earlier run (button 5 re-run) so they are not doubled."""
     ids = [n.Id for n in FilteredElementCollector(doc, view.Id).OfClass(TextNote)
-           if _AEQ_TAG.match((n.Text or "").strip())]
+           if pattern.match((n.Text or "").strip())]
     if ids:
         doc.Delete(List[ElementId](ids))
 
@@ -789,6 +840,17 @@ def roughin_views(doc, layout, takeoff, s):
             for p, names in at.values():
                 tags.add(p, _tag_text(names), _side(p, room))
             _grow_crop(view, bbox, tags.place())
+        # QF101: item numbers in the same clean rows, leaders to each item's centre
+        v_eq = views["QF101"]
+        _clear_aeq_notes(doc, v_eq, _ITEM_TAG)
+        items = _Callouts(doc, v_eq, tn, frame, gap_ft=1.0)
+        for q in layout["equipment"]:
+            if q["status"] == "demo" or not q.get("item") or not q.get("bbox") \
+                    or q["layer"].upper().startswith("FS-ELEC"):
+                continue
+            c = XYZ((q["bbox"][0] + q["bbox"][2]) / 2.0 * FT, (q["bbox"][1] + q["bbox"][3]) / 2.0 * FT, 0)
+            items.add(c, str(q["item"]), _side(c, room))
+        _grow_crop(v_eq, bbox, items.place())
     return [views[n] for n, _ in QF_PLANS]
 
 

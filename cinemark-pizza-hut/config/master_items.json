@@ -1,0 +1,295 @@
+{
+  "_about": [
+    "Pizza Hut master item numbers: the same number for a product on every PH project (Edgar).",
+    "config/master_items.json holds the master list (no prices: those stay in the AutoQuotes export on",
+    "Drive). Each item says how a drawing block is recognised as it:",
+    "  match   regexes tried against the block's AutoQuotes model, KCL hyperlink model and block name",
+    "          (the model itself is always tried too)",
+    "  size    [width, depth] inches, for stand-in blocks matched by footprint (fabricated worktables drawn",
+    "          with Advance Tabco blocks); only blocks whose catalog key matches size_keys are sized",
+    "  key     catalog key (config/families.json) the item prices and models as",
+    "  rank    which number wins when a model fits more than one (lower first; e.g. a new hand sink over an",
+    "          existing one) - the pick is reported so it can be overridden per store (item_overrides)",
+    "    python tools/master_items.py --refresh \"<...>/PH MASTER EQUIPMENT LIST - W PRICING.xlsx\"",
+    "re-reads the AutoQuotes export (existing items E# are written X#) and keeps the match / size / key /",
+    "rank / note already in the json."
+  ],
+  "source": "PH MASTER EQUIPMENT LIST - W PRICING.xlsx",
+  "items": [
+    {
+      "item": "1",
+      "mfr": "Advance Tabco",
+      "model": "7-PS-65",
+      "category": "Hand Sink",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "ADVANCE_7PS65",
+      "rank": 1,
+      "note": "New hand sink. A 7-PS-65 fits 1 and X2: new is assumed."
+    },
+    {
+      "item": "2.1",
+      "mfr": "AARON EQUIPMENT CO",
+      "model": "FABSS",
+      "category": "WORKTABLE - 60\"X36\" W 5\" BACKSPLASH - OPEN BASE",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "AEQ_FABSS_6036",
+      "size": [
+        60,
+        36
+      ],
+      "size_keys": "^ADVANCE_(TFSS|FSS|ELAG)"
+    },
+    {
+      "item": "2.2",
+      "mfr": "AARON EQUIPMENT CO",
+      "model": "FABSS",
+      "category": "WORKTABLE - 48\"X30\" W 5\" BACKSPLASH",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "AEQ_FABSS_4830",
+      "size": [
+        48,
+        30
+      ],
+      "size_keys": "^ADVANCE_(TFSS|FSS|ELAG)"
+    },
+    {
+      "item": "2.3",
+      "mfr": "AARON EQUIPMENT CO",
+      "model": "FABSS",
+      "category": "WORKTABLE - 72\"X30\" W 5\" BACKSPLASH",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "AEQ_FABSS_7230",
+      "size": [
+        72,
+        30
+      ],
+      "size_keys": "^ADVANCE_(TFSS|FSS|ELAG)"
+    },
+    {
+      "item": "2.4",
+      "mfr": "AARON EQUIPMENT CO",
+      "model": "FABSS",
+      "category": "WORKTABLE - 96\"X30\" W 5\" BACKSPLASH",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "AEQ_FABSS_9630",
+      "size": [
+        96,
+        30
+      ],
+      "size_keys": "^ADVANCE_(TFSS|FSS|ELAG)"
+    },
+    {
+      "item": "2.5",
+      "mfr": "AARON EQUIPMENT CO",
+      "model": "FABSS",
+      "category": "WORKTABLE - 84\"X30\" W 5\" BACKSPLASH",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "AEQ_FABSS_8430",
+      "size": [
+        84,
+        30
+      ],
+      "size_keys": "^ADVANCE_(TFSS|FSS|ELAG)"
+    },
+    {
+      "item": "3.1",
+      "mfr": "Quantum",
+      "model": "WR74-1836GY",
+      "category": "Shelving Unit, Wire",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "QUANTUM_WR74_1836",
+      "match": [
+        "1836GY"
+      ]
+    },
+    {
+      "item": "3.2",
+      "mfr": "Quantum",
+      "model": "WR74-1848GY",
+      "category": "Shelving Unit, Wire",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "QUANTUM_WR74_1848",
+      "match": [
+        "1848GY"
+      ]
+    },
+    {
+      "item": "3.3",
+      "mfr": "Quantum",
+      "model": "WR63-1860GY",
+      "category": "Shelving Unit, Wire",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "QUANTUM_WR63_1860",
+      "match": [
+        "1860GY"
+      ]
+    },
+    {
+      "item": "4",
+      "mfr": "ACP",
+      "model": "MXP22TLT",
+      "category": "Microwave Convection Oven",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "ACP_MXP22TLT",
+      "match": [
+        "MXP22",
+        "AXP22"
+      ]
+    },
+    {
+      "item": "5",
+      "mfr": "Hobart",
+      "model": "LXNR-5",
+      "category": "Dishwasher, Undercounter",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "HOBART_LXNR",
+      "match": [
+        "LXN-?R"
+      ]
+    },
+    {
+      "item": "6",
+      "mfr": "Atosa USA, Inc.",
+      "model": "AUF60SD",
+      "category": "Reach-In Undercounter Freezer",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "ATOSA_AUF60SD",
+      "match": [
+        "AUF60",
+        "UF60A",
+        "UR48"
+      ],
+      "note": "60 in. freezer under the ACP and PerfectFry. Drawn with Hoshizaki UF60A; a UR48B in older layouts is this item (Edgar: swap the 48 for the 60)."
+    },
+    {
+      "item": "X1",
+      "mfr": "Advance Tabco",
+      "model": "FC-3-2030-24RL",
+      "category": "Three (3) Compartment Sink",
+      "qty": "1",
+      "provided_by": "EXISTING",
+      "key": "TABCO_FC3",
+      "match": [
+        "FC-?3-?2030"
+      ],
+      "note": "Existing 3-compartment sink, any FC-3 size."
+    },
+    {
+      "item": "X1.1",
+      "mfr": "Advance Tabco",
+      "model": "WS-12-108",
+      "category": "Shelving, Wall Mounted",
+      "qty": "1",
+      "provided_by": "EXISTING",
+      "key": "TABCO_WS12108"
+    },
+    {
+      "item": "X1.2",
+      "mfr": "T&S Brass",
+      "model": "B-0133",
+      "category": "Pre-Rinse Faucet Assembly",
+      "qty": "1",
+      "provided_by": "EXISTING",
+      "key": "TS_B0133"
+    },
+    {
+      "item": "X1.3",
+      "mfr": "T&S Brass",
+      "model": "B-0230-02",
+      "category": "Wall / Splash Mount Faucet",
+      "qty": "1",
+      "provided_by": "EXISTING",
+      "key": "TS_B023002"
+    },
+    {
+      "item": "X2",
+      "mfr": "Advance Tabco",
+      "model": "7-PS-65",
+      "category": "Hand Sink",
+      "qty": "1",
+      "provided_by": "EXISTING",
+      "key": "ADVANCE_7PS65",
+      "rank": 2
+    },
+    {
+      "item": "X3",
+      "mfr": "Perfect Fry (Middleby)",
+      "model": "PFA500",
+      "category": "Ventless Fryer",
+      "qty": "1",
+      "provided_by": "EXISTING",
+      "key": "PERFECTFRY_PFA500",
+      "match": [
+        "PFA ?5\\d0",
+        "PFA0\\d\\dP"
+      ],
+      "note": "Existing PerfectFry; drawings use the PFA570 block."
+    },
+    {
+      "item": "PH1",
+      "mfr": "Ovention",
+      "model": "CONVEYOR C2000-SB",
+      "category": "Conveyor Oven, Electric",
+      "qty": "1",
+      "provided_by": "OWNER",
+      "key": "OVENTION_C2000"
+    },
+    {
+      "item": "PH2",
+      "mfr": "Traulsen",
+      "model": "G10011",
+      "category": "Reach-In Refrigerator",
+      "qty": "1",
+      "provided_by": "OWNER",
+      "key": "TRAULSEN_G10011"
+    },
+    {
+      "item": "PH3",
+      "mfr": "Traulsen",
+      "model": "G22010",
+      "category": "Reach-In Freezer",
+      "qty": "1",
+      "provided_by": "OWNER",
+      "key": "TRAULSEN_G22010"
+    },
+    {
+      "item": "PH4",
+      "mfr": "Traulsen",
+      "model": "UHT48-LR",
+      "category": "Undercounter Refrigerator",
+      "qty": "1",
+      "provided_by": "OWNER",
+      "key": "TRAULSEN_UHT48"
+    },
+    {
+      "item": "PH5",
+      "mfr": "Traulsen",
+      "model": "UST3212-L",
+      "category": "Compact Prep Table Refrigerator",
+      "qty": "1",
+      "provided_by": "OWNER",
+      "key": "TRAULSEN_UST3212"
+    },
+    {
+      "item": "PH6",
+      "mfr": "Metro",
+      "model": "TWS3030SU-304B-K",
+      "category": "Work Table, Stainless Steel Top",
+      "qty": "1",
+      "provided_by": "OWNER",
+      "key": "METRO_TWS3030"
+    }
+  ]
+}

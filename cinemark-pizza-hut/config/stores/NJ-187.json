@@ -11,6 +11,7 @@
   "layer_map": {
     "0": "A-WALL"
   },
+  "item_numbers": "master",
   "survey_date": "VERIFY",
   "space": "VERIFY from survey",
   "ceiling_ft": 10,

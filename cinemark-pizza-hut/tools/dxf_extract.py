@@ -25,6 +25,13 @@ import xml.etree.ElementTree as ET
 import ezdxf
 from ezdxf.math import Vec2
 
+try:
+    from tools import master_items
+except ImportError:                     # run as a script from tools/
+    import master_items
+from_master = master_items.assign
+provided_by = master_items.provided_by
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
@@ -170,17 +177,6 @@ def _norm(s):
     return re.sub(r"[^A-Z0-9]", "", (s or "").upper())
 
 
-def provided_by(item):
-    """Item number prefix (Edgar): PH = provided by owner (Pizza Hut), X = existing (E in older drawings),
-    plain number = AEQ supplies and installs. None when the item has no number."""
-    s = str(item or "").strip().upper()
-    if not s:
-        return None
-    if s.startswith("PH"):
-        return "OWNER"
-    return "EXISTING" if s[0] in "XE" else "AEQ"
-
-
 def _true_name(doc, name):
     """*U123 (an anonymous reference to a dynamic block) -> the dynamic block's own name."""
     br = doc.block_records.get(name)
@@ -302,6 +298,25 @@ def wall_behind(q, walls):
     n = n.normalize()
     p = foot + n * (thk / 2.0)
     return [round(p.x, 2), round(p.y, 2)], [round(n.x, 4), round(n.y, 4)]
+
+
+def stack(out, items):
+    """Countertop units (catalog stack 'top': ACP, PerfectFry, Ovention) sit on the base under them in plan
+    (stack 'base': undercounter freezer, worktable): q['on'] = that base's handle, the one overlapping the
+    most, when it covers at least half the unit's footprint."""
+    def area(b):
+        return max(0.0, b[2] - b[0]) * max(0.0, b[3] - b[1])
+
+    def overlap(a, b):
+        return area([max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])])
+
+    eq = [q for q in out["equipment"] if q["status"] != "demo" and q["key"] and q.get("bbox")]
+    bases = [q for q in eq if items.get(q["key"], {}).get("stack") == "base"]
+    for q in eq:
+        if items.get(q["key"], {}).get("stack") == "top" and bases:
+            b = max(bases, key=lambda b: overlap(q["bbox"], b["bbox"]))
+            if overlap(q["bbox"], b["bbox"]) >= 0.5 * area(q["bbox"]):
+                q["on"] = b["handle"]
 
 
 def _label(q):
@@ -474,6 +489,11 @@ def extract(path, store=None, catalog_path=None):
         out["walls"].extend(pair_walls(segs, status))
 
     _tag_items_from_text(out)
+    if (store or {}).get("item_numbers") == "master":     # PH program: numbers from the master list
+        master = master_items.load_master()
+        if master:
+            from_master(out, store, master)
+    stack(out, items)
 
     live = [w for w in out["walls"] if w["status"] != "demo"]
     for q in out["equipment"]:

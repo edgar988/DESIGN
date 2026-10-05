@@ -11,6 +11,13 @@
   "layer_map": {
     "Layer1": "A-WALL"
   },
+  "plan_window": [
+    -100,
+    -100,
+    600,
+    260
+  ],
+  "item_numbers": "master",
   "survey_date": "2026-09-21",
   "existing_docs": [
     "263 GA FAYETTEVILLE TINSELTOWN-QF101-R1.pdf",
@@ -66,7 +73,8 @@
   "notes": [
     "GA is the calibration store: QF101-R1 + heat load already issued. The pipeline's heat load must reproduce 61,106 Btu/h design for this package."
   ],
-  "package": [
+  "package": "from_dxf",
+  "issued_package": [
     {
       "item": 1,
       "key": "TABCO_FC3",

@@ -47,6 +47,10 @@ Runs clean end to end: model, 13 walls, 4 families placed, KCL data synced, 17-s
       outside the room, leaders square to the wall; only tags for close-set or stacked equipment spread
       apart and angle. Details are in the QF103 schedule. Items without a family still get rough-ins.
 - [ ] Elevation tags: the utility markers show at their A.F.F. in QF403 but carry no tag text yet.
+- [x] Master item numbers on Marks, QF101 item tags (clean rows) and QF102 / QF103.
+- [x] Countertop units sit on their base (top of the base family, or 34 in. for a table with no family).
+- [x] Items with no family yet get a placeholder box (Specialty Equipment, Mark + catalog key) at the drawn
+      footprint so plans, elevations and 3D show the whole layout; the build lists them.
 - [ ] REMARKS on QF102 shows the catalog key (the build keeps the key in instance Comments).
 - [ ] The "photoreal render" is a realistic-style 3D export. Revit's API cannot drive the renderer; for a
       true render use Revit Render / Enscape on the QF502 view (saved camera + section box are set up).
