@@ -8,6 +8,15 @@
   "manager": "Edgar Martinez",
   "drive_folder": "CINEMARK/PIZZA HUT/TX 093 MCALLEN HOLLYWOOD",
   "layout_dxf": "TX 093 MCALLEN HOLLYWOOD.dxf",
+  "layer_map": {
+    "0": "A-WALL"
+  },
+  "plan_window": [
+    -60,
+    -260,
+    1010,
+    200
+  ],
   "survey_date": "VERIFY",
   "space": "VERIFY from survey",
   "ceiling_ft": 10,

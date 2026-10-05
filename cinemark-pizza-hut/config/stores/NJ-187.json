@@ -8,6 +8,9 @@
   "manager": "Jesse Gahagan",
   "drive_folder": "CINEMARK/PIZZA HUT/NJ 187 SOMERSET CINEMARK",
   "layout_dxf": "NJ 187 CIN SOMERSET QF.dxf",
+  "layer_map": {
+    "0": "A-WALL"
+  },
   "survey_date": "VERIFY",
   "space": "VERIFY from survey",
   "ceiling_ft": 10,

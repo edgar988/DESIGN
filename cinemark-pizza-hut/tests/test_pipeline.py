@@ -64,6 +64,26 @@ def test_store_layer_map_reads_nonstandard_wall_layer(tmp_path):
     assert len(walls) == 1 and walls[0]["status"] == "exist" and abs(walls[0]["thickness"] - 4.0) < 0.01
 
 
+def test_plan_window_reads_only_that_part_of_the_drawing(tmp_path):
+    """TX / NJ drawings hold a second copy of the plan; the store's plan_window picks the one to read."""
+    doc = ezdxf.new("R2018")
+    doc.header["$INSUNITS"] = 1
+    make_sample_dxf.wall(doc.modelspace(), "0", 0, 0, 120, 0, t=4.0)
+    make_sample_dxf.wall(doc.modelspace(), "0", 0, 600, 120, 600, t=4.0)       # the copy
+    p = str(tmp_path / "two.dxf")
+    doc.saveas(p)
+    store = {"layer_map": {"0": "A-WALL"}}
+    assert len(dxf_extract.extract(p, store)["walls"]) == 2
+    walls = dxf_extract.extract(p, dict(store, plan_window=[-50, -50, 200, 200]))["walls"]
+    assert len(walls) == 1 and abs(walls[0]["start"][1]) < 1
+
+
+def test_item_prefix_sets_who_provides_it():
+    """Edgar: plain number = AEQ supplies and installs, X = existing (E in older drawings), PH = owner."""
+    assert [dxf_extract.provided_by(n) for n in ("4", "2.1", "X1", "E3", "PH2", "", None)] == \
+        ["AEQ", "AEQ", "EXISTING", "EXISTING", "OWNER", None, None]
+
+
 def _aq_xrecord(doc, name, items):
     """AutoQuotes-style root record: XML dictionary keyed by block handle -> base64 -> raw DEFLATE."""
     body = "".join("<item><key><long>%d</long></key><value><V>%s</V></value></item>"
@@ -97,7 +117,8 @@ def test_autoquotes_item_numbers_and_wall_roughin(tmp_path):
     assert q["key"] == "TABCO_KLG365" and q["item"] == "10"
     assert q["roughin"] == [130.0, round(144 - 4.875 / 2, 2)]
     assert q["revit_rotation"] == 0.0           # back to the north wall, front facing south into the room
-    assert lay["items"] == [{"item": "10", "label": "Advance Tabco KLG-365", "key": "TABCO_KLG365", "count": 1}]
+    assert lay["items"] == [{"item": "10", "label": "Advance Tabco KLG-365", "key": "TABCO_KLG365", "count": 1,
+                             "provided_by": "AEQ"}]
     assert any("Package item 15 MTI_AUTOFRY5 is not on the drawing" in w for w in lay["warnings"])
 
 
@@ -136,12 +157,14 @@ def test_customer_outputs_carry_no_internal_numbers(tmp_path):
 def test_synced_family_data_fills_only_gaps():
     import copy
     cat = copy.deepcopy(CAT)
-    synced = {"TRAULSEN_G10011": {"revit_family": "QF_Refg_Traulsen", "revit_type": "G10011",
+    synced = {"HOSHIZAKI_UR48B": {"revit_family": "QF_Hoshizaki_UR48B", "revit_type": "UR48B",
                                   "synced_at": "2026-10-02T09:00:00",
                                   "elec": {"volts": 115, "phase": 1, "amps": 6.4, "nema": "5-15P"},
                                   "connectors": []},
-              "OVENTION_C2000": {"elec": {"volts": 240, "amps": 99}}}
+              "OVENTION_C2000": {"elec": {"volts": 240, "amps": 99}},
+              "TRAULSEN_G10011": {"elec": {"amps": 99}}}
     tk.overlay_synced(cat, synced)
-    g = cat["items"]["TRAULSEN_G10011"]
+    g = cat["items"]["HOSHIZAKI_UR48B"]
     assert g["elec"]["amps"] == 6.4 and g["verified"] == "family"
     assert cat["items"]["OVENTION_C2000"]["elec"]["amps"] == 34.0     # verified mfr data never overwritten
+    assert cat["items"]["TRAULSEN_G10011"]["elec"]["amps"] == 3.8      # verified from the master cut sheet

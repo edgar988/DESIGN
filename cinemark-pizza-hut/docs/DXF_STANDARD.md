@@ -22,7 +22,15 @@ The extractor is tolerant: anything it can't classify is reported, never guessed
 
 A drawing on other layer names (AutoQuotes puts walls on `Layer1`) does not need re-layering: give the
 store file a `layer_map` saying which standard layer each one stands for, e.g.
-`"layer_map": {"Layer1": "A-WALL"}` (GA-263).
+`"layer_map": {"Layer1": "A-WALL"}` (GA-263) or `{"0": "A-WALL"}` (TX-093, NJ-187: walls on layer 0).
+A drawing holding more than one copy of the plan gets a `plan_window` (`[x0, y0, x1, y1]`, inches): only
+what lies inside it is read (TX-093 reads the lower copy, the one with the equipment).
+
+Item numbers (from AutoQuotes) say who provides each item: plain number = AEQ supplies and installs,
+`X` (`E` in older drawings) = existing, relocated with new utilities, `PH` = provided by the owner, received
+at AEQ Nashville, utilities and install by AEQ. Blocks AutoQuotes has not linked are identified from their
+KCL hyperlink (`PDF Cutsheet for (Traulsen)-G10011`); a block whose AutoQuotes model and hyperlink disagree
+is reported.
 
 ## AutoQuotes drawings
 

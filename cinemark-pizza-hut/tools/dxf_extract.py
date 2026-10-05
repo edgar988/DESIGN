@@ -157,6 +157,30 @@ def _front_offset(doc, block_name, prod):
     return 0.0
 
 
+def _hyperlink_product(e):
+    """KCL blocks carry an AutoCAD hyperlink (their hover text): 'PDF Cutsheet for (Traulsen)-G10011'."""
+    if not e.has_xdata("PE_URL"):
+        return None
+    txt = [v for c, v in e.get_xdata("PE_URL") if c == 1000]
+    m = re.search(r"\((.+?)\)-(.+)$", txt[1] if len(txt) > 1 else "")
+    return {"mfr": m.group(1).strip(), "model": m.group(2).strip()} if m else None
+
+
+def _norm(s):
+    return re.sub(r"[^A-Z0-9]", "", (s or "").upper())
+
+
+def provided_by(item):
+    """Item number prefix (Edgar): PH = provided by owner (Pizza Hut), X = existing (E in older drawings),
+    plain number = AEQ supplies and installs. None when the item has no number."""
+    s = str(item or "").strip().upper()
+    if not s:
+        return None
+    if s.startswith("PH"):
+        return "OWNER"
+    return "EXISTING" if s[0] in "XE" else "AEQ"
+
+
 def _true_name(doc, name):
     """*U123 (an anonymous reference to a dynamic block) -> the dynamic block's own name."""
     br = doc.block_records.get(name)
@@ -281,8 +305,8 @@ def wall_behind(q, walls):
 
 
 def _label(q):
-    aq = q.get("aq") or {}
-    return ("%s %s" % (aq.get("mfr") or "", aq.get("model") or "")).strip() or q["block"]
+    p = q.get("aq") or q.get("kcl") or {}
+    return ("%s %s" % (p.get("mfr") or "", p.get("model") or "")).strip() or q["block"]
 
 
 def _item_order(n):
@@ -291,12 +315,13 @@ def _item_order(n):
 
 
 def item_table(out):
-    """One row per item number on the drawing (for review): label, catalog key, count."""
+    """One row per item number on the drawing (for review): label, catalog key, count, provided by."""
     rows = {}
     for q in out["equipment"]:
         if q["status"] == "demo" or not q.get("item"):
             continue
-        r = rows.setdefault(str(q["item"]), {"item": str(q["item"]), "label": _label(q), "key": q["key"], "count": 0})
+        r = rows.setdefault(str(q["item"]), {"item": str(q["item"]), "label": _label(q), "key": q["key"], "count": 0,
+                                             "provided_by": q.get("provided_by")})
         r["count"] += 1
     return [rows[n] for n in sorted(rows, key=_item_order)]
 
@@ -343,6 +368,10 @@ def extract(path, store=None, catalog_path=None):
     block_map = (store or {}).get("block_map", {})
     # store layer_map: drawing layer -> standard layer it stands for, e.g. AutoQuotes "Layer1" -> "A-WALL"
     layer_map = {k.upper(): v for k, v in (store or {}).get("layer_map", {}).items()}
+    win = (store or {}).get("plan_window")      # [x0, y0, x1, y1] in: read only this part of the drawing
+
+    def inside(*pts):
+        return win is None or all(win[0] <= p[0] <= win[2] and win[1] <= p[1] <= win[3] for p in pts)
 
     out = {"source": os.path.basename(path), "insunits": units, "scale_to_in": scale,
            "walls": [], "rooms": [], "doors": [], "equipment": [], "points": {},
@@ -362,7 +391,10 @@ def extract(path, store=None, catalog_path=None):
                     bname = _true_name(doc, bname)
                 attribs = {a.dxf.tag.upper(): a.dxf.text for a in e.attribs} if e.attribs else {}
                 prod = aq.get(e.dxf.handle)
+                link = _hyperlink_product(e)
                 ins = Vec2(e.dxf.insert) * scale
+                if not inside(ins):
+                    continue
                 rot = e.dxf.get("rotation", 0.0)
                 status = layer_status(std, default="new")
                 hit_point = False
@@ -377,12 +409,17 @@ def extract(path, store=None, catalog_path=None):
                                          "status": layer_status(std, default="exist"),
                                          "layer": layer})
                     continue
-                # AQ model joins the match (not the manufacturer: brand aliases like HOBART would catch
-                # every product of that brand)
-                hay = dict(attribs, AQ_MODEL=prod["model"]) if prod and prod.get("model") else attribs
+                # the AQ model, else the KCL hyperlink's, joins the match (not the manufacturer: brand
+                # aliases like HOBART would catch every product of that brand)
+                model = (prod or {}).get("model") or (link or {}).get("model")
+                hay = dict(attribs, PRODUCT_MODEL=model) if model else attribs
                 key = match_equipment(bname, hay, compiled, block_map)
-                if key is None and (WALL_LAYER.search(up) or "ANNO" in up or "TITLE" in up):
+                if key is None and (WALL_LAYER.search(layer.upper()) or "ANNO" in up or "TITLE" in up):
                     continue
+                if prod and link and prod.get("model") and _norm(link["model"]) not in _norm(prod["model"]) \
+                        and _norm(prod["model"]) not in _norm(link["model"]):
+                    out["warnings"].append("Block %s at (%.0f, %.0f): AutoQuotes says %s, its hyperlink says %s."
+                                           % (bname, ins.x, ins.y, prod["model"], link["model"]))
                 bbox = None
                 try:
                     from ezdxf import bbox as _bb
@@ -400,6 +437,9 @@ def extract(path, store=None, catalog_path=None):
                        "attribs": attribs, "bbox": bbox}
                 if prod:
                     rec["aq"] = prod
+                elif link:
+                    rec["kcl"] = link
+                rec["provided_by"] = provided_by(rec["item"])
                 rec["revit_rotation"] = round(rot + _front_offset(doc, e.dxf.name, prod), 3)
                 if key is None:
                     out["unmatched"].setdefault(bname, 0)
@@ -410,20 +450,23 @@ def extract(path, store=None, catalog_path=None):
                         (t == "LWPOLYLINE" and e.closed) or (t == "POLYLINE" and e.is_closed)):
                     pts = [list(Vec2(p[:2]) * scale) for p in (
                         e.get_points("xy") if t == "LWPOLYLINE" else [v.dxf.location for v in e.vertices])]
-                    area, per = polygon_area_perim(pts)
-                    out["rooms"].append({"layer": layer, "polygon": pts,
-                                         "area_sf": round(area / 144.0, 1),
-                                         "perimeter_lf": round(per / 12.0, 1)})
+                    if inside(*pts):
+                        area, per = polygon_area_perim(pts)
+                        out["rooms"].append({"layer": layer, "polygon": pts,
+                                             "area_sf": round(area / 144.0, 1),
+                                             "perimeter_lf": round(per / 12.0, 1)})
                 elif WALL_LAYER.search(up):
-                    wall_segs[layer_status(std)].extend(_segments(e, scale))
+                    wall_segs[layer_status(std)].extend(s for s in _segments(e, scale) if inside(*s))
             elif t in ("TEXT", "MTEXT"):
                 txt = e.plain_text() if t == "MTEXT" else e.dxf.text
                 p = Vec2(e.dxf.insert) * scale
-                out["texts"].append({"text": txt.strip(), "x": p.x, "y": p.y, "layer": layer})
+                if inside(p):
+                    out["texts"].append({"text": txt.strip(), "x": p.x, "y": p.y, "layer": layer})
             elif t == "POINT":
+                p = Vec2(e.dxf.location) * scale
                 for pname, rx in POINT_LAYERS.items():
-                    if rx.search(up):
-                        out["points"].setdefault(pname, list(Vec2(e.dxf.location) * scale))
+                    if rx.search(up) and inside(p):
+                        out["points"].setdefault(pname, list(p))
 
     walk(msp)
 
