@@ -94,7 +94,8 @@ def build(est, store, ntp=None):
         tasks.append(t)
         return t
 
-    permits = (store.get("scope") or {}).get("permits", True)   # GA-263: no permits / inspections by AEQ
+    # Pizza Hut program (Edgar 2026-10-05): no permits or inspections at all, unless a store says otherwise
+    permits = (store.get("scope") or {}).get("permits", False)
     finishes = "CONSTRUCTION & FINISHES" in est["sections"]
     asm = set(l.get("assembly") for s in est["sections"].values() for l in s["lines"])
     t_sub = task("Contract / NTP, submittals & equipment release", ntp, 5, "pre")
@@ -129,8 +130,8 @@ def build(est, store, ntp=None):
                  days("EQUIPMENT SET & START-UP", crew, 2))
     t_start = task("Start-up, commissioning & HVAC balance (Hobart start-up by Hobart)",
                    _wd_add(t_set["end"], 1), 1)
-    t_final = task("Final inspections & health department" if permits else "Health department (by owner)",
-                   _wd_add(t_start["end"], 1), 3, "insp")
+    t_final = (task("Final inspections & health department", _wd_add(t_start["end"], 1), 3, "insp")
+               if permits else t_start)
     t_punch = task("Punch list, clean & turnover", _wd_add(t_final["end"], 1), 1)
 
     # days the crew actually works on site (the rough-in trip and the set trip), not the wait between them

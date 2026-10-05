@@ -194,7 +194,7 @@ def build_lines(takeoff, store, cost_db, rates):
     add("gc_protection", 1)
     if not lump:                                  # a demo lump sum includes the dumpsters
         add("gc_dumpster", 1 + (1 if q["room_sf"] > 400 or q["demo_partition_lf"] > 20 else 0))
-    if scope.get("permits", True):                # GA-263: no permits or inspections in AEQ's scope
+    if scope.get("permits", False):               # PH program: no permits or inspections (Edgar 2026-10-05)
         add("gc_permit_allow", 1)
     add("gc_final_clean", q["room_sf"])
     omit = set(scope.get("omit_sections") or [])  # GA-263: construction & finishes all existing

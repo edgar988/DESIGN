@@ -248,7 +248,9 @@
       "match": [
         "C2000",
         "OVENTION"
-      ]
+      ],
+      "stack": 2,
+      "note": "Two C2000 ovens stacked at every PH store (Edgar 2026-10-05; Cinemark 2C2000-3SW/STK): one drawn block = the stack, 2 units, 2 circuits."
     },
     {
       "item": "PH2",

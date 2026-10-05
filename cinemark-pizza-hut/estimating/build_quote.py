@@ -13,7 +13,7 @@ SCOPE_TEXT = {
     "GENERAL CONDITIONS": [
         "Mobilization for rough-in and for equipment set / finish; protection of adjacent theatre areas, "
         "dust barriers and walk-off mats.",
-        "Permits and inspections (allowance), debris removal, final construction clean.",
+        "Debris removal, final construction clean.",
     ],
     "DEMOLITION": [
         "Selective demolition within the Pizza Hut kitchen scope area per the layout.",
@@ -43,7 +43,7 @@ SCOPE_TEXT = {
         "and commission each piece (list below).",
     ],
     "TRAVEL & SUPERVISION": [
-        "Project management, coordination, submittals and inspections; crew travel, lodging and per diem.",
+        "Project management, coordination and submittals; crew travel, lodging and per diem.",
     ],
 }
 
@@ -68,7 +68,7 @@ def section_text(sec, store, est):
         return [scope["text"][sec]]
     asm = set(l.get("assembly") for l in est["sections"][sec]["lines"])
     hv = store.get("hvac") or {}
-    permits = scope.get("permits", True)
+    permits = scope.get("permits", False)       # PH program: no permits or inspections (Edgar 2026-10-05)
     if sec == "GENERAL CONDITIONS":
         trips = sum(l["qty"] for l in est["sections"][sec]["lines"] if l.get("assembly") == "gc_mobilize")
         out = ["Mobilization %s; protection of adjacent theatre areas, dust barriers and walk-off mats." % (
@@ -96,8 +96,8 @@ def section_text(sec, store, est):
         body = ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else "".join(parts)
         text = lead + body
         return [text[0].upper() + text[1:] + ", per the plumbing rough-in schedule."] if text else []
-    if sec == "TRAVEL & SUPERVISION" and not permits:
-        return ["Project management, coordination and submittals; crew travel, lodging and per diem."]
+    if sec == "TRAVEL & SUPERVISION" and permits:
+        return ["Project management, coordination, submittals and inspections; crew travel, lodging and per diem."]
     if sec == "EQUIPMENT":
         return ["Furnished by Aaron Equipment Co. at Pizza Hut master equipment list pricing, itemized below; "
                 "set and connected under Equipment Set &amp; Start-Up."]
@@ -304,7 +304,7 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
 
     s.append(CondPageBreak(3.2 * inch))
     s.append(Paragraph("SCHEDULE", Q.sechead))
-    permits = (store.get("scope") or {}).get("permits", True)
+    permits = (store.get("scope") or {}).get("permits", False)
     if sched.get("relative"):               # Edgar's day count, no dates
         s.append(Paragraph(" ".join(x for x in (
             "About %d working days on site, %d working days maximum." % (sched["site_working_days"],
@@ -338,10 +338,9 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
                                            "the existing panel, assumed to have spare capacity and breaker spaces.")
     if not has_hvac:
         excl[excl.index(EXCLUSIONS[6])] = "HVAC: none included; the area stays on the theatre's existing system."
-    if not permits:
-        excl.insert(1, "Permits, plan review and inspections: not included.")
+    # permits and inspections are not mentioned at all on PH quotes (Edgar 2026-10-05)
     if "CONSTRUCTION & FINISHES" in ((store.get("scope") or {}).get("omit_sections") or []):
-        excl.insert(2, "Construction and finishes (walls, ceiling, flooring, FRP): existing to remain, not "
+        excl.insert(1, "Construction and finishes (walls, ceiling, flooring, FRP): existing to remain, not "
                        "included.")
     if priced:
         excl[0] = ("Pizza Hut program equipment and smallwares: owner-furnished; AEQ-supplied equipment as "

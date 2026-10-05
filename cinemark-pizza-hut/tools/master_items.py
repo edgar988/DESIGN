@@ -24,7 +24,7 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 MASTER = os.path.join(ROOT, "config", "master_items.json")
-KEEP = ("key", "match", "size", "size_keys", "rank", "note")
+KEEP = ("key", "match", "size", "size_keys", "rank", "note", "stack")
 
 
 def _norm(s):
@@ -125,6 +125,8 @@ def assign(out, store, master):
         it, how = hits[0]
         q["aq_item"], q["item"], q["master_match"] = q.get("item"), it["item"], how
         q["provided_by"] = provided_by(it["item"])
+        if int(it.get("stack") or 1) > 1:       # one drawn block = a stack of units (PH1: two C2000 ovens)
+            q["stack"] = int(it["stack"])
         if it.get("key"):
             q["key"] = it["key"]
         alts = sorted(set(h[0]["item"] for h in hits[1:]) - {it["item"]})

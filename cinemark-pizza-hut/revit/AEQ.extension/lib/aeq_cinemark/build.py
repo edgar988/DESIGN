@@ -607,6 +607,21 @@ def place_equipment(doc, layout, catalog, s, block_fams=None):
                 z = lvl.Elevation + (items.get(by_handle.get(q["on"], {}).get("key"), {}).get("height_in") or 34.0) * FT
             if tb is not None:
                 ElementTransformUtils.MoveElement(doc, top.Id, XYZ(0, 0, z - tb[2]))
+        doc.Regenerate()
+        for q in layout["equipment"]:          # stacked units (two C2000 ovens on every PH store, Edgar):
+            inst = made.get(q["handle"])        # the drawn block is the bottom one, copies go on top
+            if inst is None or int(q.get("stack") or 1) < 2:
+                continue
+            bb = _body_box(doc, inst)
+            if bb is None:
+                continue
+            for k in range(1, int(q["stack"])):
+                for cid in ElementTransformUtils.CopyElement(doc, inst.Id, XYZ(0, 0, (bb[5] - bb[2]) * k)):
+                    cp = doc.GetElement(cid)            # Revit blanks a copy's Mark: same item number
+                    _set(cp, BuiltInParameter.ALL_MODEL_MARK, q.get("item") or "")
+                    _set(cp, BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS,
+                         REMARK.get(q.get("provided_by") or "AEQ", ""))
+            notes.append("%s %s: %d stacked" % (q.get("item"), q["key"], int(q["stack"])))
     return placed, skipped, notes
 
 
@@ -1160,8 +1175,10 @@ def utility_rows(doc, layout, takeoff, s):
         inst = doc.GetElement(_eid(q["revit_id"])) if q.get("revit_id") else None
         conns = []
         cs = circuits.get((key, item)) or []
-        if cs:
-            c = dict(cs.pop(0))                  # one circuit per unit, in drawing order
+        for _ in range(int(q.get("stack") or 1)):   # one circuit per unit (a stack: per oven), in drawing order
+            if not cs:
+                break
+            c = dict(cs.pop(0))
             c["amps"] = c["amps"] or None        # 0 = unknown, not zero amps
             flags = [f for f, bad in (("AMPS", c["amps"] is None), ("BKR", not c["breaker_a"]),
                                       ("NEMA", c["conn"] != "direct" and not re.search(r"\d-\d", c["nema"] or "")))
@@ -1230,6 +1247,12 @@ def _group_roughins(rows, reach_ft=2.0, oc_in=8.0):
             else:
                 clusters.append([(a, r)])
         for cl in clusters:
+            # an item's own connections stay side by side in tag order (the two ovens of a stack: EPH1.1,
+            # EPH1.2), items in the order they stand along the wall
+            at = {}
+            for a, r in cl:
+                at.setdefault(r["handle"], []).append(a)
+            cl.sort(key=lambda ar: (sum(at[ar[1]["handle"]]) / len(at[ar[1]["handle"]]), ar[1]["tag"]))
             mid = sum(a for a, _ in cl) / float(len(cl))
             first = cl[0][1]
             for k, (_, r) in enumerate(cl):
@@ -1767,6 +1790,8 @@ def interior_elevations(doc, layout, st, s):
             insts = [doc.GetElement(_eid(q["revit_id"])) for q in qs]
             boxes = [_body_box(doc, x) if x is not None else None for x in insts]
             pairs = [(q, i, b) for q, i, b in zip(qs, insts, boxes) if i is not None and b is not None]
+            # a stacked item (PH1 ovens) reaches as high as its whole stack: the tag row clears the top unit
+            pairs = [(q, i, b[:5] + (b[5] + (int(q.get("stack") or 1) - 1) * (b[5] - b[2]),)) for q, i, b in pairs]
             if not pairs:
                 continue
             n = qs[0]["roughin_n"]

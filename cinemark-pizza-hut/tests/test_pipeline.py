@@ -161,7 +161,9 @@ def test_takeoff_and_estimate_from_dxf(tmp_path):
     assert q["new_partition_lf"] == 5.0 and q["demo_partition_lf"] == 5.0
     assert q["demo_equipment"] == 1 and q["doors_new"] == 1
     # every electrified item gets a circuit; routing uses the panel point
-    assert len(t["circuits"]) == 5          # C2000, MXP22, LXnR, G22010, UR48B
+    # C2000 x2 (stacked: one block, two ovens, two circuits - Edgar), MXP22, LXnR, G22010, UR48B
+    assert len(t["circuits"]) == 6
+    assert sum(1 for c in t["circuits"] if c["item"] == "PH1") == 2
     # up from the panel to the 10 ft ceiling (4 ft), over, and down to the rough-in (8 ft to a 24" j-box)
     assert all(c["home_run_lf"] >= 12 for c in t["circuits"])
     assert {c["item"] for c in t["circuits"]} == {"PH1", "4", "5", "PH3", "6"}

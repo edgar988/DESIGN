@@ -147,7 +147,7 @@ def build(store, catalog, program, layout=None):
             if store.get("item_numbers") == "master" and not q.get("item"):
                 unnumbered[q["key"]] = unnumbered.get(q["key"], 0) + 1     # not on the PH master list
                 continue
-            rows.append({"item": q.get("item"), "key": q["key"], "qty": 1,
+            rows.append({"item": q.get("item"), "key": q["key"], "qty": int(q.get("stack") or 1),   # a stack: 2 ovens
                          "x": q["x"], "y": q["y"], "rotation": q["rotation"], "handle": q["handle"],
                          "roughin": q.get("roughin"), "provided_by": q.get("provided_by")})
         for r in rows:
