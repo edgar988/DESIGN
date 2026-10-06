@@ -71,9 +71,11 @@
     "equipment_lead_weeks": 6
   },
   "overrides": {
-    "_note": "Edgar 2026-10-05: install of owner equipment comes down to about GA's (almost the same work); demo up to about $8,800.",
+    "_note": "Edgar 2026-10-05: install of owner equipment comes down to about GA's (almost the same work); demo up to about $8,800; finishes up to $12,000, electrical down to $32,100.",
     "section_sell": {
       "DEMOLITION": 8800,
+      "CONSTRUCTION & FINISHES": 12000,
+      "ELECTRICAL": 32100,
       "EQUIPMENT SET & START-UP": 3700
     }
   },
