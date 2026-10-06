@@ -1,7 +1,9 @@
 {
   "store_id": "TX-093",
   "theatre_no": 93,
-  "theatre_name": "Movies 17 (folder: McAllen Hollywood - VERIFY name)",
+  "theatre_name": "Hollywood USA McAllen North",
+  "title_name": "Hollywood USA",
+  "_name_note": "cinemark.com lists 100 W Nolana, McAllen as Cinemark Hollywood USA McAllen North (checked 2026-10-05); title_name keeps the title block on two lines.",
   "slug": "093-MCALLEN",
   "address": "100 W. Nolana Loop, McAllen, TX 78504",
   "state": "TX",
