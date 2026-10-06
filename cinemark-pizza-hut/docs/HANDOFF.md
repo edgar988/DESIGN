@@ -42,7 +42,7 @@ Cinemark Pizza Hut kitchen conversions (program SSG-2026-CNK-PH01, Tier 2), thre
 
 ## Open flags (do not resolve by guessing)
 - Store #187: Cinemark Somerdale 16 and XD, Cooper Towne Center, Somerdale NJ (verified 2026-10-05; folder and files renamed from Somerset).
-- Store #93: list says "Movies 17", 100 W. Nolana Loop, McAllen; folder says Hollywood.
+- Store #93: Cinemark Hollywood USA McAllen North, 100 W. Nolana Ave, McAllen (verified 2026-10-05; the old list said "Movies 17", Nolana Loop).
 - Ovention C2000 and Hobart LXnR families are 208/1 types; GA specs are 208/3. Confirm site phase per store.
 - GA package items without .rfa: Beverage-Air DP60HC / WTF60AHC, True STR1R / STR2F / STA1HRI, MTI AutoFry, KLG-365, WS-12-108.
 - Unverified utilities: 7-PS-65 hand sink, FC-3 sink, Hoshizaki, Traulsen, PerfectFry, Follett. Button 4 syncs

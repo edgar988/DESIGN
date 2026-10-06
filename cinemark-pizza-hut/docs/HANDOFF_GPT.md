@@ -32,7 +32,7 @@ Stores (store config files in `config/stores/`):
 | ID | Theatre | Address | Drive folder | Status |
 |---|---|---|---|---|
 | GA-263 | Cinemark #263 Tinseltown USA | 134 Pavilion Parkway, Fayetteville, GA 30214 | `GA 263 FAYETTEVILLE TINSELTOWN` | drawn + priced (draft) |
-| TX-093 | Cinemark #93 Movies 17 (folder says Hollywood) | 100 W. Nolana Loop, McAllen, TX 78504 | `TX 093 MCALLEN HOLLYWOOD` | drawn + priced (draft) |
+| TX-093 | Cinemark #93 Hollywood USA McAllen North | 100 W. Nolana Ave, McAllen, TX 78504 | `TX 093 MCALLEN HOLLYWOOD` | drawn + priced (draft) |
 | NJ-187 | Cinemark Somerdale 16 and XD, Cooper Towne Center, Somerdale NJ (verified 2026-10-05) | | `NJ 187 SOMERDALE CINEMARK` (renamed from Somerset) | drawn from the bottom room copy (Edgar) |
 
 ---
