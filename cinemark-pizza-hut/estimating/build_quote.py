@@ -111,8 +111,10 @@ def section_text(sec, store, est):
         if "demo_lump_sum" in asm:
             out.append("Demolition in the existing room for the new kitchen, with debris removal and dumpsters.")
         if asm & {"demo_counter_front", "demo_counter_back"}:
-            out.append("Remove the existing concession stand front counter and back counter / cabinets in the "
-                       "footprint of the new layout; cap and make safe their utilities.")
+            what = ("front counter and back counter / cabinets" if asm >= {"demo_counter_front", "demo_counter_back"}
+                    else "front counter" if "demo_counter_front" in asm else "back counter / cabinets")
+            out.append("Remove the existing concession stand %s in the footprint of the new layout; cap and make "
+                       "safe their utilities." % what)
         if asm & {"demo_equipment", "demo_partition", "demo_ceiling", "demo_flooring", "demo_casework"}:
             out.append("Selective demolition within the Pizza Hut kitchen scope area per the layout.")
         if asm & {"demo_equipment", "demo_make_safe"}:

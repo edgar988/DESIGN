@@ -92,9 +92,12 @@
   "overrides": {
     "_note": "Carried from LAYOUT 1 (Edgar 2026-10-05): install of owner equipment about GA's; demo about $8,800. Alternate: demo / construction / plumbing scope assumed as LAYOUT 1 until Edgar says otherwise.",
     "section_sell": {
-      "DEMOLITION": 8800,
-      "EQUIPMENT SET & START-UP": 3700
-    }
+      "DEMOLITION": 3500,
+      "EQUIPMENT SET & START-UP": 3700,
+      "HVAC": 16000
+    },
+    "_hvac_note": "Edgar 2026-10-07: HVAC at GA's 5-ton price ($16,000).",
+    "_demo_note": "Back counter only: Edgar's LAYOUT 1 $8,800 (front + back) at the back counter's share of the built demo ($1,002 of $2,505), rounded."
   },
   "notes": [
     "NJ: confirm licensing path (NJ requires licensed master plumber / electrical contractor of record) - local sub or NJ license before quoting firm.",
@@ -114,7 +117,7 @@
       "All utilities priced new, run from a panel ~40 ft from the work: up, over at the ceiling and back down (Edgar, construction narrative 10-2026)."
     ],
     "counters": {
-      "front_lf": 20,
+      "front_lf": 0,
       "back_lf": 20,
       "provisional": true
     },
@@ -140,6 +143,7 @@
       "1"
     ],
     "_plumbing_items_note": "Edgar 2026-10-05: plumbing is just the dishwasher and the one new hand sink (about $3,200).",
-    "_alternate_note": "LAYOUT 2 scope assumed as LAYOUT 1 (counters out, new wall with two cased openings, FRP, plumbing for the dishwasher and new hand sink) - confirm with Edgar."
+    "_alternate_note": "LAYOUT 2 scope assumed as LAYOUT 1 (counters out, new wall with two cased openings, FRP, plumbing for the dishwasher and new hand sink) - confirm with Edgar.",
+    "_counters_note": "Edgar 2026-10-07: LAYOUT 2 has a back counter about the same size to demo, no front counter."
   }
 }
