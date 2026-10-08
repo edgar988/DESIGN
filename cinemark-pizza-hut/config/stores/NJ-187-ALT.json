@@ -123,29 +123,22 @@
       "back_lf": 20,
       "provisional": true
     },
-    "new_wall": {
-      "lf": 17.9,
-      "height_ft": null,
-      "cased_openings": 2,
-      "inside": "frp",
-      "outside": "paint",
-      "_note": "Edgar 2026-10-05: the south wall as drawn is the new wall at its actual length (DWG 174-389 in = 17.9 LF, a cased opening at each end); FRP on its north (kitchen) face, painted on its south face."
-    },
     "frp_walls": [
       {
-        "name": "north wall",
-        "lf": 27.3,
-        "_note": "Edgar 2026-10-05: north wall covered in FRP, as drawn: dish wall 193 in + PH3 alcove 135 in. Full ceiling height."
+        "name": "room walls all around, 120 in. high",
+        "lf": 62.7,
+        "height_ft": 10,
+        "_note": "Edgar 2026-10-07: LAYOUT 2 gets FRP on every wall, 120 in. all around the room. DWG: north 192 in, west 202 in, south 192 in, east 166 in (36 in door opening out) = 62.7 LF."
       }
     ],
-    "provisional_note": "Counter lengths are placeholders (20 LF each) until measured; wall heights taken as the ceiling height (VERIFY).",
+    "provisional_note": "Back counter length a placeholder (20 LF) until measured.",
     "equipment_priced": true,
     "plumbing_items": [
       "5",
       "1"
     ],
     "_plumbing_items_note": "Edgar 2026-10-05: plumbing is just the dishwasher and the one new hand sink (about $3,200).",
-    "_alternate_note": "LAYOUT 2 scope assumed as LAYOUT 1 (counters out, new wall with two cased openings, FRP, plumbing for the dishwasher and new hand sink) - confirm with Edgar.",
+    "_alternate_note": "LAYOUT 2 (Edgar 2026-10-07): back counter only to demo; FRP 120 in. high on every wall of the existing room, no new partition.",
     "_counters_note": "Edgar 2026-10-07: LAYOUT 2 has a back counter about the same size to demo, no front counter."
   }
 }
