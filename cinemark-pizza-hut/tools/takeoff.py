@@ -182,6 +182,17 @@ def build(store, catalog, program, layout=None):
     ref = ([sum(p[0] for p in rough) / len(rough), sum(p[1] for p in rough) / len(rough)] if rough
            else room and centroid(room["polygon"]))
     panel = pts.get("panel")
+    # a measured panel distance (store electrical_service): to the connection on the panel's side, then across
+    # (Edgar, NJ-187 alternate: the panel is 96 ft from the first, east, connection)
+    es = store.get("electrical_service") or {}
+    panel_ft = es.get("panel_distance_ft") or rt.get("panel_distance_ft", 25)
+    el_ref = ref
+    side = {"east": (0, max), "west": (0, min), "north": (1, max), "south": (1, min)}.get(es.get("panel_side"))
+    if side:
+        el_pts = [r.get("roughin") or [r["x"], r["y"]] for r in rows
+                  if (items.get(r["key"]) or {}).get("elec") and (r.get("roughin") or "x" in r)]
+        if el_pts:
+            el_ref = side[1](el_pts, key=lambda p: p[side[0]])
     water = pts.get("water")
     waste = pts.get("waste") or water
 
@@ -234,10 +245,10 @@ def build(store, catalog, program, layout=None):
             up_down = max(0.0, ceil_ft - rt.get("panel_top_ft", 6)) + max(0.0, ceil_ft - aff_ft)
             if panel and loc:
                 run = manhattan_ft(panel, loc) * rt["electrical_factor"] + up_down
-            elif ref and loc:               # panel ~40 ft from the work, then across to the rough-in
-                run = rt.get("panel_distance_ft", 25) + manhattan_ft(ref, loc) * rt["electrical_factor"] + up_down
+            elif el_ref and loc:            # panel ~40 ft from the work, then across to the rough-in
+                run = panel_ft + manhattan_ft(el_ref, loc) * rt["electrical_factor"] + up_down
             else:
-                run = rt.get("panel_distance_ft", 25) + 15 + up_down
+                run = panel_ft + 15 + up_down
             for _ in range(qty):
                 circuits.append({"circuit": ckt, "item": r.get("item"), "key": r["key"],
                                  "volts": e.get("volts"), "phase": e.get("phase"), "amps": e.get("amps"),

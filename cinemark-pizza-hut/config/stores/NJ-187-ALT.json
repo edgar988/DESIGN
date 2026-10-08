@@ -1,0 +1,145 @@
+{
+  "store_id": "NJ-187-ALT",
+  "variant": "Alternate Layout",
+  "quote_code": "C2",
+  "_variant_note": "Edgar 2026-10-07: Cinemark wants pricing on the alternate layout, LAYOUT 2 in the DWG (the enclosed room above LAYOUT 1). Same store as NJ-187; quote SSG-2026-CNK-PH01-187-C2.",
+  "theatre_no": 187,
+  "theatre_name": "Somerdale 16 and XD",
+  "title_name": "Somerdale 16",
+  "_theatre_name_note": "Verified 2026-10-05 (web): Cinemark Somerdale 16 and XD, 711 Evesham Road, Somerdale NJ 08083. Folder and files renamed from Somerset to Somerdale (Edgar 2026-10-05). title_name: the title block holds two lines.",
+  "slug": "187-SOMERDALE-ALT",
+  "address": "Cooper Towne Center, 711 Evesham, Somerdale, NJ 08083",
+  "state": "NJ",
+  "manager": "Jesse Gahagan",
+  "drive_folder": "CINEMARK/PIZZA HUT/NJ 187 SOMERDALE CINEMARK",
+  "layout_dxf": "NJ 187 CIN SOMERDALE QF.dxf",
+  "layer_map": {
+    "0": "A-WALL"
+  },
+  "item_numbers": "master",
+  "omit_sheets": [
+    "QF203",
+    "QF204",
+    "QF401",
+    "QF402"
+  ],
+  "_omit_sheets_note": "Edgar 2026-10-05: no ventilation, refrigeration, special conditions or wall backing sheets for NJ / TX.",
+  "views_3d": 3,
+  "plan_window": [
+    40,
+    -230,
+    560,
+    80
+  ],
+  "_plan_window_note": "LAYOUT 2 (label at 91, 54): room x 83-275, y -174 to 28, door in the east wall; the Hobart and an F2A stand about 14 ft east of it.",
+  "survey_date": "VERIFY",
+  "space": "VERIFY from survey",
+  "ceiling_ft": 10,
+  "electrical_service": {
+    "available_phase": "VERIFY",
+    "panel": "Existing panel 96 ft from the first (east) connection (Edgar 2026-10-07)",
+    "new_subpanel": true,
+    "feeder_lf": 110,
+    "panel_distance_ft": 10,
+    "panel_side": "east",
+    "_note": "One feeder (~110 LF: the 96 ft plus the rise) to a new kitchen subpanel at the room's east door; branch circuits from there (10 ft to the east-most connection, then across). Fourteen separate home runs from the existing panel price at $203,779 total instead (electrical $62,200, travel $47,700)."
+  },
+  "plumbing": {
+    "hot_water_source": "VERIFY",
+    "new_water_heater": false,
+    "floor_sinks": 0,
+    "grease_interceptor": true,
+    "underslab_lf": 0,
+    "drain": "wall",
+    "supply_lf_each": 10,
+    "_note": "Edgar 2026-10-05: no floor cutting - waste routes to the existing wall drain; water from the existing supply close by (10 LF per fixture assumed)."
+  },
+  "hvac": {
+    "system_cost": 5760,
+    "tons": 4,
+    "heads": 2,
+    "lineset_lf_each": 65,
+    "crane": true,
+    "penetration_existing": false,
+    "roof_penetrations": 1,
+    "condenser_circuit_lf": 40,
+    "exhaust_fan": false,
+    "minisplit_override_tons": 4.0,
+    "note": "Edgar 2026-10-07: add 4 tons of cooling to offset the ovens and the added refrigeration in the enclosed room. Priced like GA's system: 2 heads on one condensing unit; system cost scaled from GA's $7,200 for 5 tons (PROVISIONAL - confirm with the HVAC quote), 65 ft line sets, crane, one new roof penetration, condenser circuit ~40 ft from the new kitchen subpanel to the roof unit."
+  },
+  "finishes": {
+    "lighting": false,
+    "patch_paint": false,
+    "note": "Narrative gives no new floor / ceiling / FRP / lighting for the stand: confirm."
+  },
+  "demo": {
+    "equipment_count": "from_dxf",
+    "partition_lf": "from_dxf",
+    "ceiling_sf": 0,
+    "flooring_sf": 0,
+    "casework_lf": 0,
+    "make_safe": "from_dxf"
+  },
+  "travel": {
+    "mode": "fly",
+    "one_way_miles": 820
+  },
+  "schedule": {
+    "work_window": "day",
+    "permit_weeks": 6,
+    "equipment_lead_weeks": 6
+  },
+  "overrides": {
+    "_note": "Carried from LAYOUT 1 (Edgar 2026-10-05): install of owner equipment about GA's; demo about $8,800. Alternate: demo / construction / plumbing scope assumed as LAYOUT 1 until Edgar says otherwise.",
+    "section_sell": {
+      "DEMOLITION": 8800,
+      "EQUIPMENT SET & START-UP": 3700
+    }
+  },
+  "notes": [
+    "NJ: confirm licensing path (NJ requires licensed master plumber / electrical contractor of record) - local sub or NJ license before quoting firm.",
+    "NJ permitting typically runs longer; 6 wk assumed."
+  ],
+  "package": "from_dxf",
+  "customer_verify": [
+    "available electrical service phase, spare capacity and breaker spaces at the existing panel (about 96 ft from the first connection)",
+    "roof access and a location for the condensing unit",
+    "hot water source capacity",
+    "ceiling height along the utility runs"
+  ],
+  "scope": {
+    "narrative": [
+      "Demo the existing satellite concession stand: back counter (standard cabinets) and front counter (standard movie theater front counter) come out; both sit in the footprint the new layout goes into.",
+      "Erect a wall with a cased (bucked) opening on either side for employees to pass in and out; standard finish.",
+      "All utilities priced new, run from a panel ~40 ft from the work: up, over at the ceiling and back down (Edgar, construction narrative 10-2026)."
+    ],
+    "counters": {
+      "front_lf": 20,
+      "back_lf": 20,
+      "provisional": true
+    },
+    "new_wall": {
+      "lf": 17.9,
+      "height_ft": null,
+      "cased_openings": 2,
+      "inside": "frp",
+      "outside": "paint",
+      "_note": "Edgar 2026-10-05: the south wall as drawn is the new wall at its actual length (DWG 174-389 in = 17.9 LF, a cased opening at each end); FRP on its north (kitchen) face, painted on its south face."
+    },
+    "frp_walls": [
+      {
+        "name": "north wall",
+        "lf": 27.3,
+        "_note": "Edgar 2026-10-05: north wall covered in FRP, as drawn: dish wall 193 in + PH3 alcove 135 in. Full ceiling height."
+      }
+    ],
+    "provisional_note": "Counter lengths are placeholders (20 LF each) until measured; wall heights taken as the ceiling height (VERIFY).",
+    "equipment_priced": true,
+    "plumbing_items": [
+      "5",
+      "1"
+    ],
+    "_plumbing_items_note": "Edgar 2026-10-05: plumbing is just the dishwasher and the one new hand sink (about $3,200).",
+    "_alternate_note": "LAYOUT 2 scope assumed as LAYOUT 1 (counters out, new wall with two cased openings, FRP, plumbing for the dishwasher and new hand sink) - confirm with Edgar."
+  }
+}

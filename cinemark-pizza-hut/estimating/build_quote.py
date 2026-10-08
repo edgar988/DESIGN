@@ -214,7 +214,7 @@ def _fmt_date(d):
 
 def quote_numbers(store, rev="R0", today=None):
     today = today or dt.date.today()
-    no = "SSG-2026-CNK-PH01-%03d-C1" % store["theatre_no"]
+    no = "SSG-2026-CNK-PH01-%03d-%s" % (store["theatre_no"], store.get("quote_code", "C1"))
     slug = store.get("slug") or "%03d" % store["theatre_no"]
     fname = "%s_%s_CINEMARK_%s_PH-CONSTRUCTION_%s_%s_%s" % (
         today.strftime("%y"), store["state"], slug, no, rev, today.strftime("%m-%d-%y"))
@@ -228,7 +228,8 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
     loc = "#%d %s" % (store["theatre_no"], store["theatre_name"].split(" (")[0])
     doc = Q.make_doc(path, no, "%s · %s" % (prog["name"], loc), con, rev)
     s = []
-    s.append(Paragraph("STORE CONSTRUCTION QUOTE · %s · PROGRAM %s" % (
+    s.append(Paragraph("STORE CONSTRUCTION QUOTE · %s%s · PROGRAM %s" % (
+        ("%s · " % store["variant"].upper()) if store.get("variant") else "",
         prog["tier"].split(":")[0].upper(), prog["proposal_ref"]), Q.eyebrow))
     s.append(Paragraph("Pizza Hut Kitchen Conversion · Cinemark %s" % loc, Q.h1))
     s.append(Paragraph(store["address"], Q.h1sub))
@@ -249,7 +250,8 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
              ("layout " + store.get("layout_dxf", "")) if takeoff.get("layout_used")
              else ", ".join(d for d in store.get("existing_docs", ["equipment package list"])
                             if "Heat-Load" not in d),
-             ", heat-load assessment SSG-2026-CNK-PH01-%03d-M1" % store["theatre_no"] if has_hvac else "")),
+             ", heat-load assessment SSG-2026-CNK-PH01-%03d-M1" % store["theatre_no"]
+             if has_hvac and any("Heat-Load" in d for d in store.get("existing_docs", [])) else "")),
          ("Connected load:", "%.1f kW equipment%s" % (
              heat["connected_kw"], "; %.1f tons added cooling" % heat["minisplit_tons"] if has_hvac else ""))]))
     s.append(Paragraph("CONTRACTOR", Q.sechead))
