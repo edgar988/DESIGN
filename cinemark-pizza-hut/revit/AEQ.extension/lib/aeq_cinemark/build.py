@@ -210,15 +210,16 @@ def new_store_model(app, s):
         # one for it (NJ "Somerdale 16 and XD" ran into OWNER / CLIENT - Edgar)
         name = "Cinemark #%d %s - Pizza Hut Kitchen" % (
             st["theatre_no"], st.get("title_name") or st["theatre_name"].split(" (")[0])
-        number = "SSG-2026-CNK-PH01-%03d" % st["theatre_no"]
+        number = "SSG-2026-CNK-PH01-%03d%s" % (st["theatre_no"], st.get("drawing_suffix", ""))
         _set(pi, BuiltInParameter.PROJECT_NAME, name)       # wraps to 2 lines in the AEQ title block
         _set(pi, BuiltInParameter.PROJECT_NUMBER, number)
         _set(pi, BuiltInParameter.PROJECT_ADDRESS, st["address"])
         _set(pi, BuiltInParameter.CLIENT_NAME, prog["customer"]["name"])
         _set(pi, BuiltInParameter.PROJECT_ISSUE_DATE, datetime.date.today().strftime("%m/%d/%y"))
         _set(pi, BuiltInParameter.PROJECT_STATUS, "Tier 2 Rough-In Package %s" % s.get("rev", "R0"))
-        _cover_note(doc, [name, st["address"], "Owner: " + prog["customer"]["name"], "Project No. " + number,
-                          "", "Drawn to AEQ foodservice drawing standards."])
+        _cover_note(doc, [name] + ([st["variant"]] if st.get("variant") else []) +
+                    [st["address"], "Owner: " + prog["customer"]["name"], "Project No. " + number,
+                     "", "Drawn to AEQ foodservice drawing standards."])
         _trim_general_notes(doc)
     path = os.path.join(C.store_out(s), "%s_PH.rvt" % s["store_id"])
     opts = SaveAsOptions()
@@ -2478,7 +2479,8 @@ def export_pdf_and_render(doc, s, st):
     ids = List[ElementId]([sh.Id for sh in sheets])
     opts = PDFExportOptions()
     opts.Combine = True
-    base = "%s-QF-SET-%s" % (os.path.basename(st.get("drive_folder", st["store_id"])), s.get("rev", "R0"))
+    base = "%s-QF-SET-%s" % (st.get("set_name") or os.path.basename(st.get("drive_folder", st["store_id"])),
+                             s.get("rev", "R0"))
     opts.FileName = base
     doc.Export(out, ids, opts)
     renders = []

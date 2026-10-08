@@ -898,7 +898,11 @@
       "heat": null,
       "verified": true,
       "source": "No utilities",
-      "height_in": 74
+      "height_in": 74,
+      "shape": {
+        "kind": "shelving",
+        "shelves": 4
+      }
     },
     "QUANTUM_WR74_1848": {
       "description": "Wire Shelving, 18x48x74",
@@ -916,7 +920,11 @@
       "heat": null,
       "verified": true,
       "source": "No utilities",
-      "height_in": 74
+      "height_in": 74,
+      "shape": {
+        "kind": "shelving",
+        "shelves": 4
+      }
     },
     "QUANTUM_WR63_1860": {
       "description": "Wire Shelving, 18x60x63",
@@ -934,7 +942,11 @@
       "heat": null,
       "verified": true,
       "source": "No utilities",
-      "height_in": 63
+      "height_in": 63,
+      "shape": {
+        "kind": "shelving",
+        "shelves": 4
+      }
     },
     "TS_B0133": {
       "description": "Pre-Rinse Faucet Assembly",

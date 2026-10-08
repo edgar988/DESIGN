@@ -2,6 +2,8 @@
   "store_id": "NJ-187-ALT",
   "variant": "Alternate Layout",
   "quote_code": "C2",
+  "set_name": "NJ 187 SOMERDALE CINEMARK-ALT",
+  "drawing_suffix": "-ALT",
   "_variant_note": "Edgar 2026-10-07: Cinemark wants pricing on the alternate layout, LAYOUT 2 in the DWG (the enclosed room above LAYOUT 1). Same store as NJ-187; quote SSG-2026-CNK-PH01-187-C2.",
   "theatre_no": 187,
   "theatre_name": "Somerdale 16 and XD",
@@ -28,10 +30,10 @@
   "plan_window": [
     40,
     -230,
-    560,
+    470,
     80
   ],
-  "_plan_window_note": "LAYOUT 2 (label at 91, 54): room x 83-275, y -174 to 28, door in the east wall; the Hobart and an F2A stand about 14 ft east of it.",
+  "_plan_window_note": "LAYOUT 2 (label at 91, 54): room x 83-275, y -174 to 28, door in the east wall; the Hobart and an F2A stand about 14 ft east of it. x stops at 470 to leave out an unrelated outline at x 475-522.",
   "survey_date": "VERIFY",
   "space": "VERIFY from survey",
   "ceiling_ft": 10,
