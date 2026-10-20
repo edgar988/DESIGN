@@ -172,6 +172,15 @@ def build(store, catalog, program, layout=None):
         room, pts = None, {}
         warn.append("No layout: routing lengths use allowances, room quantities use store values.")
 
+    # by item number (Juan, 2026-10-20): existing_items are already at the store - not supplied, moved and
+    # reconnected like any existing item; omit_items are out of the scope altogether (no set, no utilities)
+    omit = set(str(i) for i in store.get("omit_items") or [])
+    on_site = set(str(i) for i in store.get("existing_items") or [])
+    rows = [r for r in rows if str(r.get("item")) not in omit]
+    for r in rows:
+        if str(r.get("item")) in on_site:
+            r["provided_by"] = "EXISTING"
+
     # with no panel / source drawn, they sit ~40 ft from the work (Edgar): measure from the middle of the
     # rough-ins, not the room, which can take in more than the kitchen (TX-093 reads two rooms)
     def _util(r):

@@ -154,7 +154,7 @@ def test_autoquotes_item_numbers_and_wall_roughin(tmp_path):
 
 def test_takeoff_and_estimate_from_dxf(tmp_path):
     p = make_sample_dxf.build(str(tmp_path / "s.dxf"))
-    store = load("config", "stores", "TX-093.json")
+    store = dict(load("config", "stores", "TX-093.json"), omit_items=[])     # the sample's full equipment
     lay = dxf_extract.extract(p, store)
     t = tk.build(store, CAT, PROG, lay)
     q = t["quantities"]
@@ -177,6 +177,23 @@ def test_takeoff_and_estimate_from_dxf(tmp_path):
     assert s["tasks"][-1]["kind"] == "allow" or s["tasks"][-1]["end"] == s["site_working_days"]
     s = sm.build(e, dict(store, schedule=dict(store["schedule"], dated=True)))
     assert s["turnover"] > s["site_start"] > s["ntp"]
+
+
+def test_store_existing_and_omitted_items(tmp_path):
+    """Juan 2026-10-20: an item the store already has moves to the existing list (no supply line, still
+    connected); an omitted item leaves the job (no set, no circuit)."""
+    p = make_sample_dxf.build(str(tmp_path / "s.dxf"))
+    store = dict(load("config", "stores", "TX-093.json"), omit_items=[], existing_items=[])
+    lay = dxf_extract.extract(p, store)
+    base = tk.build(store, CAT, PROG, lay)
+    on_site = dict(store, existing_items=["4"])
+    ex = tk.build(on_site, CAT, PROG, lay)
+    om = tk.build(dict(store, omit_items=["4"]), CAT, PROG, lay)
+    assert [r["provided_by"] for r in ex["schedule"] if r["item"] == "4"] == ["EXISTING"]
+    assert len(ex["circuits"]) == len(base["circuits"])
+    assert not [r for r in om["schedule"] if r["item"] == "4"]
+    assert len(om["circuits"]) == len(base["circuits"]) - 1
+    assert not [l for l in em.estimate(ex, on_site, PROG)["lines"] if l.get("item") == "4"]
 
 
 def test_customer_outputs_carry_no_internal_numbers(tmp_path):

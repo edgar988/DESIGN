@@ -19,6 +19,8 @@
     "0": "A-WALL"
   },
   "item_numbers": "master",
+  "existing_items": ["4"],
+  "_existing_items_note": "Juan 2026-10-20 (C2 R1): quote line 9.5, the ACP MXP22TLT ovens (item 4), comes off: the theatre already has them. Not supplied; set and reconnected as existing equipment.",
   "omit_sheets": [
     "QF203",
     "QF204",
