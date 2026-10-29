@@ -12,6 +12,7 @@ lengths fall back to allowances).
 import argparse
 import json
 import math
+import re
 import os
 import sys
 
@@ -81,6 +82,19 @@ def breaker_for(elec):
         return None, poles
     need = a * 1.25
     return next((b for b in STD_BREAKERS if b >= need), STD_BREAKERS[-1]), poles
+
+
+def receptacle_for(nema):
+    """The receptacle for an equipment plug and its rating: 5-15P -> ("5-20R", 20) (120 V cords go on 20 A
+    circuits with a 5-20R, as priced); 6-30P -> ("6-30R", 30); 15-50P -> ("15-50R", 50). (None, None) when
+    the plug is not known."""
+    m = re.search(r"(L?\d{1,2})-(\d{2})P", nema or "")
+    if not m:
+        return None, None
+    cfg, amps = m.group(1), int(m.group(2))
+    if cfg == "5" and amps <= 20:
+        return "5-20R", 20
+    return "%s-%dR" % (cfg, amps), amps
 
 
 def connection_assembly(elec):
@@ -245,6 +259,9 @@ def build(store, catalog, program, layout=None):
             conn_kw += kw
             brk, poles = breaker_for(e)
             asm = connection_assembly(e)
+            rcpt, rcpt_a = receptacle_for(e.get("nema")) if e.get("conn") != "direct" else (None, None)
+            if rcpt_a:                  # the breaker matches the receptacle (never above it; 120 V: 20 A)
+                brk = rcpt_a if poles == 1 else min(brk or rcpt_a, rcpt_a)
             # up from the panel to the ceiling, over, and back down to the rough-in (Edgar)
             # refrigeration plugs at 78" A.F.F. on every job (Edgar); other cords under the counter
             aff_in = (rd["direct_connect_jbox"] if e.get("conn") == "direct"
@@ -262,7 +279,8 @@ def build(store, catalog, program, layout=None):
                 circuits.append({"circuit": ckt, "item": r.get("item"), "key": r["key"],
                                  "volts": e.get("volts"), "phase": e.get("phase"), "amps": e.get("amps"),
                                  "breaker_a": brk, "poles": poles, "conn": e.get("conn"),
-                                 "nema": e.get("nema"), "assembly": asm, "home_run_lf": round(run, 1),
+                                 "nema": e.get("nema"), "receptacle": rcpt, "assembly": asm,
+                                 "home_run_lf": round(run, 1),
                                  "height_aff": aff_in,
                                  "breaker_basis": "125% nameplate - VERIFY MOCP on data plate"})
                 ckt += poles

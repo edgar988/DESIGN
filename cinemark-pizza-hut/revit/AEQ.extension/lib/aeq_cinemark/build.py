@@ -197,6 +197,48 @@ def _trim_general_notes(doc):
             doc.Delete(n.Id)
 
 
+def apply_scope(layout, st):
+    """The store's scope changes by item number, as the takeoff applies them (Juan, 2026-10-20): omit_items are
+    out of the job, so they are not drawn; existing_items are already on site, drawn and scheduled as existing."""
+    omit = set(str(i) for i in st.get("omit_items") or [])
+    on_site = set(str(i) for i in st.get("existing_items") or [])
+    layout["equipment"] = [q for q in layout["equipment"] if str(q.get("item")) not in omit]
+    for q in layout["equipment"]:
+        if str(q.get("item")) in on_site:
+            q["provided_by"] = "EXISTING"
+    return layout
+
+
+def _revisions(doc, st):
+    """The store's drawing issues (store drawing_revisions: [{rev, date, desc}], R0 first) as Revit revisions
+    numbered R0, R1... in the title block's issue history. Returns their ids."""
+    from Autodesk.Revit.DB import Revision
+    revs = st.get("drawing_revisions") or []
+    if not revs:
+        return []
+    seq = None
+    try:
+        from Autodesk.Revit.DB import RevisionNumberingSequence, NumericRevisionSettings
+        ns = NumericRevisionSettings()
+        ns.Prefix, ns.StartNumber, ns.MinimumDigits = "R", int(re.sub(r"\D", "", revs[0]["rev"]) or 0), 1
+        seq = RevisionNumberingSequence.CreateNumericSequence(doc, "AEQ R#", ns)
+    except Exception:
+        seq = None
+    ids = list(Revision.GetAllRevisionIds(doc))
+    out = []
+    for i, r in enumerate(revs):
+        rv = doc.GetElement(ids[i]) if i < len(ids) else Revision.Create(doc)
+        rv.Description = r["desc"]
+        rv.RevisionDate = r["date"]
+        if seq is not None:
+            try:
+                rv.RevisionNumberingSequenceId = seq.Id
+            except Exception:
+                pass
+        out.append(rv.Id)
+    return out
+
+
 def new_store_model(app, s):
     """Create <outputs>/<store>/<store>.rvt from the AEQ 11x17 template and fill Project Information."""
     st = C.store(s)
@@ -221,6 +263,7 @@ def new_store_model(app, s):
                     [st["address"], "Owner: " + prog["customer"]["name"], "Project No. " + number,
                      "", "Drawn to AEQ foodservice drawing standards."])
         _trim_general_notes(doc)
+        _revisions(doc, st)
     path = os.path.join(C.store_out(s), "%s_PH.rvt" % s["store_id"])
     opts = SaveAsOptions()
     opts.OverwriteExistingFile = True
@@ -1216,6 +1259,7 @@ def utility_rows(doc, layout, takeoff, s):
     on the wall behind it, 8" apart."""
     items = C.catalog(s)["items"]
     rd = C.read_json(os.path.join(s["repo_root"], "config", "program.json"))["rough_in_defaults"]
+    drain = (C.store(s).get("plumbing") or {}).get("drain")
     lvl = _level(doc)
     sched = {(r["key"], str(r.get("item") or "")): r for r in takeoff["schedule"]}
     circuits = {}
@@ -1245,7 +1289,8 @@ def utility_rows(doc, layout, takeoff, s):
                      if bad]
             conns.append({"svc": "E-DEVICE" if c["conn"] == "direct" else "E-CORD", "aff": c["height_aff"],
                           "size": "%s-P %sA" % (c["poles"], c["breaker_a"] or "?"),
-                          "desc": "J-BOX, DIRECT CONNECT" if c["conn"] == "direct" else "CORD & PLUG, " + _receptacle(c["nema"]),
+                          "desc": "J-BOX, DIRECT CONNECT" if c["conn"] == "direct" else "CORD & PLUG, " + (
+                              "RECEPTACLE " + c["receptacle"] if c.get("receptacle") else _receptacle(c["nema"])),
                           "kw": (it.get("elec") or {}).get("kw"), "amps": c["amps"], "v": c["volts"],
                           "ph": c["phase"] or 1,
                           "remarks": "CKT %s%s" % (c["circuit"], "; VERIFY " + ", ".join(flags) if flags else "")})
@@ -1259,7 +1304,11 @@ def utility_rows(doc, layout, takeoff, s):
                 svc = "I"
             hit = [f for f in fam if f[0] == ("D" if svc in ("D", "I") else svc)]
             size = plumb[ck] if plumb[ck] == "VERIFY" else plumb[ck] + '"'
-            if svc == "I":
+            aff_text, desc = None, _SVC_DESC[svc]
+            if svc == "I" and drain in ("wall", "existing"):     # NJ / TX: no floor sink, the existing drain
+                aff, aff_text, note = 0, "AT DRAIN", "AIR GAP; EXISTING DRAIN HEIGHT - VERIFY"
+                desc = "INDIRECT WASTE TO EXISTING %sDRAIN" % ("WALL " if drain == "wall" else "")
+            elif svc == "I":
                 aff, note = rd.get("floor_sink", 0), "TO FLOOR SINK"
             elif hit and hit[0][2] > 0:
                 aff, note = hit[0][2], ""
@@ -1267,8 +1316,8 @@ def utility_rows(doc, layout, takeoff, s):
                 aff = rd["waste_wall_sink"] if svc == "D" else (
                     rd["cw_hw_supply_hand_sink"] if hand else rd["cw_hw_supply_sink"])
                 note = "STD HEIGHT - VERIFY"
-            conns.append({"svc": svc, "aff": aff, "size": size, "desc": _SVC_DESC[svc], "kw": None, "amps": None,
-                          "v": None, "ph": None, "remarks": note})
+            conns.append({"svc": svc, "aff": aff, "aff_text": aff_text, "size": size, "desc": desc, "kw": None,
+                          "amps": None, "v": None, "ph": None, "remarks": note})
         if not conns:
             continue
         conns.sort(key=lambda r: _SVC_ORDER.index(r["svc"]))
@@ -1368,11 +1417,13 @@ def utility_markers(doc, rows, lvl, phase):
         if abs(ang) > 1e-6:
             ElementTransformUtils.RotateElement(doc, inst.Id, Line.CreateBound(pt, pt + XYZ.BasisZ), ang)
         aff = float(r["aff"] or 0.0) * FT
-        _set(inst, "AEQ Marker Top", aff + 3.0 * FT)
-        _set(inst, "AEQ Marker Bottom", aff)
+        bottom = max(0.0, aff - 1.5 * FT)        # the 3" marker centred on the rough-in height (rough-in
+        _set(inst, "AEQ Marker Top", bottom + 3.0 * FT)          # elevations dimension to its centre)
+        _set(inst, "AEQ Marker Bottom", bottom)
         for field, value in (("ITEM", r["item"]), ("TAG", r["tag"]), ("SVC", r["svc"][0]), ("SIZE", r["size"]),
                              ("DESCRIPTION", r["desc"]), ("LOC.", "WALL" if r["wall"] else "AT EQUIP"),
-                             ("A.F.F.", _aff_text(r["aff"])), ("SERVICE TO", r["to"]), ("KW", r["kw"]),
+                             ("A.F.F.", r.get("aff_text") or _aff_text(r["aff"])), ("SERVICE TO", r["to"]),
+                             ("KW", r["kw"]),
                              ("AMPS", r["amps"]), ("V", r["v"]), ("PH", r["ph"]), ("REMARKS", r["remarks"])):
             _set_text(inst, "%s %s" % (UTIL, field), value)
         _set(inst, BuiltInParameter.ALL_MODEL_MARK, r["tag"])
@@ -2001,6 +2052,238 @@ def interior_elevations(doc, layout, st, s):
     return [ev for ev, _, _ in made]
 
 
+RIE_SHEET = ("QF405", "ROUGH-IN ELEVATIONS")
+RIE_NOTE = ("ROUGH-IN HEIGHTS ARE ABOVE FINISHED FLOOR (A.F.F.) TO THE CENTER OF EACH CONNECTION. EQUIPMENT IS "
+            "SHOWN GHOSTED. CONNECTION DATA (SIZE, VOLTS, AMPS, NEMA): SEE QF103.")
+
+
+def _inches(txt):
+    """'22 1/2"' or '33-1/4"' (as _aff_text writes it) -> inches; None when the text is not a height (AT DRAIN)."""
+    m = re.match(r'^\s*(\d+)(?:[\s-]+(\d+)/(\d+))?\s*"', txt or "")
+    if not m:
+        return None
+    return float(m.group(1)) + (float(m.group(2)) / float(m.group(3)) if m.group(2) else 0.0)
+
+
+def _height_dim_type(doc):
+    """The rough-in dimension type for heights A.F.F.: inches to the nearest 1/8" (78", 33 1/4"), as QF103."""
+    from Autodesk.Revit.DB import DimensionType
+    name = "AEQ - Rough-In Heights - 3/32 inch"
+    t = next((x for x in FilteredElementCollector(doc).OfClass(DimensionType) if _name(x) == name), None)
+    if t is not None:
+        return t
+    src = _dim_type(doc)
+    if src is None:
+        return None
+    try:
+        t = src.Duplicate(name)
+        from Autodesk.Revit.DB import FormatOptions, UnitTypeId, SymbolTypeId
+        fo = FormatOptions(UnitTypeId.FractionalInches)
+        fo.Accuracy = 1.0 / 8.0
+        try:
+            fo.SetSymbolTypeId(SymbolTypeId.InchDoubleQuote)
+        except Exception:
+            pass
+        t.SetUnitsFormatOptions(fo)
+        return t
+    except Exception:
+        return src
+
+
+def _ghost_equipment(doc, view):
+    """Equipment see-through and halftone in a view, so the connections on the wall behind it show."""
+    ogs = OverrideGraphicSettings()
+    ogs.SetHalftone(True)
+    ogs.SetSurfaceTransparency(100)
+    for el in FilteredElementCollector(doc, view.Id).WhereElementIsNotElementType():
+        if isinstance(el, FamilyInstance):
+            if el.Symbol.Family.Name.startswith("AEQ_CONN") or el.Category is None or \
+                    _id_int(el.Category.Id) == int(BuiltInCategory.OST_Doors):
+                continue
+        elif not isinstance(el, DirectShape):
+            continue
+        try:
+            view.SetElementOverrides(el.Id, ogs)
+        except Exception:
+            pass
+
+
+def connection_list(doc):
+    """Every connection symbol's QF103 data (tag, service, item, size, description, height, remarks), in tag
+    order: what the rough-in material list works from."""
+    out = []
+    for m in _utility_markers(doc):
+        if not isinstance(m, FamilyInstance):
+            continue
+        row = {"family": m.Symbol.Family.Name}
+        for field, key in (("TAG", "tag"), ("SVC", "svc"), ("ITEM", "item"), ("SIZE", "size"),
+                           ("DESCRIPTION", "description"), ("LOC.", "loc"), ("A.F.F.", "aff"),
+                           ("SERVICE TO", "service_to"), ("KW", "kw"), ("AMPS", "amps"), ("V", "v"), ("PH", "ph"),
+                           ("REMARKS", "remarks")):
+            p = m.LookupParameter("%s %s" % (UTIL, field))
+            if p is not None:
+                row[key] = p.AsString() if p.StorageType == StorageType.String else p.AsValueString()
+        out.append(row)
+    out.sort(key=lambda r: r.get("tag") or "")
+    return out
+
+
+def roughin_elevations(doc, layout, st, s):
+    """Rough-in elevations for the field (Edgar 2026-10-29): one per wall with connections, the wall face seen
+    from the room with the equipment ghosted, each connection symbol at its rough-in height with its utility
+    tag, and a dimension from the finished floor to the centre of every connection (inches, to 1/8"). QF405...
+    Returns the views."""
+    from Autodesk.Revit.DB import ReferenceArray
+    lvl = _level(doc)
+    z0 = lvl.Elevation
+    h = (st.get("ceiling_ft") or 10.0)
+    plan = next((v for _, _, v in PLAN_SHEETS), None) or _view_named(doc, ViewPlan, "QF101") or _first_plan(doc)
+    vft = _vft(doc, ViewFamily.Elevation)
+    nc = _phase(doc, "New Construction")
+    sc = int(s.get("elev_scale", 48))
+    sym_ut = F.tag_symbol(doc, F.TAG_UTIL)
+    groups = {}
+    for m in _utility_markers(doc):
+        if not isinstance(m, FamilyInstance):
+            continue
+        tf = m.GetTransform()
+        n = (tf.BasisY.X, tf.BasisY.Y)
+        p = m.Location.Point
+        ap = m.LookupParameter(UTIL + " A.F.F.")
+        aff = _inches(ap.AsString() if ap is not None else "")
+        if abs(n[0]) > 0.9:
+            k = ("X", 1 if n[0] > 0 else -1, int(round(p.X * 2.0)))
+        elif abs(n[1]) > 0.9:
+            k = ("Y", 1 if n[1] > 0 else -1, int(round(p.Y * 2.0)))
+        else:
+            continue
+        groups.setdefault(k, []).append((m, p, n, aff))
+    made = []
+    with _Tx(doc, "AEQ: rough-in elevations"):
+        dt = _height_dim_type(doc)
+        for v in [v for v in FilteredElementCollector(doc).OfClass(View)
+                  if not v.IsTemplate and v.Name.startswith(RIE_SHEET[0] + " ")]:
+            try:
+                doc.Delete(v.Id)
+            except Exception:
+                pass
+        order = sorted(groups.items(), key=lambda kv: kv[0])
+        for idx, (k, ms) in enumerate(order):
+            n = ms[0][2]
+            w = sum((p.X if k[0] == "X" else p.Y) for _, p, _, _ in ms) / float(len(ms))   # the wall face
+            along = [(p.Y if k[0] == "X" else p.X) for _, p, _, _ in ms]
+            lo, hi = min(along) - 2.75, max(along) + 1.5     # room left of the first group for its heights
+            back_off = 4.0                          # in front of the equipment on the wall
+            mid = (lo + hi) / 2.0
+            origin = (XYZ(w + n[0] * back_off, mid, z0) if k[0] == "X" else XYZ(mid, w + n[1] * back_off, z0))
+            mk = ElevationMarker.CreateElevationMarker(doc, vft.Id, origin, sc)
+            ev = None
+            for i in range(4):
+                e = mk.CreateElevation(doc, plan.Id, i)
+                vd = e.ViewDirection
+                if vd.X * n[0] + vd.Y * n[1] > 0.9:
+                    ev = e
+                    break
+                doc.Delete(e.Id)
+            if ev is None:
+                continue
+            ev.Name = _unique_name(doc, type(ev), "%s - ROUGH-IN ELEVATION %d - %s WALL" % (
+                RIE_SHEET[0], idx + 1, _compass(n)))
+            try:
+                ev.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(back_off + 0.75)
+            except Exception:
+                pass
+            ev.get_Parameter(BuiltInParameter.VIEW_PHASE).Set(nc.Id)
+            ev.AreImportCategoriesHidden = True
+            try:
+                ev.SetCategoryHidden(ElementId(BuiltInCategory.OST_Levels), True)
+            except Exception:
+                pass
+            _hide_zones(doc, ev, keep_doors=False)
+            doc.Regenerate()
+            if k[0] == "X":
+                _crop_elevation(ev, min(w, origin.X), lo, max(w, origin.X), hi, z0, z0 + h)
+            else:
+                _crop_elevation(ev, lo, min(w, origin.Y), hi, max(w, origin.Y), z0, z0 + h)
+            made.append((ev, ms))
+        doc.Regenerate()
+        for ev, ms in made:
+            _ghost_equipment(doc, ev)
+            rd, o = ev.RightDirection, ev.Origin
+
+            def U(p):
+                return (p - o).DotProduct(rd)
+
+            def P(u, z):
+                return XYZ(o.X, o.Y, 0) + rd.Multiply(u) + XYZ(0, 0, z)
+
+            pts = sorted(((U(p), m, p, a) for m, p, _, a in ms), key=lambda x: x[0])
+            clusters = []
+            for x in pts:                           # connections side by side (8" o.c.) dimension together
+                if clusters and x[0] - clusters[-1][-1][0] < 1.5:
+                    clusters[-1].append(x)
+                else:
+                    clusters.append([x])
+            # a dimension from a floor line to each distinct height in a cluster, just left of the cluster
+            spots = []
+            for cl in clusters:
+                left = cl[0][0]
+                hs = sorted(set(round(x[3] * 8.0) / 8.0 for x in cl if x[3]))   # as QF103 shows them
+                for j, a in enumerate(hs):
+                    spots.append((left - 0.55 - 0.9 * j, left - 0.12, a))   # 0.9 ft apart: the figures clear
+            if spots:
+                fl = doc.Create.NewDetailCurve(ev, Line.CreateBound(P(min(x[0] for x in spots) - 0.3, z0),
+                                                                    P(pts[-1][0] + 1.0, z0)))
+                for ud, end, a in spots:
+                    zz = z0 + a * FT
+                    ref = doc.Create.NewDetailCurve(ev, Line.CreateBound(P(ud - 0.12, zz), P(end, zz)))
+                    ra = ReferenceArray()
+                    ra.Append(fl.GeometryCurve.Reference)
+                    ra.Append(ref.GeometryCurve.Reference)
+                    try:
+                        if dt is not None:
+                            doc.Create.NewDimension(ev, Line.CreateBound(P(ud, z0), P(ud, zz)), ra, dt)
+                        else:
+                            doc.Create.NewDimension(ev, Line.CreateBound(P(ud, z0), P(ud, zz)), ra)
+                    except Exception:
+                        pass
+            # tags: one row above the high connections (refrigeration plugs at 78"), one above the low ones
+            if sym_ut is None:
+                continue
+            bands = {}
+            for x in pts:
+                bands.setdefault("hi" if (x[3] or 0) >= 54 else "lo", []).append(x)
+            for band, lst in bands.items():
+                top = max((x[3] or 0) for x in lst)
+                zrow = z0 + min(top * FT + 1.0, h - 0.6)
+                tags = []
+                for u, m, p, a in lst:
+                    try:                        # no leader yet: a tag made with one reports a false head
+                        t = IndependentTag.Create(doc, sym_ut.Id, ev.Id, Reference(m), False,
+                                                  TagOrientation.Horizontal, P(u, zrow))
+                    except Exception:
+                        continue
+                    tags.append((t, u, P(u, z0 + (a or 0) * FT + 1.5 * FT)))
+                if not tags:
+                    continue
+                doc.Regenerate()
+                items = []
+                for t, ideal, _ in tags:
+                    bb = t.get_BoundingBox(ev)
+                    half = abs((bb.Max - bb.Min).DotProduct(rd)) / 2.0 if bb else 0.2
+                    items.append((ideal, half, half))
+                pos = _spread(items, 0.1)
+                for (t, ideal, end), q in zip(tags, pos):
+                    try:
+                        t.HasLeader = True
+                        t.LeaderEndCondition = LeaderEndCondition.Free
+                        t.SetLeaderEnd(list(t.GetTaggedReferences())[0], end)
+                    except Exception:
+                        pass
+                    t.TagHeadPosition = P(q, zrow)      # last: freeing the leader moves the head off the plane
+    return [ev for ev, _ in made]
+
+
 # the 3D kitchen from the southwest (QF502); stores with views_3d > 1 also get it from the northeast (QF503)
 # and the southeast, lower (QF504) - Edgar (NJ / TX review): a couple more renderings from other perspectives
 VIEWS_3D = [("QF502", "3D KITCHEN", (-1, -1), 25.0), ("QF503", "3D KITCHEN FROM NORTHEAST", (1, 1), 25.0),
@@ -2434,6 +2717,7 @@ def make_sheets(doc, s):
         for num in drop:
             if num in sheets:
                 doc.Delete(sheets.pop(num).Id)
+        last_elev = 402
         elevs = [v for v in FilteredElementCollector(doc).OfClass(View)
                  if not v.IsTemplate and v.Name.startswith(ELEV_SHEET[0] + " - ELEVATION")]
         if elevs:
@@ -2445,6 +2729,22 @@ def make_sheets(doc, s):
                 num = "QF%03d" % (403 + gi)
                 _place(doc, sheet(num, ELEV_SHEET[1] if gi == 0 else ELEV_SHEET[1] + " (CONT.)"), grp, s,
                        rescale=False)
+                last_elev = 403 + gi
+        ries = [v for v in FilteredElementCollector(doc).OfClass(View)
+                if not v.IsTemplate and v.Name.startswith(RIE_SHEET[0] + " - ROUGH-IN ELEVATION")]
+        if ries:                                # the field's rough-in heights (Edgar 2026-10-29)
+            ries.sort(key=lambda v: int(re.search(r"ELEVATION (\d+)", v.Name).group(1)))
+            for v in ries:
+                _set_scale(doc, v, int(s.get("elev_scale", 48)))
+            doc.Regenerate()
+            first = max(int(RIE_SHEET[0][2:]), last_elev + 1)
+            x0, y0, x1, y1 = _area(s)
+            for gi, grp in enumerate(_pack(ries, s, title_in=0.6)):
+                sh = sheet("QF%03d" % (first + gi), RIE_SHEET[1] if gi == 0 else RIE_SHEET[1] + " (CONT.)")
+                _place(doc, sh, grp, s, rescale=False, area=[x0, y0 + 0.45, x1, y1])
+                if not list(FilteredElementCollector(doc, sh.Id).OfClass(TextNote)):
+                    TextNote.Create(doc, sh.Id, XYZ(x0 / 12.0, (y0 + 0.4) / 12.0, 0), RIE_NOTE,
+                                    _text_type(doc, '3/32"'))
         for num, title, _, _ in VIEWS_3D:                   # QF502 (+ QF503 / QF504 where the store has them)
             v3 = _view_named(doc, View3D, num + " ")
             if v3 is not None:
@@ -2468,6 +2768,15 @@ def make_sheets(doc, s):
             for si in FilteredElementCollector(doc, ush.Id).OfClass(ScheduleSheetInstance):
                 if not si.IsTitleblockRevisionSchedule:
                     _fit_schedule(doc, doc.GetElement(si.ScheduleId), UTIL_COLS, UTIL_SHEET[1])
+        if C.store(s).get("drawing_revisions"):      # the store's issue history on every sheet
+            from Autodesk.Revit.DB import Revision
+            rids = List[ElementId](list(Revision.GetAllRevisionIds(doc)))
+            for sh in FilteredElementCollector(doc).OfClass(ViewSheet):
+                if sh.SheetNumber.startswith("QF"):
+                    try:
+                        sh.SetAdditionalRevisionIds(rids)
+                    except Exception:
+                        pass
     return made
 
 

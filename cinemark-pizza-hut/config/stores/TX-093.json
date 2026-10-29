@@ -19,6 +19,12 @@
   },
   "_item_overrides_note": "Edgar 2026-10-05: the hand sink on the west wall by the passage (block 63132) is existing; the one in the cook area (5EEA5) is new, by AEQ.",
   "omit_items": ["4", "X3"],
+  "drawing_rev": "R1",
+  "drawing_revisions": [
+    {"rev": "R0", "date": "10/05/26", "desc": "ISSUED FOR REVIEW"},
+    {"rev": "R1", "date": "10/29/26", "desc": "SCOPE PER CINEMARK 10/20"}
+  ],
+  "_drawing_rev_note": "R1 drawings (2026-10-29): the 10/20 scope (Juan) on the drawings, and rough-in elevations QF405+ with heights for the field team. The R0 sets stay as issued.",
   "_omit_items_note": "Juan 2026-10-20 (C1 R1): quote line 8.5, the ACP MXP22TLT ovens (item 4), and the existing PerfectFry PFA500 fryer (X3) come off the quote. Section sells left at Edgar's numbers.",
   "omit_sheets": ["QF203", "QF204", "QF401", "QF402"],
   "_omit_sheets_note": "Edgar 2026-10-05: no ventilation, refrigeration, special conditions or wall backing sheets for TX / NJ.",

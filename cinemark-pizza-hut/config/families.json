@@ -27,7 +27,7 @@
         "amps": 34.0,
         "kw": 16.3,
         "conn": "cord",
-        "nema": "VERIFY"
+        "nema": "15-50P"
       },
       "plumb": null,
       "gas": null,
@@ -38,7 +38,7 @@
         "latent_frac": 0.1
       },
       "verified": true,
-      "source": "Ovention C2000 spec via heat-load report SSG-2026-CNK-PH01-263-M1 (16.3 kW max, 208-240/3, 34 A)",
+      "source": "Ovention C2000 spec via heat-load report SSG-2026-CNK-PH01-263-M1 (16.3 kW max, 208-240/3, 34 A); NEMA 15-50P for 3-ph per CINEMARK_PH_MASTER.pdf p.41 (1-ph is 6-50P)",
       "flags": [
         "Family type is C2000_208_60_1 (single phase) but the GA spec is 208-240/3, 34 A. Confirm the phase available at each store and pick the matching type before rough-in."
       ],
@@ -61,7 +61,7 @@
         "amps": 27.4,
         "kw": 5.7,
         "conn": "cord",
-        "nema": "VERIFY"
+        "nema": "6-30P"
       },
       "plumb": null,
       "gas": null,
@@ -72,7 +72,7 @@
         "latent_frac": 0.1
       },
       "verified": true,
-      "source": "ACP MXP22TLT (5,700 W, 208-240/1, 27.4 A) via SSG-2026-CNK-PH01-263-M1",
+      "source": "ACP MXP22TLT (5,700 W, 208-240/1, 27.4 A) via SSG-2026-CNK-PH01-263-M1; cord NEMA 6-30P per CINEMARK_PH_MASTER.pdf p.2 and p.22",
       "stack": "top"
     },
     "HOBART_LXNR": {

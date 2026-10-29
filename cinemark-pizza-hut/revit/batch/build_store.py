@@ -39,7 +39,8 @@ def main():
     s["outputs_dir"] = job["work_dir"]          # model + exports stay local
     out_drive = job["outputs_dir"]
     st = C.store(s)
-    lay = C.read_json(os.path.join(out_drive, "layout.json"))
+    s["rev"] = job.get("rev") or st.get("drawing_rev") or s.get("rev", "R0")
+    lay = build.apply_scope(C.read_json(os.path.join(out_drive, "layout.json")), st)
     tk = C.read_json(os.path.join(out_drive, "takeoff.json"))
     app = _app()
 
@@ -62,7 +63,9 @@ def main():
         log.append(("placement", pnotes))
         log.append(("synced", build.sync_family_data(doc, C.catalog(s), s)[1]))
         build.roughin_views(doc, lay, tk, s)
+        C.write_json(os.path.join(out_drive, "roughin_connections.json"), build.connection_list(doc))
         build.interior_elevations(doc, lay, st, s)
+        log.append(("rough-in elevations", len(build.roughin_elevations(doc, lay, st, s))))
         build.view_3d(doc, lay, st)
         build.equipment_schedule(doc)
         build.roughin_schedule_drafting(doc, tk)

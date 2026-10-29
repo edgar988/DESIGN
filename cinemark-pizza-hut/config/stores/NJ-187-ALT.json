@@ -20,6 +20,12 @@
   },
   "item_numbers": "master",
   "existing_items": ["4"],
+  "drawing_rev": "R1",
+  "drawing_revisions": [
+    {"rev": "R0", "date": "10/07/26", "desc": "ISSUED FOR REVIEW"},
+    {"rev": "R1", "date": "10/29/26", "desc": "SCOPE PER CINEMARK 10/20"}
+  ],
+  "_drawing_rev_note": "R1 drawings (2026-10-29): the 10/20 scope (Juan) on the drawings, and rough-in elevations QF405+ with heights for the field team. The R0 sets stay as issued.",
   "_existing_items_note": "Juan 2026-10-20 (C2 R1): quote line 9.5, the ACP MXP22TLT ovens (item 4), comes off: the theatre already has them. Not supplied; set and reconnected as existing equipment.",
   "omit_sheets": [
     "QF203",
