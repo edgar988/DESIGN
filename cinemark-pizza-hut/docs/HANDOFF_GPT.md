@@ -146,7 +146,9 @@ stays the R0 / heat-load calibration store); work folder `C:\AEQ\work\GA-263-NEW
 file uses that is new in the pipeline:
 - `drawn_items`: items Edgar drew as plain rectangles (36x30 table 2.6, Quantum 24x48 shelving 3.4 x3, the existing
   bag-in-box rack X4), read at their DWG coordinates. 2.6 and 3.4 are `local` PH list items in master_items.json
-  with AEQ's price until the AutoQuotes list has them.
+  with AEQ's price until the AutoQuotes list has them. An entry with `block` + `insert` + `rotation` instead of
+  `rect` places that block from the DWG's own block table (R2, 11/11: the PH4 UHT48 under the oven table that Juan
+  asked for, which Edgar's layout does not show yet), so the family still comes from Edgar's block, never a box.
 - `electrical_service.sources` / `item_sources` / `item_circuits`: 120 V from the panel drawn in the room (layer
   FS-ELEC, mapped to E-PANEL; a closed polyline on a source layer is now a source point + box); ovens, Menumaster and
   fryer on ~200 ft home runs from the panel across the lobby with Edgar's wire (QF103 REMARKS: "LOBBY CKT 1;
