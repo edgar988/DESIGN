@@ -45,3 +45,17 @@ def test_counts_add_up_per_circuit():
     # #12 black: two 120 V runs (50 + 30 ft) x 1.10 + 2 ft tails each end
     assert round(wire[("12", "BLACK")], 1) == round((50 * 1.1 + 4) + (30 * 1.1 + 4), 1)
     assert ("8", "BLUE") in wire                            # the 35 A 3-pole Hobart: #8
+
+
+def test_given_wire_and_conduit_fill():
+    # GA-263 new area (Edgar 11/10): a 200 ft home run for an oven, 3 #4 + #6 G for 3% voltage drop
+    oven = {"poles": 3, "breaker_a": 50, "conn": "cord", "nema": "15-50P", "volts": 208,
+            "wire": {"hot": "4", "ground": "6"}, "source_label": "LOBBY", "home_run_lf": 200}
+    brk, poles, rec, cond = M.circuit_plan(oven)
+    assert (brk, rec) == (50, "15-50R")
+    assert [c[0] for c in cond] == ["4", "4", "4", "6"]
+    assert M.emt_size(cond) == '1"'                          # 3 #4 + #6 overfill 3/4" EMT at 40%
+    assert M.emt_size(M.circuit_plan({"poles": 1, "breaker_a": 20, "conn": "cord", "nema": "5-15P"})[3]) == '3/4"'
+    items, _, wire, _ = M.electrical({"circuits": [oven], "quantities": {"electrical": {}}}, {})
+    assert items[("BREAKERS", "Circuit breaker, 3-pole 50 A (LOBBY)")] == 1
+    assert round(wire[("4", "BLUE")]) == 224                 # 200 x 1.10 + 2 ft at each end

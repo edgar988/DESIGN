@@ -138,6 +138,23 @@ Round 2 on GA-263 (Edgar's notes, 2026-10-05; his Davie FL TPHD set is the refer
 - Stacked items stand on the base's top face (`_stand_z`); AQSL block fronts from the block extents (item 4).
 Still open: X1.2 / X1.3 T&S faucets need KCL blocks (the DWG's AQ 2D blocks give boxes in elevation).
 
+## 3c. GA-263 new area, R1 (2026-11-10, built on OFFICECAD)
+
+Edgar moved the GA kitchen to a new area (Polycam scan 11/03). Store file `config/stores/GA-263-NEW.json` (GA-263.json
+stays the R0 / heat-load calibration store); work folder `C:\AEQ\work\GA-263-NEW` (DXF exported from Edgar's
+11/10 4:36 PM DWG into `src\`). Decisions in the Drive handoff `GA 263 R1 HANDOFF FOR OFFICECAD.md`. What the store
+file uses that is new in the pipeline:
+- `drawn_items`: items Edgar drew as plain rectangles (36x30 table 2.6, Quantum 24x48 shelving 3.4 x3, the existing
+  bag-in-box rack X4), read at their DWG coordinates. 2.6 and 3.4 are `local` PH list items in master_items.json
+  with AEQ's price until the AutoQuotes list has them.
+- `electrical_service.sources` / `item_sources` / `item_circuits`: 120 V from the panel drawn in the room (layer
+  FS-ELEC, mapped to E-PANEL; a closed polyline on a source layer is now a source point + box); ovens, Menumaster and
+  fryer on ~200 ft home runs from the panel across the lobby with Edgar's wire (QF103 REMARKS: "LOBBY CKT 1;
+  3#4+#6G", a PANELS note under QF103, the room panel boxed on QF301 / QF302); condensers from the booth panel.
+- `scope.extra_lines` (store lines priced to the cent: Alpine BNR34285 HVAC, Edgar's crane / roof / 3-comp numbers)
+  with `hvac.itemized`; section sells per `overrides` = R0 sells + the 11/10 change list.
+- Dimension strings and rough-in elevations now stop at a partition meeting the wall (one per room's stretch).
+
 ## 4. What Edgar rejected on 2026-10-05, and why it happened
 
 His words: "I hate the way the tags are set up - the arrow on the leader is way too big, and the numbers don't seem to

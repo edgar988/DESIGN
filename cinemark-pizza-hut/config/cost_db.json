@@ -217,6 +217,16 @@
       "desc": "Branch circuit, EMT and wire",
       "basis": "HELM:Cinemark branch circuits $25/lf combined"
     },
+    "el_branch_lf_upsized": {
+      "unit": "LF",
+      "hrs": 0.15,
+      "mat": 12.12,
+      "sub": 0,
+      "eqp": 0,
+      "section": "ELECTRICAL",
+      "desc": "Branch circuit, long home run, EMT and wire upsized for voltage drop",
+      "basis": "AEQ est - review: $30/lf (HELM $25/lf standard + upsized wire, #4 / #6), GA-263 new area 11/10"
+    },
     "el_brk_1p20": {
       "unit": "ea",
       "hrs": 0.4,

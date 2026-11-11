@@ -1,0 +1,184 @@
+{
+  "store_id": "GA-263-NEW",
+  "variant": "New Area",
+  "quote_code": "C1",
+  "_variant_note": "Edgar 2026-11-10: the GA-263 kitchen moves to a new area (Polycam scan 11/03/26: kitchen 240 SF, Other 1 188 SF, Other 2 149 SF). Same job and quote as GA-263 (SSG-2026-CNK-PH01-263-C1), reissued as R1; GA-263.json stays the R0 / heat-load calibration store. Handoff: Drive store folder, GA 263 R1 HANDOFF FOR OFFICECAD.md.",
+  "theatre_no": 263,
+  "theatre_name": "Tinseltown USA",
+  "slug": "263-FAYETTEVILLE-TINSELTOWN",
+  "address": "134 Pavilion Parkway, Fayetteville, GA 30214",
+  "state": "GA",
+  "manager": "Adam Friedman",
+  "drive_folder": "CINEMARK/PIZZA HUT/GA 263 FAYETTEVILLE TINSELTOWN",
+  "layout_dxf": "GA 263 FAYETTEVILLE TINSELTOWN-NEW AREA-LAYOUT BASE-R0.dxf",
+  "_layout_dxf_note": "Exported 2026-11-10 (accoreconsole DXFOUT 2018) from Edgar's DWG saved 11/10 4:36 PM, into C:\\AEQ\\work\\GA-263-NEW\\src. The DXF of the same name on Drive is the 11/03 export, older than the DWG.",
+  "layer_map": {
+    "FS-ELEC": "E-PANEL"
+  },
+  "_layer_map_note": "FS-ELEC: the existing panel in the room, west wall of Other 2 north of the door (the red box by the door, Edgar 11/10).",
+  "plan_window": [100, -20, 640, 280],
+  "_plan_window_note": "The scanned rooms (x 125-612, y -8 to 263). Leaves out the north arrow (x 646-678), the staging blocks above (y 340 up) and the notes below (y -40 down).",
+  "item_numbers": "master",
+  "existing_items": ["4"],
+  "_existing_items_note": "Edgar 2026-11-10: the Menumaster (ACP MXP22TLT, item 4) is existing: relocated, not supplied.",
+  "item_overrides": {"5DA98": "X2"},
+  "_item_overrides_note": "The hand sink (block 5DA98, 7-PS-65) stays existing X2, relocated, as in R0 (Edgar 10/05: the hand sink is existing); the 11/10 change list adds no new hand sink.",
+  "drawn_items": [
+    {"item": "2.6", "key": "AEQ_FABSS_3630", "rect": [379.77, 98.96, 415.77, 128.96],
+     "_note": "Edgar's DWG, layer FS-EQ-CUST: 36 x 30 rectangle on the north wall of Other 1, between the Menumaster and the reach-in."},
+    {"item": "3.4", "key": "QUANTUM_WR74_2448", "rect": [508.28, -0.79, 556.15, 22.15],
+     "_note": "Edgar's DWG, layer FS-EQ-BO: S1, south wall of Other 2."},
+    {"item": "3.4", "key": "QUANTUM_WR74_2448", "rect": [556.15, -0.79, 604.01, 22.15],
+     "_note": "S2, south wall, SE corner."},
+    {"item": "3.4", "key": "QUANTUM_WR74_2448", "rect": [580.12, 22.15, 604.01, 71.78], "back": "east",
+     "_note": "S3, east wall above S2. About 0.6 in. clear of the reach-in door swing: field verify (scan +/- 1 in.)."},
+    {"key": "EXISTING_BIB_RACK", "rect": [457.85, 1.01, 504.59, 18.77],
+     "_note": "Edgar's DWG, layer FS-EQ-EXISTING-DIM, labelled 'bag in box rack -relocated-': against the west wall of Other 2."}
+  ],
+  "_drawn_items_note": "Items Edgar drew as plain rectangles (no block): read at these DWG coordinates, back to the nearest wall unless 'back' says which side. Item numbers: 2.6 and 3.4 are new PH list numbers (master_items.json, local).",
+  "drawing_rev": "R1",
+  "drawing_revisions": [
+    {"rev": "R0", "date": "10/05/26", "desc": "ISSUED FOR REVIEW"},
+    {"rev": "R1", "date": "11/10/26", "desc": "NEW AREA LAYOUT"}
+  ],
+  "_drawing_rev_note": "R1 (Edgar 2026-11-10): the kitchen in the new area. The R0 set (old room) stays as issued.",
+  "omit_sheets": ["QF203", "QF204", "QF401", "QF402"],
+  "survey_date": "2026-11-03",
+  "existing_docs": [
+    "Polycam LiDAR scan 11/03/26 (scan accuracy about +/- 1 in.)"
+  ],
+  "_existing_docs_note": "The 09/22 heat-load report (M1) and QF101-R1 were for the old room; the new area's 6 tons is Edgar's call (11/10), so neither is cited.",
+  "space": "New area: three connected rooms from the 11/03/26 scan (kitchen 240 SF, Other 1 188 SF, Other 2 149 SF)",
+  "ceiling_ft": 8.4,
+  "_ceiling_note": "Scan: kitchen and Other 1 8'-4 7/8\", Other 2 8'-9 1/4\".",
+  "electrical_service": {
+    "available_phase": "3",
+    "panel": "Existing panel in the room (120 V circuits); a 208 V 3-phase panel across the lobby (home runs about 200 ft); the projector booth panel (condensing units)",
+    "new_subpanel": false,
+    "sources": {
+      "EXIST": {"label": "EXISTING PANEL IN THE ROOM", "short": "RM PNL", "order": 1,
+                "note": "120V circuits and the dish machine"},
+      "LOBBY": {"label": "208V 3-PH PANEL ACROSS THE LOBBY", "short": "LOBBY", "order": 2, "run_lf": 200,
+                "assembly": "el_branch_lf_upsized",
+                "note": "home runs about 200 ft, wire as noted (sized for 3% voltage drop)"},
+      "BOOTH": {"label": "PROJECTOR BOOTH PANEL", "short": "BOOTH", "order": 3, "run_lf": 100,
+                "note": "the 2 roof condensing units (HVAC)"}
+    },
+    "_sources_note": "short = the panel's name in QF103's REMARKS and on the electrical plans; the QF103 note spells each out.",
+    "default_source": "EXIST",
+    "item_sources": {"PH1": "LOBBY", "4": "LOBBY", "X3": "LOBBY"},
+    "item_circuits": {
+      "PH1": {"breaker_a": 50, "wire": {"hot": "4", "ground": "6"}},
+      "4": {"breaker_a": 35, "wire": {"hot": "6", "ground": "6"}},
+      "X3": {"breaker_a": 30, "wire": {"hot": "6", "ground": "6"}}
+    },
+    "_note": "Edgar 2026-11-10. 120 V circuits come off the existing panel in the room (the red box by the door), reusing circuits freed by the relocated items. A new 208 V 3-phase feed from across the lobby (about 200 ft) serves only the 2 ovens (3-phase 50 A, 3 #4 + #6 ground each), the Menumaster (35 A, 2 #6 + #6 ground) and the fryer (30 A, 2 #6 + #6 ground): home runs sized for 3% voltage drop. The Hobart is not in either list: on the existing panel here (VERIFY the panel is 208Y/120 V 3-phase with 3 spaces). The condensing units are fed from the projector booth panel."
+  },
+  "plumbing": {
+    "hot_water_source": "VERIFY",
+    "new_water_heater": false,
+    "floor_sinks": 0,
+    "grease_interceptor": false,
+    "underslab_lf": 0
+  },
+  "hvac": {
+    "itemized": true,
+    "tons": 6,
+    "heads": 2,
+    "condensers": 2,
+    "condenser_circuit_lf": 100,
+    "condenser_source": "BOOTH",
+    "lineset_lf_each": 100,
+    "crane": true,
+    "penetration_existing": false,
+    "roof_penetrations": 2,
+    "minisplit_override_tons": 6.0,
+    "exhaust_fan": false,
+    "model": "Blueridge BXS2A36SC0-36WM",
+    "note": "Edgar 2026-11-10: 2 x 3-ton ductless splits (Blueridge BXS2A36SC0-36WM, Alpine order BNR34285), one head each, condensers on the roof, line sets about 100 ft, R-454B 0.6 oz per added foot. 2 roof penetrations at $1,500 each (Edgar is finding the roofer); crane $2,500. Condensers fed from the projector booth panel (~100 ft each, length to verify)."
+  },
+  "finishes": {
+    "floor": null,
+    "frp": false,
+    "ceiling": null,
+    "new_partition_lf": 0,
+    "doors": 0
+  },
+  "demo": {
+    "equipment_count": 0,
+    "partition_lf": 0,
+    "ceiling_sf": 0,
+    "flooring_sf": 0,
+    "casework_lf": 0,
+    "make_safe": 2
+  },
+  "travel": {
+    "mode": "drive",
+    "one_way_miles": 270
+  },
+  "schedule": {
+    "work_window": "day",
+    "permit_weeks": 3,
+    "equipment_lead_weeks": 6,
+    "site_days": 4,
+    "max_site_days": 6,
+    "_site_days_note": "As R0 (Edgar 2026-10-05: a 4 day job, no more than 6 working days). The new area adds the lobby home runs and a second condensing unit: confirm."
+  },
+  "overrides": {
+    "_note": "R0 section sells are Edgar's (10/05); R1 = R0 + the 11/10 change list (ESTIMATE\\26_GA_CINEMARK_263_NEW-AREA_R1-CHANGES_11-10-26_INTERNAL.csv): electrical 28,500 + 17,678.90; equipment set 3,700 + 1,333. Demolition and travel unchanged. HVAC is itemized below (Alpine BNR34285 + Edgar's crane and roof numbers), so it prices to 23,320.44 on its own.",
+    "section_sell": {
+      "DEMOLITION": 2500,
+      "ELECTRICAL": 46178.90,
+      "EQUIPMENT SET & START-UP": 5033,
+      "TRAVEL & SUPERVISION": 9500
+    }
+  },
+  "notes": [
+    "R1 (Edgar 2026-11-10): new area. Existing, relocate: 3-comp sink, Menumaster, PerfectFry fryer, bag-in-box rack. New: AEQ-fabricated 36x30 table (PH list 2.6), three Quantum 24x48x74 shelving units with dunnage base + 3 wire shelves (PH list 3.4). The Atosa freezer stays AEQ-supplied. No prices on drawings.",
+    "Open (11/10): Blueridge max line length and precharge length; Quantum dunnage part number; roof stand price; 36x30 table price ($650 placeholder); condenser circuit lengths."
+  ],
+  "material_verify": [
+    "Menumaster (item 4): the 11/10 notes give 35 A, but its cord is a NEMA 6-30P and a 6-30R may not sit on a breaker above 30 A (NEC 210.21(B)). Drawn and listed at 30 A with the #6 wire given; keeping 35 A means changing the cord and receptacle.",
+    "Lobby home runs: about 200 ft each (Edgar 11/10); measure the route before cutting wire. Wire per Edgar for 3% voltage drop: ovens 3 #4 + #6 G each, Menumaster and fryer 2 #6 + #6 G.",
+    "Condensing units (Blueridge BXS2A36SC0): breaker and conductor size from the data plate MCA / MOCP; circuits from the projector booth panel, about 100 ft each - verify.",
+    "Hobart LXnR on the existing panel in the room: confirm that panel is 208Y/120 V 3-phase with 3 spaces free."
+  ],
+  "package": "from_dxf",
+  "customer_verify": [
+    "spare capacity and breaker spaces at the existing panel in the room, and that it is 208Y/120 V 3-phase (Hobart dish machine)",
+    "the 208 V 3-phase panel across the lobby: spare capacity and four 2- / 3-pole spaces; the route for the home runs (about 200 ft)",
+    "the projector booth panel: two circuits for the condensing units; roof access, crane access and a location for the two condensing units",
+    "hot water source capacity at the new dish machine location"
+  ],
+  "scope": {
+    "narrative": [
+      "New area (Polycam scan 11/03/26): the Pizza Hut kitchen goes into three connected rooms, kitchen 240 SF, Other 1 188 SF, Other 2 149 SF.",
+      "120 V from the existing panel in the room; 208 V 3-phase home runs from the panel across the lobby for the ovens, Menumaster and fryer; condensing units from the projector booth panel (Edgar 11/10)."
+    ],
+    "demo_lump_sum": 2500,
+    "demo_note": "Edgar 10-05: demolition $2,500 (taken as sell), unchanged for the new area (11/10 change list)",
+    "permits": false,
+    "omit_sections": ["CONSTRUCTION & FINISHES"],
+    "plumbing_items": ["5"],
+    "_plumbing_note": "As R0 (Edgar 10/05: plumbing for the new dishwasher only). The relocated 3-comp sink and hand sink need water and waste in the new area: confirm whether that is in the scope.",
+    "equipment_priced": true,
+    "extra_lines": [
+      {"section": "EQUIPMENT SET & START-UP", "desc": "Modify the existing 3-compartment sink: remove legs so the undercounter dish machine fits below, add support", "qty": 1, "unit": "LS", "cost": 400, "sell": 800, "basis": "Edgar 11/10: $800"},
+      {"section": "HVAC", "desc": "Ductless heat pump, 3-ton, Blueridge BXS2A36SC0-36WM: outdoor unit and wall-mount head", "qty": 2, "unit": "ea", "mat": 2259.0, "basis": "Alpine BNR34285 11/03/26 ($4,518 for 2)"},
+      {"section": "HVAC", "desc": "Line set 3/8 x 5/8, 50 ft (two per unit for about 100 ft)", "qty": 4, "unit": "ea", "mat": 419.99, "basis": "Alpine L04-F50, BNR34285"},
+      {"section": "HVAC", "desc": "Communication wire, 55 ft (two per unit)", "qty": 4, "unit": "ea", "mat": 89.99, "basis": "Alpine MW4/55, BNR34285"},
+      {"section": "HVAC", "desc": "Non-fused disconnect at the condensing unit", "qty": 2, "unit": "ea", "mat": 21.99, "basis": "Alpine AG-DCT, BNR34285"},
+      {"section": "HVAC", "desc": "Controller, Cielo Breez Max", "qty": 2, "unit": "ea", "mat": 129.99, "basis": "Alpine, BNR34285"},
+      {"section": "HVAC", "desc": "Roof stand for the condensing unit", "qty": 2, "unit": "ea", "mat": 350.0, "basis": "AEQ est - review (ground stand QSMS1801 was $319.99)"},
+      {"section": "HVAC", "desc": "Added refrigerant charge (R-454B) for the long line sets", "qty": 2, "unit": "ea", "mat": 150.0, "basis": "Edgar 11/10: 0.6 oz per added foot: 75 ft over the 25 ft precharge x 0.6 oz/ft = 45 oz (2.8 lb) per unit; $/lb AEQ est - review; precharge length to verify"},
+      {"section": "HVAC", "desc": "Install: set 2 condensing units on the roof, hang 2 heads, 200 LF of line set, condensate, evacuate, charge, start-up", "qty": 1, "unit": "LS", "hrs": 80, "basis": "80 hr at R0 rates: head 12 hr, condenser set 8 hr, line set 0.2 hr/LF, condensate 1.5 hr"},
+      {"section": "HVAC", "desc": "Crane to set the condensing units on the roof", "qty": 1, "unit": "LS", "cost": 2500, "sell": 2500, "basis": "Edgar 11/10: $2,500"},
+      {"section": "HVAC", "desc": "Roof penetrations", "qty": 2, "unit": "ea", "cost": 1500, "sell": 1500, "basis": "Edgar 11/10: $1,500 each, Edgar sourcing the roofer"}
+    ],
+    "_extra_lines_note": "Lines priced outside the cost database (store-specific). mat / hrs are per unit, marked up like any line; cost + sell are a fixed price per unit. HVAC is these lines only (hvac.itemized).",
+    "text": {
+      "ELECTRICAL": "Dedicated 208 V home runs, about 200 ft each from the 208 V 3-phase panel across the lobby, sized for 3% voltage drop, for the two conveyor ovens, the Menumaster and the fryer; 120 V circuits from the existing panel in the room for the refrigeration and the dish machine; breakers and receptacles / direct connections per the electrical rough-in schedule. Circuits and disconnects for the two condensing units from the projector booth panel. LED lighting in the kitchen area.",
+      "HVAC": "Added cooling for the kitchen: two 3-ton ductless split systems (one wall-mount head each), condensing units on the roof set by crane, two new roof penetrations, line sets about 100 ft each, refrigerant charge, condensate drains, controls and start-up."
+    }
+  }
+}

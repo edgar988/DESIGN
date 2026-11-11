@@ -98,6 +98,25 @@
       "size_keys": "^ADVANCE_(TFSS|FSS|ELAG)"
     },
     {
+      "item": "2.6",
+      "mfr": "AARON EQUIPMENT CO",
+      "model": "FABSS",
+      "category": "WORKTABLE - 36\"X30\"",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "AEQ_FABSS_3630",
+      "size": [
+        36,
+        30
+      ],
+      "size_keys": "^ADVANCE_(TFSS|FSS|ELAG)",
+      "local": true,
+      "sell": 650.0,
+      "net": null,
+      "price_basis": "AEQ est - review: $650 placeholder (Edgar's handoff 11/10); the 60x36 FABSS sells 775.00 on the list",
+      "note": "Edgar 2026-11-10: AEQ-fabricated 36x30 stainless table, added to the normal PH list (GA-263 new area). Not in the AutoQuotes list yet: number 2.6 and price are AEQ's until it is."
+    },
+    {
       "item": "3.1",
       "mfr": "Quantum",
       "model": "WR74-1836GY",
@@ -132,6 +151,23 @@
       "match": [
         "1860GY"
       ]
+    },
+    {
+      "item": "3.4",
+      "mfr": "Quantum",
+      "model": "WR74-2448GY",
+      "category": "Shelving Unit, Wire, dunnage base + 3 wire shelves",
+      "qty": "1",
+      "provided_by": "AEQ",
+      "key": "QUANTUM_WR74_2448",
+      "match": [
+        "2448GY"
+      ],
+      "local": true,
+      "sell": 474.55,
+      "net": 365.04,
+      "price_basis": "gofoodservice 365.04 ea (4-shelf starter kit) + 30%; dunnage base part number not found in Quantum's 74 in. kits - verify",
+      "note": "Edgar 2026-11-10: Quantum 74 in. posts, dunnage base + 3 wire shelves, 24x48 (GA-263 new area, three units in the SE corner). Not in the AutoQuotes list yet: number 3.4 and price are AEQ's until it is."
     },
     {
       "item": "4",

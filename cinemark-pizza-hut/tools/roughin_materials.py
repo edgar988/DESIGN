@@ -40,11 +40,13 @@ RULES = [
     "15-50R); the breaker is the takeoff size (125% of nameplate) but never above the receptacle rating. "
     "Confirm MOCP on each data plate.",
     "Wire: copper THHN/THWN-2 at 75 C. Up to 20 A #12, 30 A #10, 50 A #8, 65 A #6. Ground per breaker: up to "
-    "20 A #12, up to 60 A #10. Length = home run x %.2f + %d ft at each end." % (WASTE, TAIL_FT),
+    "20 A #12, up to 60 A #10. Where the store gives sizes for a long run (voltage drop), those sizes. "
+    "Length = home run x %.2f + %d ft at each end." % (WASTE, TAIL_FT),
     "Neutral (white) only where the circuit needs one: 120 V circuits and NEMA 14- / L14- / L21- receptacles.",
     "Hot colours: 1-pole black; 2-pole black + red; 3-pole black + red + blue.",
-    "EMT %s per run: a coupling every 10 ft, 2 set-screw connectors, a strap every 10 ft plus one at each end, "
-    "and 2 sweeps (up and down)." % EMT_SIZE,
+    "EMT per run, sized for its conductors at 40%% fill (NEC Chapter 9), %s minimum: a coupling every 10 ft, "
+    "2 set-screw connectors, a strap every 10 ft plus one at each end, and 2 sweeps (up and down)." % EMT_SIZE,
+    "Breakers are listed by the panel they go in when the circuits come from more than one panel.",
     "Boxes: 4\" square x 2-1/8\" deep with a 1-gang ring for 5-20R; 4-11/16\" square x 2-1/8\" deep with a "
     "single-receptacle ring for 30-50 A receptacles and direct connections. Stainless steel plates.",
     "Direct connections (Hobart LXnR): a junction box at the rough-in and a 6 ft 3/4\" liquidtight whip.",
@@ -96,13 +98,26 @@ def circuit_plan(c):
     brk = int(c.get("breaker_a") or 20)
     if rec_a:                           # as the takeoff sizes it (older takeoffs: applied here)
         brk = rec_a if poles == 1 else min(brk, rec_a)
-    awg = wire_awg(brk)
+    given = c.get("wire") or {}         # sizes given for a long run (Edgar: 3% voltage drop)
+    awg = given.get("hot") or wire_awg(brk)
     colours = ["BLACK", "RED", "BLUE"][:poles]
     cond = [(awg, col, 1) for col in colours]
     if needs_neutral(c, rec):
         cond.append((awg, "WHITE", 1))
-    cond.append((ground_awg(brk), "GREEN", 1))
+    cond.append((given.get("ground") or ground_awg(brk), "GREEN", 1))
     return brk, poles, rec, cond
+
+
+# THHN / THWN-2 area, sq in (NEC Chapter 9 Table 5), and EMT at 40% fill (Table 4)
+THHN_SQIN = {"14": 0.0097, "12": 0.0133, "10": 0.0211, "8": 0.0366, "6": 0.0507, "4": 0.0824, "3": 0.0973,
+             "2": 0.1158, "1": 0.1562}
+EMT_40 = [('1/2"', 0.122), ('3/4"', 0.213), ('1"', 0.346), ('1-1/4"', 0.598), ('1-1/2"', 0.814)]
+
+
+def emt_size(cond):
+    """The smallest EMT that holds a circuit's conductors at 40% fill (never under 3/4")."""
+    area = sum(THHN_SQIN.get(awg, 0.2) * n for awg, _, n in cond)
+    return next((s for s, a in EMT_40 if a >= area and s != '1/2"'), "VERIFY")
 
 
 def _add(d, key, qty):
@@ -113,16 +128,18 @@ def electrical(takeoff, store):
     items = {}                  # (group, description) -> qty
     notes = {}                  # (group, description) -> note
     wire = {}                   # (awg, colour) -> LF
-    emt_lf = 0.0
+    emt_lf = {}                 # EMT size -> LF
     runs = 0
     for c in takeoff["circuits"]:
         brk, poles, rec, cond = circuit_plan(c)
         run = float(c.get("home_run_lf") or 0)
         runs += 1
-        emt_lf += run
+        size = emt_size(cond)
+        emt_lf[size] = emt_lf.get(size, 0.0) + run
         for awg, col, n in cond:
             _add(wire, (awg, col), n * (run * WASTE + 2 * TAIL_FT))
-        _add(items, ("BREAKERS", "Circuit breaker, %d-pole %d A" % (poles, brk)), 1)
+        _add(items, ("BREAKERS", "Circuit breaker, %d-pole %d A%s" % (
+            poles, brk, " (%s)" % c["source_label"] if c.get("source_label") else "")), 1)
         if rec:
             if rec == "5-20R":
                 _add(items, ("DEVICES", "Receptacle, NEMA 5-20R, 20 A 125 V, GFCI, commercial grade"), 1)
@@ -145,13 +162,15 @@ def electrical(takeoff, store):
             _add(items, key, 1)
             notes[key] = "Plug type not in the catalog: check the data plate"
     # EMT and fittings: one run per circuit, as estimated
-    _add(items, ("CONDUIT", "EMT %s, 10 ft lengths (LF)" % EMT_SIZE), math.ceil(emt_lf))
+    for size, lf in sorted(emt_lf.items()):
+        _add(items, ("CONDUIT", "EMT %s, 10 ft lengths (LF)" % size), math.ceil(lf))
     for c in takeoff["circuits"]:
         run = float(c.get("home_run_lf") or 0)
-        _add(items, ("CONDUIT", "EMT %s coupling, set-screw" % EMT_SIZE), math.ceil(run / 10.0))
-        _add(items, ("CONDUIT", "EMT %s connector, set-screw" % EMT_SIZE), 2)
-        _add(items, ("CONDUIT", "EMT %s 1-hole strap" % EMT_SIZE), math.ceil(run / 10.0) + 1)
-        _add(items, ("CONDUIT", "EMT %s 90 deg sweep" % EMT_SIZE), 2)
+        size = emt_size(circuit_plan(c)[3])
+        _add(items, ("CONDUIT", "EMT %s coupling, set-screw" % size), math.ceil(run / 10.0))
+        _add(items, ("CONDUIT", "EMT %s connector, set-screw" % size), 2)
+        _add(items, ("CONDUIT", "EMT %s 1-hole strap" % size), math.ceil(run / 10.0) + 1)
+        _add(items, ("CONDUIT", "EMT %s 90 deg sweep" % size), 2)
     es = store.get("electrical_service") or {}
     if es.get("new_subpanel"):
         amps = takeoff["quantities"]["electrical"].get("connected_amps_208_3ph")
@@ -169,15 +188,20 @@ def electrical(takeoff, store):
         _add(items, k, math.ceil(lf))
         _add(items, ("SUBPANEL & FEEDER", "Feeder breaker, 3-pole, at the existing panel - size per load calc"), 1)
     hv = store.get("hvac") or {}
-    if hv.get("system_cost") and not hv.get("none"):
+    if (hv.get("system_cost") or hv.get("itemized")) and not hv.get("none"):
         lf = float(hv.get("condenser_circuit_lf") or 0)
-        _add(items, ("HVAC CIRCUIT", "Breaker, 2-pole, for the condensing unit - size per unit MOCP"), 1)
+        n = int(hv.get("condensers") or 1)
+        src = ((es.get("sources") or {}).get(hv.get("condenser_source")) or {}).get("short")
+        _add(items, ("HVAC CIRCUIT", "Breaker, 2-pole, for the condensing unit%s - size per unit MOCP" % (
+            " (%s)" % src if src else "")), n)
         k = ("HVAC CIRCUIT", "Disconnect, fused or non-fused per unit nameplate, at the condensing unit")
-        _add(items, k, 1)
+        _add(items, k, n)
+        if hv.get("itemized"):
+            notes[k] = "In the HVAC order (non-fused, one per unit) - do not buy twice"
         _add(items, ("HVAC CIRCUIT", "Condensing unit circuit conductors, 2 + ground, size per unit MCA (LF)"),
-             math.ceil(lf * WASTE + 2 * TAIL_FT) * 3)
-        _add(items, ("HVAC CIRCUIT", "Condensing unit circuit conduit (LF)"), math.ceil(lf))
-        _add(items, ("HVAC CIRCUIT", 'Whip, 3/4" liquidtight, 6 ft, disconnect to unit'), 1)
+             math.ceil(lf * WASTE + 2 * TAIL_FT) * 3 * n)
+        _add(items, ("HVAC CIRCUIT", "Condensing unit circuit conduit (LF)"), math.ceil(lf) * n)
+        _add(items, ("HVAC CIRCUIT", 'Whip, 3/4" liquidtight, 6 ft, disconnect to unit'), n)
     return items, notes, wire, runs
 
 
@@ -311,7 +335,7 @@ def _book(path, title, store, elec, plumb, conns):
     ws.append([])
     ws.append(["VERIFY BEFORE ORDERING"])
     ws.cell(row=ws.max_row, column=1).font = bold
-    for v in VERIFY:
+    for v in VERIFY + list(store.get("material_verify") or []):
         ws.append(["- " + v])
     for row in ws.iter_rows(min_row=4):
         for cell in row:

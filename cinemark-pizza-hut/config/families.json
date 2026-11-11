@@ -1112,6 +1112,66 @@
         "kind": "shelving",
         "shelves": 4
       }
+    },
+    "AEQ_FABSS_3630": {
+      "description": "Work Table, stainless, 36x30 (AEQ fabricated)",
+      "mfr": "Aaron Equipment Co",
+      "model": "FABSS 36x30",
+      "rfa": null,
+      "block_aliases": [],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities. Edgar 2026-11-10 (GA-263 new area): AEQ-fabricated 36x30 stainless table, PH list 2.6",
+      "stack": "base",
+      "height_in": 34
+    },
+    "QUANTUM_WR74_2448": {
+      "description": "Wire Shelving, 24x48x74, dunnage base + 3 wire shelves",
+      "mfr": "Quantum",
+      "model": "WR74-2448GY",
+      "rfa": null,
+      "block_aliases": [
+        "2448GY"
+      ],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities. Edgar 2026-11-10 (GA-263 new area): Quantum 74 in. posts, dunnage base + 3 wire shelves, PH list 3.4",
+      "height_in": 74,
+      "shape": {
+        "kind": "shelving",
+        "shelves": 4
+      },
+      "_shape_note": "Four levels drawn: the dunnage base at the bottom and the 3 wire shelves."
+    },
+    "EXISTING_BIB_RACK": {
+      "description": "Bag-in-Box Rack (existing)",
+      "mfr": "Existing",
+      "model": "BIB RACK",
+      "rfa": null,
+      "block_aliases": [],
+      "category": "nonutility",
+      "install": "set",
+      "elec": null,
+      "plumb": null,
+      "gas": null,
+      "heat": null,
+      "verified": true,
+      "source": "No utilities. The theatre's bag-in-box syrup rack, relocated (Edgar 2026-11-10, GA-263 new area). Height not measured: drawn 60 in.",
+      "height_in": 60,
+      "shape": {
+        "kind": "shelving",
+        "shelves": 4
+      }
     }
   }
 }

@@ -287,3 +287,41 @@ def test_synced_family_data_fills_only_gaps():
     assert g["elec"]["amps"] == 6.4 and g["verified"] == "family"
     assert cat["items"]["OVENTION_C2000"]["elec"]["amps"] == 34.0     # verified mfr data never overwritten
     assert cat["items"]["TRAULSEN_G10011"]["elec"]["amps"] == 3.8      # verified from the master cut sheet
+
+
+def test_more_than_one_panel_and_store_lines():
+    """GA-263 new area (Edgar 11/10): 120 V from the panel drawn in the room, the ovens on measured 200 ft home runs
+    from the panel across the lobby, Edgar's breaker capped at the receptacle, store lines priced to the cent."""
+    import copy
+    from tools import takeoff as tk
+    from estimating import estimate as est
+    cat = tk.load_catalog()
+    program = json.load(open(os.path.join(ROOT, "config", "program.json"), encoding="utf-8"))
+    store = {"store_id": "T", "ceiling_ft": 10,
+             "electrical_service": {"default_source": "RM", "item_sources": {"PH1": "LOBBY", "4": "LOBBY"},
+                                    "item_circuits": {"PH1": {"breaker_a": 50, "wire": {"hot": "4", "ground": "6"}},
+                                                      "4": {"breaker_a": 35}},
+                                    "sources": {"RM": {"short": "RM PNL"},
+                                                "LOBBY": {"short": "LOBBY", "run_lf": 200,
+                                                          "assembly": "el_branch_lf_upsized"}}}}
+    layout = {"equipment": [
+        {"key": "OVENTION_C2000", "item": "PH1", "stack": 2, "x": 0, "y": 0, "rotation": 0, "handle": "a",
+         "status": "new", "roughin": [0, 0]},
+        {"key": "ACP_MXP22TLT", "item": "4", "x": 60, "y": 0, "rotation": 0, "handle": "b", "status": "new",
+         "roughin": [60, 0]},
+        {"key": "TRAULSEN_G10011", "item": "PH2", "x": 120, "y": 0, "rotation": 0, "handle": "c", "status": "new",
+         "roughin": [120, 0]}],
+        "rooms": [], "points": {"panel": [120, 120]}, "walls": [], "doors": []}
+    t = tk.build(copy.deepcopy(store), cat, program, layout)
+    by = dict((c["key"], c) for c in t["circuits"])
+    assert [c["circuit"] for c in t["circuits"] if c["source"] == "LOBBY"] == [1, 4, 7]   # 3-, 3-, 2-pole
+    assert by["OVENTION_C2000"]["home_run_lf"] == 200 and by["OVENTION_C2000"]["breaker_a"] == 50
+    assert by["ACP_MXP22TLT"]["breaker_a"] == 30 and any("210.21" in w for w in t["warnings"])
+    assert by["TRAULSEN_G10011"]["source"] == "RM" and by["TRAULSEN_G10011"]["home_run_lf"] < 40
+    assert t["quantities"]["electrical"]["branch_lf_by_assembly"]["el_branch_lf_upsized"] == 600
+    store["scope"] = {"extra_lines": [
+        {"section": "HVAC", "desc": "Crane", "qty": 1, "unit": "LS", "cost": 2500, "sell": 2500},
+        {"section": "HVAC", "desc": "Unit", "qty": 2, "unit": "ea", "mat": 100.0}]}
+    store["hvac"] = {"itemized": True}
+    e = est.estimate(t, store, program)
+    assert e["customer_sections"]["HVAC"] == 2500 + 2 * 100 * (1 + program["rates"]["material_markup"])

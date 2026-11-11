@@ -794,7 +794,12 @@ def _outline_frame(x0, y0, x1, y1, segs, reach=12.0):
             for gap_, rot in ((a.x - x1, 270.0), (x0 - a.x, 90.0)):
                 if -0.5 <= gap_ < best[0]:
                     best = (gap_, rot)
-    rot = best[1]
+    return _frame(best[1], x0, y0, x1, y1)
+
+
+def _frame(rot, x0, y0, x1, y1):
+    """(rotation, insertion corner, world -> local) for a rectangle whose back (+Y in the family) faces
+    north at 0, south at 180, east at 270 and west at 90."""
     if rot == 180.0:
         return rot, Vec2(x1, y1), lambda p: (x1 - p.x, y1 - p.y)
     if rot == 270.0:
@@ -847,6 +852,38 @@ def _outline_items(out, wall_segs, master):
                 out["warnings"].append("Item %s (%s) read from the rectangle drawn at (%.0f, %.0f), %.0f x %.0f in."
                                        % (it["item"], it.get("category"), x0, y0, x1 - x0, y1 - y0))
                 break
+    return geoms
+
+
+BACK_ROT = {"north": 0.0, "south": 180.0, "east": 270.0, "west": 90.0}
+
+
+def _drawn_items(out, store, wall_segs):
+    """Items Edgar draws as a plain rectangle with no block (GA-263 new area: the 36x30 table, the shelving, the
+    bag-in-box rack), listed in the store's drawn_items at their DWG coordinates: each becomes that item, its
+    rectangle the plan symbol the Revit family is built from, its back to the nearest wall line unless the store
+    says which side ('back'). An item number given is kept; none is numbered from the master list (an existing
+    item off the list gets its own X number). Returns {geom name: linework}."""
+    geoms = {}
+    segs = [s for ss in wall_segs.values() for s in ss]
+    for d in (store or {}).get("drawn_items") or []:
+        x0, y0, x1, y1 = d["rect"]
+        if d.get("back"):
+            rot, ins, loc = _frame(BACK_ROT[d["back"]], x0, y0, x1, y1)
+        else:
+            rot, ins, loc = _outline_frame(x0, y0, x1, y1, segs)
+        lw, ld = (x1 - x0, y1 - y0) if rot in (0.0, 180.0) else (y1 - y0, x1 - x0)
+        lw, ld = round(lw, 3), round(ld, 3)
+        name = "DRAWN_%s_%d_%d" % (d.get("item") or d["key"], round(x0), round(y0))
+        geoms[name] = {"curves": [["L", 0, 0, lw, 0], ["L", lw, 0, lw, ld], ["L", lw, ld, 0, ld], ["L", 0, ld, 0, 0]],
+                       "bbox": [0, 0, lw, ld], "body_bbox": [0, 0, lw, ld], "z": None, "n_faces": 0}
+        item = d.get("item")
+        out["equipment"].append({
+            "handle": name, "block": "drawn (%s)" % d["key"], "layer": "0", "key": d["key"], "item": item,
+            "x": round(ins.x, 3), "y": round(ins.y, 3), "rotation": rot, "xscale": 1.0, "yscale": 1.0,
+            "geom_block": name, "status": "new", "attribs": {}, "bbox": [x0, y0, x1, y1],
+            "provided_by": provided_by(item), "front_offset": 0.0, "revit_rotation": rot,
+            "master_match": "outline" if item else None})
     return geoms
 
 
@@ -940,6 +977,15 @@ def extract(path, store=None, catalog_path=None):
                     out["unmatched"][bname] += 1
                 out["equipment"].append(rec)
             elif t in ("LINE", "LWPOLYLINE", "POLYLINE"):
+                pname = next((n for n, rx in POINT_LAYERS.items() if rx.search(up)), None)
+                if pname and t == "LWPOLYLINE" and e.closed:   # a source drawn as a box (GA-263: the panel)
+                    pts = [Vec2(p[:2]) * scale for p in e.get_points("xy")]
+                    if inside(*pts):
+                        out["points"].setdefault(pname, [sum(p.x for p in pts) / len(pts),
+                                                         sum(p.y for p in pts) / len(pts)])
+                        out["points"].setdefault(pname + "_box", [min(p.x for p in pts), min(p.y for p in pts),
+                                                                  max(p.x for p in pts), max(p.y for p in pts)])
+                    continue
                 if ROOM_LAYER.search(up) and t != "LINE" and (
                         (t == "LWPOLYLINE" and e.closed) or (t == "POLYLINE" and e.is_closed)):
                     pts = [list(Vec2(p[:2]) * scale) for p in (
@@ -966,6 +1012,7 @@ def extract(path, store=None, catalog_path=None):
     outlines = {}
     if (store or {}).get("item_numbers") == "master":     # the PH cut table: a rectangle, not walls
         outlines = _outline_items(out, wall_segs, master_items.load_master())
+    outlines.update(_drawn_items(out, store, wall_segs))
 
     centres = [Vec2((q["bbox"][0] + q["bbox"][2]) / 2.0, (q["bbox"][1] + q["bbox"][3]) / 2.0)
                for q in out["equipment"] if q.get("bbox") and q["key"]]

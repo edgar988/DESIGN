@@ -1251,6 +1251,12 @@ def _aff_text(v):
     return '%d"' % int(round(v)) if abs(v - round(v)) < 0.05 else '%s"' % _inch_frac(v)
 
 
+def _wire_text(c):
+    """The conductors given for a circuit (Edgar's sizes for a long run): '3#4 + #6G'."""
+    w = c["wire"]
+    return "%d#%s+#%sG" % (int(c.get("poles") or 1), w["hot"], w.get("ground") or w["hot"])
+
+
 def utility_rows(doc, layout, takeoff, s):
     """One row per connection, tagged per the template's QF002 format: service + equipment item +
     connection suffix (E4.1, H1.1, C1.2, D1.3). Electrical from the takeoff circuits (what is priced);
@@ -1293,7 +1299,10 @@ def utility_rows(doc, layout, takeoff, s):
                               "RECEPTACLE " + c["receptacle"] if c.get("receptacle") else _receptacle(c["nema"])),
                           "kw": (it.get("elec") or {}).get("kw"), "amps": c["amps"], "v": c["volts"],
                           "ph": c["phase"] or 1,
-                          "remarks": "CKT %s%s" % (c["circuit"], "; VERIFY " + ", ".join(flags) if flags else "")})
+                          "remarks": "%sCKT %s%s%s" % (
+                              (c["source_label"] + " ") if c.get("source_label") else "", c["circuit"],
+                              "; " + _wire_text(c) if c.get("wire") else "",
+                              "; VERIFY " + ", ".join(flags) if flags else "")})
         plumb = it.get("plumb") or {}
         fam = _family_pipes(doc, inst, lvl)
         hand = "7-PS" in (it.get("model") or "")
@@ -1648,16 +1657,30 @@ def _dimension_runs(doc, view, runs, dim_type):
     """QF002 note 4 / Edgar / the Davie FL set: every rough-in dimensioned from a finished wall face - one
     continuous string per wall run, every rough-in its own segment, just in front of the wall. runs: [(side,
     wall-face coordinate ft, dimension-line coordinate ft, [(along-wall coordinate ft, marker)])]. The string
-    starts at the nearest wall running across this one at either end of the run."""
+    starts at the nearest wall running across this one at either end of the run. A wall meeting this one
+    between two rough-ins (GA-263 new area: the partition between two rooms) ends the string there; the
+    rough-ins past it get their own string from that wall's other face."""
     from Autodesk.Revit.DB import ReferenceArray, FamilyInstanceReferenceType
     faces = {"X": None, "Y": None}
     made = 0
     dims = []
+    split = []
     for side, wall_line, line, pts in runs:
         axis = "X" if side in ("N", "S") else "Y"
         if faces[axis] is None:
             faces[axis] = _perp_faces(doc, axis)
         pts = sorted(pts, key=lambda p: p[0])
+        meets = [f for f in faces[axis] if f[3][0] - f[4] - 1.5 <= wall_line <= f[3][1] + f[4] + 1.5]
+        cuts = sorted(set(f[0] for f in meets if pts[0][0] < f[0] < pts[-1][0]))
+        group = []
+        for p in pts:
+            if group and any(group[-1][0] < c < p[0] for c in cuts):
+                split.append((side, wall_line, line, group))
+                group = []
+            group.append(p)
+        split.append((side, wall_line, line, group))
+    for side, wall_line, line, pts in split:
+        axis = "X" if side in ("N", "S") else "Y"
         first, last = pts[0][0], pts[-1][0]
         meets = [f for f in faces[axis] if f[3][0] - f[4] - 1.5 <= wall_line <= f[3][1] + f[4] + 1.5]
         before = [f for f in meets if f[1] > 0 and f[0] < first - 1.0 / 12.0 and first - f[0] < 40.0]
@@ -1774,6 +1797,27 @@ def _dim_type(doc):
     except Exception:
         return src
 
+def _panel_mark(doc, v, layout, st):
+    """The panel drawn in the layout (GA-263 new area: the existing panel by the door) on the electrical plans:
+    its box, and a note with a leader naming it as QF103's remarks do. Only when the store names its sources."""
+    from Autodesk.Revit.DB import TextNoteLeaderTypes
+    es = st.get("electrical_service") or {}
+    src = (es.get("sources") or {}).get(es.get("default_source")) or {}
+    box = (layout.get("points") or {}).get("panel_box")
+    if not box or not src:
+        return
+    x0, y0, x1, y1 = [c * FT for c in box]
+    for a, b in (((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)), ((x1, y1), (x0, y1)), ((x0, y1), (x0, y0))):
+        doc.Create.NewDetailCurve(v, Line.CreateBound(XYZ(a[0], a[1], 0), XYZ(b[0], b[1], 0)))
+    words = src["label"].split()
+    half = (len(words) + 1) // 2
+    tn = TextNote.Create(doc, v.Id, XYZ(x1 + 1.0, y0 - 2.5, 0),
+                         "%s\r%s (%s)" % (" ".join(words[:half]), " ".join(words[half:]), src["short"]),
+                         _text_type(doc, '3/32"'))
+    ld = tn.AddLeader(TextNoteLeaderTypes.TNLT_STRAIGHT_L)
+    ld.End = XYZ(x1, (y0 + y1) / 2.0, 0)
+
+
 def roughin_views(doc, layout, takeoff, s):
     """Every QF plan, per plan area (plan_areas: one, or A / B... when the kitchen does not fit at 1/4"),
     cropped and at the plan scale; a connection symbol per connection (QF103 rows), shown only on the sheets
@@ -1888,6 +1932,8 @@ def roughin_views(doc, layout, takeoff, s):
                 _grow_crop(v, _frame(layout, area), tags.place())
             else:
                 _crop(v, *_frame(layout, area))
+            if num in ("QF301", "QF302"):
+                _panel_mark(doc, v, layout, C.store(s))
     del PLAN_SHEETS[:]
     PLAN_SHEETS.extend((n, nm, v) for n, nm, v, _ in out)
     return list(PLAN_SHEETS)
@@ -2158,6 +2204,24 @@ def roughin_elevations(doc, layout, st, s):
         else:
             continue
         groups.setdefault(k, []).append((m, p, n, aff))
+    # a wall meeting this one between two connections (GA-263 new area: the partition between two rooms on one
+    # wall line) splits it: one elevation per room's stretch of wall, its heights never drawn across the partition
+    faces = {"X": _perp_faces(doc, "X"), "Y": _perp_faces(doc, "Y")}
+    split, walls_at = {}, {}
+    for k, ms in groups.items():
+        axis = "X" if k[0] == "Y" else "Y"         # a wall facing along Y runs along X: walls across it face X
+        w = sum((p.X if k[0] == "X" else p.Y) for _, p, _, _ in ms) / float(len(ms))
+        along = lambda x: x[1].X if axis == "X" else x[1].Y     # noqa: E731
+        ms = sorted(ms, key=along)
+        cuts = sorted(set(f[0] for f in faces[axis] if f[3][0] - f[4] - 1.5 <= w <= f[3][1] + f[4] + 1.5
+                          and along(ms[0]) < f[0] < along(ms[-1])))
+        part = 0
+        for i, x in enumerate(ms):
+            if i and any(along(ms[i - 1]) < c < along(x) for c in cuts):
+                part += 1
+            split.setdefault(k + (part,), []).append(x)
+        walls_at[k] = cuts
+    groups = split
     made = []
     with _Tx(doc, "AEQ: rough-in elevations"):
         dt = _height_dim_type(doc)
@@ -2172,7 +2236,10 @@ def roughin_elevations(doc, layout, st, s):
             n = ms[0][2]
             w = sum((p.X if k[0] == "X" else p.Y) for _, p, _, _ in ms) / float(len(ms))   # the wall face
             along = [(p.Y if k[0] == "X" else p.X) for _, p, _, _ in ms]
-            lo, hi = min(along) - 2.75, max(along) + 1.5     # room left of the first group for its heights
+            lo, hi = min(along) - 2.75, max(along) + 1.5     # room beside the connections for their heights
+            cuts = walls_at.get(k[:3]) or []                 # ...but not past a partition: that is another room
+            lo = max([lo] + [c for c in cuts if c < min(along)])
+            hi = min([hi] + [c for c in cuts if c > max(along)])
             back_off = 4.0                          # in front of the equipment on the wall
             mid = (lo + hi) / 2.0
             origin = (XYZ(w + n[0] * back_off, mid, z0) if k[0] == "X" else XYZ(mid, w + n[1] * back_off, z0))
@@ -2205,9 +2272,9 @@ def roughin_elevations(doc, layout, st, s):
                 _crop_elevation(ev, min(w, origin.X), lo, max(w, origin.X), hi, z0, z0 + h)
             else:
                 _crop_elevation(ev, lo, min(w, origin.Y), hi, max(w, origin.Y), z0, z0 + h)
-            made.append((ev, ms))
+            made.append((ev, ms, lo, hi, k))
         doc.Regenerate()
-        for ev, ms in made:
+        for ev, ms, lo, hi, k in made:
             _ghost_equipment(doc, ev)
             rd, o = ev.RightDirection, ev.Origin
 
@@ -2217,6 +2284,7 @@ def roughin_elevations(doc, layout, st, s):
             def P(u, z):
                 return XYZ(o.X, o.Y, 0) + rd.Multiply(u) + XYZ(0, 0, z)
 
+            ulo, uhi = sorted(U(XYZ(c, o.Y, o.Z) if k[0] == "Y" else XYZ(o.X, c, o.Z)) for c in (lo, hi))
             pts = sorted(((U(p), m, p, a) for m, p, _, a in ms), key=lambda x: x[0])
             clusters = []
             for x in pts:                           # connections side by side (8" o.c.) dimension together
@@ -2224,19 +2292,31 @@ def roughin_elevations(doc, layout, st, s):
                     clusters[-1].append(x)
                 else:
                     clusters.append([x])
-            # a dimension from a floor line to each distinct height in a cluster, just left of the cluster
-            spots = []
-            for cl in clusters:
-                left = cl[0][0]
+            # a dimension from a floor line to each distinct height in a cluster, beside the cluster on the
+            # side with room for them (left unless a wall or the next cluster is closer there than on the right)
+            spots = []                              # (dimension line u, reference line from u, to u, height)
+            used = ulo                              # how far right the clusters so far (and their heights) reach
+            for i, cl in enumerate(clusters):
                 hs = sorted(set(round(x[3] * 8.0) / 8.0 for x in cl if x[3]))   # as QF103 shows them
-                for j, a in enumerate(hs):
-                    spots.append((left - 0.55 - 0.9 * j, left - 0.12, a))   # 0.9 ft apart: the figures clear
+                need = 0.55 + 0.9 * (len(hs) - 1) + 0.25
+                room_l = cl[0][0] - used
+                room_r = (clusters[i + 1][0][0] if i + 1 < len(clusters) else uhi) - cl[-1][0]
+                go_left = room_l >= need or room_l >= room_r
+                used = cl[-1][0] + (0 if go_left or not hs else need)
+                for j, a in enumerate(hs):          # 0.9 ft apart: the figures clear
+                    if go_left:
+                        ud = cl[0][0] - 0.55 - 0.9 * j
+                        spots.append((ud, ud - 0.12, cl[0][0] - 0.12, a))
+                    else:
+                        ud = cl[-1][0] + 0.55 + 0.9 * j
+                        spots.append((ud, cl[-1][0] + 0.12, ud + 0.12, a))
             if spots:
-                fl = doc.Create.NewDetailCurve(ev, Line.CreateBound(P(min(x[0] for x in spots) - 0.3, z0),
-                                                                    P(pts[-1][0] + 1.0, z0)))
-                for ud, end, a in spots:
+                fl = doc.Create.NewDetailCurve(ev, Line.CreateBound(
+                    P(min(min(x[0] for x in spots) - 0.3, pts[0][0] - 1.0), z0),
+                    P(max(max(x[0] for x in spots) + 0.3, pts[-1][0] + 1.0), z0)))
+                for ud, start, end, a in spots:
                     zz = z0 + a * FT
-                    ref = doc.Create.NewDetailCurve(ev, Line.CreateBound(P(ud - 0.12, zz), P(end, zz)))
+                    ref = doc.Create.NewDetailCurve(ev, Line.CreateBound(P(start, zz), P(end, zz)))
                     ra = ReferenceArray()
                     ra.Append(fl.GeometryCurve.Reference)
                     ra.Append(ref.GeometryCurve.Reference)
@@ -2281,7 +2361,7 @@ def roughin_elevations(doc, layout, st, s):
                     except Exception:
                         pass
                     t.TagHeadPosition = P(q, zrow)      # last: freeing the leader moves the head off the plane
-    return [ev for ev, _ in made]
+    return [x[0] for x in made]
 
 
 # the 3D kitchen from the southwest (QF502); stores with views_3d > 1 also get it from the northeast (QF503)
@@ -2768,6 +2848,21 @@ def make_sheets(doc, s):
             for si in FilteredElementCollector(doc, ush.Id).OfClass(ScheduleSheetInstance):
                 if not si.IsTitleblockRevisionSchedule:
                     _fit_schedule(doc, doc.GetElement(si.ScheduleId), UTIL_COLS, UTIL_SHEET[1])
+            srcs = (C.store(s).get("electrical_service") or {}).get("sources") or {}
+            if srcs:                            # more than one panel (GA-263 new area): what REMARKS names
+                doc.Regenerate()
+                boxes = [si.get_BoundingBox(ush) for si in FilteredElementCollector(doc, ush.Id)
+                         .OfClass(ScheduleSheetInstance) if not si.IsTitleblockRevisionSchedule]
+                boxes = [b for b in boxes if b is not None]
+                if boxes:
+                    txt = "PANELS: " + " ".join("%s = %s%s." % (v["short"], v["label"], (": " + v["note"].upper())
+                                                                if v.get("note") else "")
+                                                for _, v in sorted(srcs.items(), key=lambda kv: kv[1].get("order", 9)))
+                    txt += " CIRCUIT NUMBERS IDENTIFY THE HOME RUNS; ASSIGN SPACES AT THE PANEL."
+                    left = min(b.Min.X for b in boxes)
+                    width = max(b.Max.X for b in boxes) - left
+                    TextNote.Create(doc, ush.Id, XYZ(left, min(b.Min.Y for b in boxes) - 0.15 / 12.0, 0), width, txt,
+                                    _text_type(doc, '3/32"'))
         if C.store(s).get("drawing_revisions"):      # the store's issue history on every sheet
             from Autodesk.Revit.DB import Revision
             rids = List[ElementId](list(Revision.GetAllRevisionIds(doc)))

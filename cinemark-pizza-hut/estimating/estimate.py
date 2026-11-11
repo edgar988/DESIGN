@@ -110,7 +110,8 @@ def build_lines(takeoff, store, cost_db, rates):
     if es.get("new_subpanel", True):
         add("el_subpanel", 1)
         add("el_feeder_lf", es.get("feeder_lf", 60))
-    add("el_branch_lf", el["branch_lf"], "home runs from takeoff routing")
+    for k, lf in sorted((el.get("branch_lf_by_assembly") or {"el_branch_lf": el["branch_lf"]}).items()):
+        add(k, lf, "home runs from takeoff routing" if k == "el_branch_lf" else "measured home runs, wire upsized")
     brk = {"1": 0, "2": 0, "3": 0}
     asm_ct = {}
     for c in takeoff["circuits"]:
@@ -125,9 +126,11 @@ def build_lines(takeoff, store, cost_db, rates):
         add("el_lighting_sf", q["room_sf"])
     if hv.get("none"):
         n_hvac_ckts = 0
-    elif hv.get("system_cost"):                   # one condensing unit + any exhaust fan
-        n_hvac_ckts = 1 + (1 if hv.get("exhaust_fan") else 0)
-        add("el_branch_lf", hv.get("condenser_circuit_lf", 0), "new circuit to the condensing unit")
+    elif hv.get("system_cost") or hv.get("itemized"):     # its condensing unit(s) + any exhaust fan
+        n_cond = hv.get("condensers", 1)
+        n_hvac_ckts = n_cond + (1 if hv.get("exhaust_fan") else 0)
+        add("el_branch_lf", hv.get("condenser_circuit_lf", 0) * n_cond, "new circuit to %s" % (
+            "each condensing unit" if n_cond > 1 else "the condensing unit"))
     else:
         n_hvac_ckts = heat["minisplit_units"] + (1 if hv.get("exhaust_fan") else 0)
     add("el_hvac_circuit", n_hvac_ckts)
@@ -156,7 +159,9 @@ def build_lines(takeoff, store, cost_db, rates):
         add("pl_water_heater", 1 if plm.get("new_water_heater") else 0)
 
     # HVAC
-    if hv.get("system_cost"):                     # Edgar's system (GA: 5 t, 2 x 2.5 t heads, $7,200 cost)
+    if hv.get("itemized"):                        # priced line by line in scope.extra_lines (GA-263 new area)
+        pass
+    elif hv.get("system_cost"):                   # Edgar's system (GA: 5 t, 2 x 2.5 t heads, $7,200 cost)
         heads = hv.get("heads", 2)
         add("hv_split_system", 1, "%s tons, %d indoor heads, marked up as material (design %s Btu/h)" % (
             hv.get("tons"), heads, format(heat["design_total"], ",")), mat=hv["system_cost"])
@@ -209,6 +214,22 @@ def build_lines(takeoff, store, cost_db, rates):
     if scope.get("permits", False):               # PH program: no permits or inspections (Edgar 2026-10-05)
         add("gc_permit_allow", 1)
     add("gc_final_clean", q["room_sf"])
+
+    # store lines priced outside the cost database (Edgar's numbers, a vendor quote): mat / hrs / sub per unit,
+    # marked up like any line, or cost + sell, a fixed price per unit. Their section is then priced to the cent
+    # (no contingency or rounding), like the equipment list.
+    for x in scope.get("extra_lines") or []:
+        if "sell" in x:
+            ln = {"qty": x["qty"], "unit": x.get("unit", "ea"), "desc": x["desc"], "section": x["section"],
+                  "hrs": 0, "mat": 0, "sub": round(x.get("cost", 0) * x["qty"], 2), "eqp": 0,
+                  "cost": round(x.get("cost", 0) * x["qty"], 2), "sell": round(x["sell"] * x["qty"], 2),
+                  "basis": x.get("basis", ""), "note": ""}
+        else:
+            ln = price_line({"unit": x.get("unit", "ea"), "desc": x["desc"], "section": x["section"],
+                             "hrs": x.get("hrs", 0), "mat": x.get("mat", 0), "sub": x.get("sub", 0), "eqp": 0,
+                             "basis": x.get("basis", "")}, x["qty"], rates)
+        ln.update({"assembly": "store_line", "fixed": True})
+        L.append(ln)
     omit = set(scope.get("omit_sections") or [])  # GA-263: construction & finishes all existing
     return [ln for ln in L if ln["section"] not in omit]
 
@@ -256,7 +277,13 @@ def equipment_lines(takeoff, program):
     if not os.path.isfile(path):
         return [], ["equipment price list not found: %s" % path]
     prices = price_list(path)
-    master = dict((m["item"], m.get("key")) for m in _load("master_items.json")["items"])
+    master_list = _load("master_items.json")["items"]
+    master = dict((m["item"], m.get("key")) for m in master_list)
+    for m in master_list:       # items AEQ added to the PH list ahead of the AutoQuotes list: AEQ's own price
+        if m.get("local") and m.get("sell") and not (prices.get(m["item"]) or {}).get("sell"):
+            prices[m["item"]] = {"sell": float(m["sell"]), "map_raised": None, "net": float(m.get("net") or 0),
+                                 "mfr": m["mfr"], "model": m["model"], "category": m["category"], "adds": [],
+                                 "basis": m.get("price_basis")}
     L, warn = [], []
     n = {}
     for r in takeoff["schedule"]:
@@ -277,9 +304,11 @@ def equipment_lines(takeoff, program):
                                else "Item %s: %s" % (item, part["spec"])),
                       "spec": part.get("spec"), "hrs": 0, "mat": round(part["net"] * qty, 2), "sub": 0, "eqp": 0,
                       "cost": round(part["net"] * qty, 2), "sell": round(part["sell"] * qty, 2), "fixed": True,
-                      "basis": "PH master list sell %.2f%s, net %.2f%s" % (
+                      "basis": ("PH list (AEQ, not in the AutoQuotes list yet) sell %.2f: %s" % (
+                          part["sell"], part["basis"]) if part.get("basis") else
+                          "PH master list sell %.2f%s, net %.2f%s" % (
                           part["sell"], " (raised to MAP)" if part.get("map_raised") else "", part["net"],
-                          "" if part["net"] else " (no net in the list - cost unknown)"),
+                          "" if part["net"] else " (no net in the list - cost unknown)")),
                       "note": ""})
     return L, warn
 

@@ -218,10 +218,16 @@ def build(store, catalog, program, layout=None):
             el_ref = side[1](el_pts, key=lambda p: p[side[0]])
     water = pts.get("water")
     waste = pts.get("waste") or water
+    # more than one panel (GA-263 new area, Edgar 2026-11-10): each item's circuits come from its source; a
+    # source with run_lf is a measured home-run length (the panel across the lobby, ~200 ft), one without is the
+    # panel drawn in the layout. item_circuits: the breaker and wire Edgar gives for an item's circuits
+    sources = es.get("sources") or {}
+    item_src = es.get("item_sources") or {}
+    item_ckt = es.get("item_circuits") or {}
 
     ceil_ft = store.get("ceiling_ft") or rt["default_ceiling_ft"]
     sched, circuits = [], []
-    q_el = {"branch_lf": 0.0}
+    q_el = {"branch_lf": 0.0, "by_assembly": {}}
     q_pl = {"hw": 0, "cw": 0, "waste": 0, "indirect": 0, "supply_lf": 0.0}
     pl_by_item = {}                 # the same per item number, for a store that plumbs only some items
     sens = lat = 0.0
@@ -229,7 +235,7 @@ def build(store, catalog, program, layout=None):
     counts = {"plug": 0, "plumbed": 0, "set": 0}
     by_source = {}                  # who provides it (item prefix): AEQ / EXISTING / OWNER -> install counts
     unverified = []
-    ckt = 1
+    ckt_at = {}                     # next circuit number at each source (one count when there is one panel)
     for r in rows:
         it = items.get(r["key"])
         if it is None:
@@ -260,7 +266,15 @@ def build(store, catalog, program, layout=None):
             brk, poles = breaker_for(e)
             asm = connection_assembly(e)
             rcpt, rcpt_a = receptacle_for(e.get("nema")) if e.get("conn") != "direct" else (None, None)
+            src_id = item_src.get(str(r.get("item"))) or es.get("default_source")
+            src = sources.get(src_id) or {}
+            given = item_ckt.get(str(r.get("item"))) or {}
+            brk = given.get("breaker_a") or brk
             if rcpt_a:                  # the breaker matches the receptacle (never above it; 120 V: 20 A)
+                if given.get("breaker_a", 0) > rcpt_a:
+                    warn.append("Item %s: the %d A breaker given is above its %s receptacle; drawn and priced at "
+                                "%d A (NEC 210.21(B)). Change the cord / receptacle to keep %d A." % (
+                                    r.get("item"), given["breaker_a"], rcpt, rcpt_a, given["breaker_a"]))
                 brk = rcpt_a if poles == 1 else min(brk or rcpt_a, rcpt_a)
             # up from the panel to the ceiling, over, and back down to the rough-in (Edgar)
             # refrigeration plugs at 78" A.F.F. on every job (Edgar); other cords under the counter
@@ -269,22 +283,30 @@ def build(store, catalog, program, layout=None):
                       else rd["receptacle_cord_under_counter"])
             aff_ft = aff_in / 12.0
             up_down = max(0.0, ceil_ft - rt.get("panel_top_ft", 6)) + max(0.0, ceil_ft - aff_ft)
-            if panel and loc:
+            if src.get("run_lf"):           # a measured home run (Edgar: "about 200 ft")
+                run = float(src["run_lf"])
+            elif panel and loc:
                 run = manhattan_ft(panel, loc) * rt["electrical_factor"] + up_down
             elif el_ref and loc:            # panel ~40 ft from the work, then across to the rough-in
                 run = panel_ft + manhattan_ft(el_ref, loc) * rt["electrical_factor"] + up_down
             else:
                 run = panel_ft + 15 + up_down
+            run_asm = src.get("assembly") or "el_branch_lf"
             for _ in range(qty):
-                circuits.append({"circuit": ckt, "item": r.get("item"), "key": r["key"],
+                n = ckt_at.get(src_id, 1)
+                circuits.append({"circuit": n, "item": r.get("item"), "key": r["key"],
                                  "volts": e.get("volts"), "phase": e.get("phase"), "amps": e.get("amps"),
                                  "breaker_a": brk, "poles": poles, "conn": e.get("conn"),
                                  "nema": e.get("nema"), "receptacle": rcpt, "assembly": asm,
                                  "home_run_lf": round(run, 1),
                                  "height_aff": aff_in,
-                                 "breaker_basis": "125% nameplate - VERIFY MOCP on data plate"})
-                ckt += poles
+                                 "source": src_id, "source_label": src.get("short"), "wire": given.get("wire"),
+                                 "run_assembly": run_asm,
+                                 "breaker_basis": ("given (Edgar)" if given.get("breaker_a") else
+                                                   "125% nameplate - VERIFY MOCP on data plate")})
+                ckt_at[src_id] = n + poles
                 q_el["branch_lf"] += run
+                q_el["by_assembly"][run_asm] = q_el["by_assembly"].get(run_asm, 0.0) + run
             row["elec"] = "%s/%s, %s A, %.1f kW, %s" % (e.get("volts"), e.get("phase"), e.get("amps"),
                                                       kw_of(e), e.get("conn"))
             if e.get("nema") == "VERIFY" or e.get("amps") is None:
@@ -349,6 +371,7 @@ def build(store, catalog, program, layout=None):
         "equipment_counts": counts,
         "equipment_by_source": by_source,
         "electrical": {"circuits": len(circuits), "branch_lf": round(q_el["branch_lf"]),
+                       "branch_lf_by_assembly": {k: round(v) for k, v in q_el["by_assembly"].items()},
                        "connected_kw": round(conn_kw, 1),
                        "connected_amps_208_3ph": round(conn_kw * 1000 / (208 * math.sqrt(3)), 1)},
         "plumbing": {k: (round(v) if isinstance(v, float) else v) for k, v in q_pl.items()},
