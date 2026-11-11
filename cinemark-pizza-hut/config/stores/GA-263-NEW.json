@@ -150,12 +150,8 @@
     "Champion UH330B on the existing panel in the room: 2-pole 40 A with a neutral (208/60/1, 3 wire plus ground); confirm 2 spaces free."
   ],
   "package": "from_dxf",
-  "customer_verify": [
-    "spare capacity and breaker spaces at the existing panel in the room (refrigeration and the dish machine, 2-pole 40 A)",
-    "the 208 V 3-phase panel across the lobby: spare capacity and four 2- / 3-pole spaces; the route for the home runs (about 200 ft)",
-    "the projector booth panel: two circuits for the condensing units; roof access, crane access and a location for the two condensing units",
-    "a cold water supply (1/2 in., 25 psi minimum) and an indirect receptor within 3 ft of drain height at the new dish machine location"
-  ],
+  "customer_verify": [],
+  "_customer_verify_note": "Edgar 11/10: no site-verify lines on the quote (room panel, lobby panel, booth panel and roof, dish machine water / drain).",
   "scope": {
     "narrative": [
       "New area (Polycam scan 11/03/26): the Pizza Hut kitchen goes into three connected rooms, kitchen 240 SF, Other 1 188 SF, Other 2 149 SF.",
