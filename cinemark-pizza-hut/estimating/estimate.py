@@ -324,6 +324,14 @@ def equipment_lines(takeoff, program, store=None):
                           part["sell"], " (raised to MAP)" if part.get("map_raised") else "", part["net"],
                           "" if part["net"] else " (no net in the list - cost unknown)")),
                       "note": ""})
+    for adj in (store or {}).get("equipment_adjust") or []:    # Edgar's change to one priced line
+        hit = [ln for ln in L if ln["item"] == str(adj["item"]) and adj.get("match", "").lower() in ln["desc"].lower()]
+        if len(hit) != 1:
+            warn.append("equipment_adjust %s / %s matches %d lines - not applied" % (
+                adj["item"], adj.get("match"), len(hit)))
+            continue
+        hit[0]["sell"] = round(hit[0]["sell"] + float(adj["add"]), 2)
+        hit[0]["basis"] += "; %s" % adj.get("basis", "adjusted %+.2f" % adj["add"])
     return L, warn
 
 

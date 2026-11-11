@@ -343,5 +343,7 @@ def test_item_substitute_prices_and_quotes_as_itself():
         return                                  # the AutoQuotes export is on Drive, not on every machine
     assert [(l["item"], l["sell"], l["cost"]) for l in lines] == [("5", 10651.42, 9104.71)]
     assert "Champion UH330B" in lines[0]["desc"]
+    store["equipment_adjust"] = [{"item": "5", "match": "champion", "add": 50}]     # Edgar: "add $50 to 8.6"
+    assert est.equipment_lines(takeoff, program, store)[0][0]["sell"] == 10701.42
     assert bq._startup_notes(takeoff) == ["Champion dish machine start-up per Champion's warranty requirements"]
     assert bq._startup_notes({"schedule": [{"key": "HOBART_LXNR"}]})[0].startswith("Hobart dish machine")

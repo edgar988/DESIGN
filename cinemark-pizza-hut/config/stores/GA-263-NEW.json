@@ -26,6 +26,9 @@
           "sell": 9250.00, "net": 9104.71,
           "basis": "Edgar 11/10: sell $9,250. Cost per HELM 9,104.71 (PO26-V74--P123-0268 to Champion via CGA: UH330B 8,935.71 per the CGA quote 11/4/2026 + liftgate 169.00); the Hobart was 9,510.20 net / 10,651.42 sell"}
   },
+  "equipment_adjust": [
+    {"item": "6", "match": "warranty", "add": 50.0, "basis": "Edgar 11/10: add $50 to 8.6 (the Atosa 8-year warranty, 913.92 on the PH list)"}
+  ],
   "_item_substitutes_note": "Edgar 2026-11-10: the dishwasher is the Champion UH330B, ordered in HELM for GA, NJ and TX 11/4, and its sell comes down from the Hobart's 10,651.42 (HELM's sales orders still carry that) to Edgar's $9,250. Item 5 stays the dish machine's number; the DWG still shows the Hobart block (the Revit family is the Hobart LXnR KCL family as a stand-in).",
   "item_overrides": {"5DA98": "X2"},
   "_item_overrides_note": "The hand sink (block 5DA98, 7-PS-65) stays existing X2, relocated, as in R0 (Edgar 10/05: the hand sink is existing); the 11/10 change list adds no new hand sink.",
@@ -179,12 +182,14 @@
       {"section": "HVAC", "desc": "Added refrigerant charge (R-454B) for the long line sets", "qty": 2, "unit": "ea", "mat": 150.0, "basis": "Edgar 11/10: 0.6 oz per added foot: 75 ft over the 25 ft precharge x 0.6 oz/ft = 45 oz (2.8 lb) per unit; $/lb AEQ est - review; precharge length to verify"},
       {"section": "HVAC", "desc": "Install: set 2 condensing units on the roof, hang 2 heads, 200 LF of line set, condensate, evacuate, charge, start-up", "qty": 1, "unit": "LS", "hrs": 80, "basis": "80 hr at R0 rates: head 12 hr, condenser set 8 hr, line set 0.2 hr/LF, condensate 1.5 hr"},
       {"section": "HVAC", "desc": "Crane to set the condensing units on the roof", "qty": 1, "unit": "LS", "cost": 2500, "sell": 2500, "basis": "Edgar 11/10: $2,500"},
-      {"section": "HVAC", "desc": "Roof penetrations", "qty": 2, "unit": "ea", "cost": 1500, "sell": 1500, "basis": "Edgar 11/10: $1,500 each, Edgar sourcing the roofer"}
+      {"section": "HVAC", "desc": "Roof penetrations", "qty": 2, "unit": "ea", "cost": 1500, "sell": 1500, "basis": "Edgar 11/10: $1,500 each, Edgar sourcing the roofer"},
+      {"section": "HVAC", "desc": "Concrete X-ray of the slab at the core locations before coring", "qty": 1, "unit": "LS", "cost": 1000, "sell": 1200, "basis": "AEQ est - review: Edgar 11/10, cores and X-ray are for the HVAC (no price given); GPR / X-ray scanning runs about $1,000 and up a visit (planning figures, web 11/10)"},
+      {"section": "HVAC", "desc": "Concrete cores for the HVAC lines", "qty": 2, "unit": "ea", "cost": 333.33, "sell": 400, "basis": "AEQ est - review: Edgar 11/10, 2 cores for the HVAC (no price given); 4 in. cores about $350 and up a hole (planning figures, web 11/10)"}
     ],
     "_extra_lines_note": "Lines priced outside the cost database (store-specific). mat / hrs are per unit, marked up like any line; cost + sell are a fixed price per unit. HVAC is these lines only (hvac.itemized).",
     "text": {
       "ELECTRICAL": "Dedicated 208 V home runs, about 200 ft each from the 208 V 3-phase panel across the lobby, sized for 3% voltage drop, for the two conveyor ovens, the Menumaster and the fryer; 120 V circuits from the existing panel in the room for the refrigeration and the dish machine; breakers and receptacles / direct connections per the electrical rough-in schedule. Circuits and disconnects for the two condensing units from the projector booth panel. LED lighting in the kitchen area.",
-      "HVAC": "Added cooling for the kitchen: two 3-ton ductless split systems (one wall-mount head each), condensing units on the roof set by crane, two new roof penetrations, line sets about 100 ft each, refrigerant charge, condensate drains, controls and start-up."
+      "HVAC": "Added cooling for the kitchen: two 3-ton ductless split systems (one wall-mount head each), condensing units on the roof set by crane, two new roof penetrations, two concrete cores for the HVAC lines (slab X-rayed first), line sets about 100 ft each, refrigerant charge, condensate drains, controls and start-up."
     }
   }
 }
