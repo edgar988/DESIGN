@@ -84,6 +84,26 @@ def test_plan_window_reads_only_that_part_of_the_drawing(tmp_path):
     assert len(walls) == 1 and abs(walls[0]["start"][1]) < 1
 
 
+def test_drawn_item_places_a_block_from_the_dwg(tmp_path):
+    """A store drawn_items entry with 'block' places that block from the DWG's block table (GA-263 R2: the UHT48
+    under the oven table, Juan 11/11): real block geometry for the family, the plan extents turned with it."""
+    doc = ezdxf.new("R2018")
+    doc.header["$INSUNITS"] = 1
+    blk = doc.blocks.new("UHT_TEST")
+    blk.add_lwpolyline([(0, 0), (48, 0), (48, -30), (0, -30)], close=True)
+    make_sample_dxf.wall(doc.modelspace(), "0", 0, 0, 200, 0, t=4.0)
+    p = str(tmp_path / "blk.dxf")
+    doc.saveas(p)
+    store = {"layer_map": {"0": "A-WALL"},
+             "drawn_items": [{"item": "PH4", "key": "TRAULSEN_UHT48", "block": "UHT_TEST",
+                              "insert": [100.0, 5.0], "rotation": 180}]}
+    out = dxf_extract.extract(p, store)
+    q = [e for e in out["equipment"] if e["item"] == "PH4"]
+    assert len(q) == 1 and q[0]["geom_block"] == "UHT_TEST" and q[0]["master_match"] == "outline"
+    assert q[0]["bbox"] == [52.0, 5.0, 100.0, 35.0]
+    assert q[0]["body_local"] and q[0]["revit_rotation"] == 180.0
+
+
 def test_master_numbers_by_model_size_and_swap(tmp_path):
     """Master numbering (Edgar): by model (G10011 -> PH2), by the master's equivalents (UR48B is the 60 in.
     Atosa, item 6), by footprint for table stand-ins (TFSS 48x30 -> fab table 2.2); a 7-PS-65 fits new 1 and

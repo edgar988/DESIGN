@@ -42,15 +42,18 @@
     {"item": "3.4", "key": "QUANTUM_WR74_2448", "rect": [580.12, 22.15, 604.01, 71.78], "back": "east",
      "_note": "S3, east wall above S2. About 0.6 in. clear of the reach-in door swing: field verify (scan +/- 1 in.)."},
     {"key": "EXISTING_BIB_RACK", "rect": [457.85, 1.01, 504.59, 18.77],
-     "_note": "Edgar's DWG, layer FS-EQ-EXISTING-DIM, labelled 'bag in box rack -relocated-': against the west wall of Other 2."}
+     "_note": "Edgar's DWG, layer FS-EQ-EXISTING-DIM, labelled 'bag in box rack -relocated-': against the west wall of Other 2."},
+    {"item": "PH4", "key": "TRAULSEN_UHT48", "block": "4e31fa31-f370-4f6c-8ef1-838f077abfde", "insert": [389.10, 4.97], "rotation": 180,
+     "_note": "Juan 11/11/26 (reply in the '263 Fayetteville - first run' thread): the 48 in. undercounter refrigerator under the oven table is missing, as at 187. Not in Edgar's DWG yet: the UHT48 block from the DWG's own block table (the old-room insert), under 2.1 (the 60 x 36 oven table, insert 394.66, 0.89 at 180) where TX-093 has it: 5.56 in. in from the table's insert, 4.08 in. off the wall, front 1.8 in. behind the table's front."}
   ],
   "_drawn_items_note": "Items Edgar drew as plain rectangles (no block): read at these DWG coordinates, back to the nearest wall unless 'back' says which side. Item numbers: 2.6 and 3.4 are new PH list numbers (master_items.json, local).",
-  "drawing_rev": "R1",
+  "drawing_rev": "R2",
   "drawing_revisions": [
     {"rev": "R0", "date": "10/05/26", "desc": "ISSUED FOR REVIEW"},
-    {"rev": "R1", "date": "11/10/26", "desc": "NEW AREA LAYOUT"}
+    {"rev": "R1", "date": "11/10/26", "desc": "NEW AREA LAYOUT"},
+    {"rev": "R2", "date": "11/11/26", "desc": "ADD UNDERCOUNTER REFRIGERATOR"}
   ],
-  "_drawing_rev_note": "R1 (Edgar 2026-11-10): the kitchen in the new area. The R0 set (old room) stays as issued.",
+  "_drawing_rev_note": "R1 (Edgar 2026-11-10): the kitchen in the new area. The R0 set (old room) stays as issued. R2 (11/11): the PH4 UHT48 under the oven table (Juan's reply to R1); R1 stays as issued.",
   "omit_sheets": ["QF203", "QF204", "QF401", "QF402"],
   "survey_date": "2026-11-03",
   "existing_docs": [
@@ -141,6 +144,7 @@
   },
   "notes": [
     "R1 (Edgar 2026-11-10): new area. Existing, relocate: 3-comp sink, Menumaster, PerfectFry fryer, bag-in-box rack. New: AEQ-fabricated 36x30 table (PH list 2.6), three Quantum 24x48x74 shelving units with dunnage base + 3 wire shelves (PH list 3.4). The Atosa freezer stays AEQ-supplied. No prices on drawings.",
+    "R2 (11/11, Juan's reply to R1): the PH4 UHT48 undercounter refrigerator goes under the oven table, owner-furnished as at 187. Its 120 V circuit is off the room panel. Electrical stays at Edgar's $46,178.90 (his 11/10 list allows 9 room-panel circuits at about 40 LF; with PH4 the room panel feeds 7 refrigeration circuits and the dish machine, plus the 2 BIB circuits priced under Beverage System). Equipment Set stays at $5,033: R0 included setting the UHT48 and the change list never took it out.",
     "Open (11/10): Blueridge max line length and precharge length; Quantum dunnage part number; roof stand price; 36x30 table price ($650 placeholder); condenser circuit lengths."
   ],
   "material_verify": [

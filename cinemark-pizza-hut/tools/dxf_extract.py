@@ -858,15 +858,51 @@ def _outline_items(out, wall_segs, master):
 BACK_ROT = {"north": 0.0, "south": 180.0, "east": 270.0, "west": 90.0}
 
 
-def _drawn_items(out, store, wall_segs):
+def _placed_bbox(doc, bname, x, y, rot, scale):
+    """Plan extents (inches) of block bname inserted at (x, y), turned rot degrees; None if it has no extents."""
+    try:
+        from ezdxf import bbox as _bb
+        blk = doc.blocks[bname]
+        ext = _bb.extents(blk)
+    except Exception:
+        return None
+    if not ext.has_data:
+        return None
+    bx, by = blk.block.dxf.base_point[0], blk.block.dxf.base_point[1]
+    c, s = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+    pts = [((px - bx) * scale, (py - by) * scale) for px in (ext.extmin.x, ext.extmax.x)
+           for py in (ext.extmin.y, ext.extmax.y)]
+    w = [(x + c * px - s * py, y + s * px + c * py) for px, py in pts]
+    return [round(min(p[0] for p in w), 3), round(min(p[1] for p in w), 3),
+            round(max(p[0] for p in w), 3), round(max(p[1] for p in w), 3)]
+
+
+def _drawn_items(out, store, wall_segs, doc=None, scale=1.0):
     """Items Edgar draws as a plain rectangle with no block (GA-263 new area: the 36x30 table, the shelving, the
     bag-in-box rack), listed in the store's drawn_items at their DWG coordinates: each becomes that item, its
     rectangle the plan symbol the Revit family is built from, its back to the nearest wall line unless the store
     says which side ('back'). An item number given is kept; none is numbered from the master list (an existing
-    item off the list gets its own X number). Returns {geom name: linework}."""
+    item off the list gets its own X number). An entry with 'block' instead places that block from the DWG's own
+    block table at 'insert' (inches, plan coordinates) and 'rotation', like an insert Edgar drew (GA-263: the
+    UHT48 under the oven table, which Juan asked for 11/11 and the layout does not show yet): the family is
+    made from the block, never a box. Returns {geom name: linework}."""
     geoms = {}
     segs = [s for ss in wall_segs.values() for s in ss]
     for d in (store or {}).get("drawn_items") or []:
+        if d.get("block"):
+            bname, (x, y) = d["block"], d["insert"]
+            rot = float(d.get("rotation") or 0.0)
+            item = d.get("item")
+            fo = _front_offset(doc, bname, None, bname) if doc is not None else 0.0
+            out["equipment"].append({
+                "handle": "PLACED_%s_%d_%d" % (item or d["key"], round(x), round(y)), "block": bname,
+                "layer": "0", "key": d["key"], "item": item, "x": round(x, 3), "y": round(y, 3),
+                "rotation": rot, "xscale": 1.0, "yscale": 1.0, "geom_block": bname,
+                "status": d.get("status") or "new", "attribs": {},
+                "bbox": _placed_bbox(doc, bname, x, y, rot, scale) if doc is not None else None,
+                "provided_by": provided_by(item), "front_offset": fo, "revit_rotation": round(rot + fo, 3),
+                "master_match": "outline" if item else None})
+            continue
         x0, y0, x1, y1 = d["rect"]
         if d.get("back"):
             rot, ins, loc = _frame(BACK_ROT[d["back"]], x0, y0, x1, y1)
@@ -1012,7 +1048,7 @@ def extract(path, store=None, catalog_path=None):
     outlines = {}
     if (store or {}).get("item_numbers") == "master":     # the PH cut table: a rectangle, not walls
         outlines = _outline_items(out, wall_segs, master_items.load_master())
-    outlines.update(_drawn_items(out, store, wall_segs))
+    outlines.update(_drawn_items(out, store, wall_segs, doc, scale))
 
     centres = [Vec2((q["bbox"][0] + q["bbox"][2]) / 2.0, (q["bbox"][1] + q["bbox"][3]) / 2.0)
                for q in out["equipment"] if q.get("bbox") and q["key"]]
