@@ -155,7 +155,7 @@ def build_lines(takeoff, store, cost_db, rates):
         add("pl_grease_interceptor", 1 if plm.get("grease_interceptor") else 0)
         hand_sinks = sum(r["qty"] for r in takeoff["schedule"] if r["key"] == "ADVANCE_7PS65")
         add("pl_mixing_valve", hand_sinks)
-        add("pl_backflow", 1 if any(r["key"] == "HOBART_LXNR" for r in takeoff["schedule"]) else 0)
+        add("pl_backflow", 1 if any("Dishwasher" in r["description"] for r in takeoff["schedule"]) else 0)
         add("pl_water_heater", 1 if plm.get("new_water_heater") else 0)
 
     # HVAC
@@ -270,9 +270,10 @@ def price_list(path):
     return out
 
 
-def equipment_lines(takeoff, program):
+def equipment_lines(takeoff, program, store=None):
     """EQUIPMENT: AEQ-supplied items (item numbers without PH / X) at the master list's sell, exactly - no
-    markup, contingency or rounding (Edgar, 2026-10-05). Net cost from the same list, internal only."""
+    markup, contingency or rounding (Edgar, 2026-10-05). Net cost from the same list, internal only. A store's
+    item_substitutes (another product under a master number) price at their own sell and net."""
     path = program.get("equipment_price_list") or ""
     if not os.path.isfile(path):
         return [], ["equipment price list not found: %s" % path]
@@ -284,6 +285,11 @@ def equipment_lines(takeoff, program):
             prices[m["item"]] = {"sell": float(m["sell"]), "map_raised": None, "net": float(m.get("net") or 0),
                                  "mfr": m["mfr"], "model": m["model"], "category": m["category"], "adds": [],
                                  "basis": m.get("price_basis")}
+    for item, sub in ((store or {}).get("item_substitutes") or {}).items():
+        master[item] = sub["key"]
+        prices[item] = {"sell": float(sub["sell"]), "map_raised": None, "net": float(sub.get("net") or 0),
+                        "mfr": sub["mfr"], "model": sub["model"], "category": sub["category"], "adds": [],
+                        "basis": sub.get("basis")}
     L, warn = [], []
     n = {}
     for r in takeoff["schedule"]:
@@ -304,8 +310,8 @@ def equipment_lines(takeoff, program):
                                else "Item %s: %s" % (item, part["spec"])),
                       "spec": part.get("spec"), "hrs": 0, "mat": round(part["net"] * qty, 2), "sub": 0, "eqp": 0,
                       "cost": round(part["net"] * qty, 2), "sell": round(part["sell"] * qty, 2), "fixed": True,
-                      "basis": ("PH list (AEQ, not in the AutoQuotes list yet) sell %.2f: %s" % (
-                          part["sell"], part["basis"]) if part.get("basis") else
+                      "basis": ("AEQ price, not the AutoQuotes list: sell %.2f, net %.2f; %s" % (
+                          part["sell"], part["net"], part["basis"]) if part.get("basis") else
                           "PH master list sell %.2f%s, net %.2f%s" % (
                           part["sell"], " (raised to MAP)" if part.get("map_raised") else "", part["net"],
                           "" if part["net"] else " (no net in the list - cost unknown)")),
@@ -394,7 +400,7 @@ def estimate(takeoff, store, program=None, cost_db=None):
     lines += tlines
     warnings = []
     if (store.get("scope") or {}).get("equipment_priced"):     # AEQ's own equipment on the quote too
-        eq, warnings = equipment_lines(takeoff, program)
+        eq, warnings = equipment_lines(takeoff, program, store)
         lines += eq
 
     sections = {}

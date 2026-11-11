@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
-from takeoff import receptacle_for  # noqa: E402  (one rule for drawings, quote and list)
+from takeoff import receptacle_for, load_catalog  # noqa: E402  (one rule for drawings, quote and list)
 
 WASTE = 1.10            # wire: 10% for waste and makeup, plus TAIL_FT at each end
 TAIL_FT = 2.0
@@ -49,7 +49,7 @@ RULES = [
     "Breakers are listed by the panel they go in when the circuits come from more than one panel.",
     "Boxes: 4\" square x 2-1/8\" deep with a 1-gang ring for 5-20R; 4-11/16\" square x 2-1/8\" deep with a "
     "single-receptacle ring for 30-50 A receptacles and direct connections. Stainless steel plates.",
-    "Direct connections (Hobart LXnR): a junction box at the rough-in and a 6 ft 3/4\" liquidtight whip.",
+    "Direct connections (the dish machine): a junction box at the rough-in and a 6 ft 3/4\" liquidtight whip.",
     "Plumbing: only the items in the store's plumbing scope (new connections). Each water connection gets a "
     "quarter-turn stop, a drop-ear elbow / stub-out, an escutcheon and a braided connector; supply piping "
     "is the takeoff length per fixture, split between its connections; hot piping is insulated.",
@@ -63,8 +63,6 @@ VERIFY = [
     "spare spaces.",
     "Available phase at the panel: the Ovention C2000 is listed 3-phase (34 A, NEMA 15-50P). On single-phase "
     "service it is a 44-49 A NEMA 6-50P unit (CINEMARK_PH_MASTER.pdf p.5).",
-    "Hobart LXnR: hot water inlet size, drain size, and any water hammer arrestor or pressure regulator per the "
-    "Hobart installation sheet; whether the 208 V 3-phase connection needs a neutral.",
     "Existing drain at the indirect waste: height and location; air gap per the plumbing code.",
 ]
 
@@ -86,7 +84,7 @@ def ground_awg(amps):
 
 
 def needs_neutral(circuit, rec):
-    if (circuit.get("poles") or 1) == 1:
+    if (circuit.get("poles") or 1) == 1 or circuit.get("neutral"):    # or the data plate says so (Champion)
         return True
     return bool(rec and re.match(r"^(14|L14|L21|18)-", rec))
 
@@ -258,7 +256,14 @@ def plumbing(takeoff, store, conns):
     return items, notes, rows
 
 
-def _book(path, title, store, elec, plumb, conns):
+def notes_for(takeoff):
+    """The field notes of the catalog items on the job (the dish machine's water, drain and power)."""
+    items = load_catalog()["items"]
+    keys = sorted(set(r["key"] for r in (takeoff or {}).get("schedule", [])))
+    return [items[k]["field_note"] for k in keys if (items.get(k) or {}).get("field_note")]
+
+
+def _book(path, title, store, elec, plumb, conns, takeoff=None):
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.utils import get_column_letter
@@ -335,7 +340,7 @@ def _book(path, title, store, elec, plumb, conns):
     ws.append([])
     ws.append(["VERIFY BEFORE ORDERING"])
     ws.cell(row=ws.max_row, column=1).font = bold
-    for v in VERIFY + list(store.get("material_verify") or []):
+    for v in VERIFY + notes_for(takeoff) + list(store.get("material_verify") or []):
         ws.append(["- " + v])
     for row in ws.iter_rows(min_row=4):
         for cell in row:
@@ -357,7 +362,7 @@ def run(store_id, work, out=None):
     elec = electrical(takeoff, store)
     plumb = plumbing(takeoff, store, conns)
     path = os.path.join(out or work, "%s-ROUGH-IN MATERIAL LIST-%s.xlsx" % (name, rev))
-    _book(path, title, store, elec, plumb, conns)
+    _book(path, title, store, elec, plumb, conns, takeoff)
     return path, elec, plumb, conns
 
 

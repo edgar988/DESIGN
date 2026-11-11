@@ -301,6 +301,7 @@ def build(store, catalog, program, layout=None):
                                  "home_run_lf": round(run, 1),
                                  "height_aff": aff_in,
                                  "source": src_id, "source_label": src.get("short"), "wire": given.get("wire"),
+                                 "neutral": bool(e.get("neutral")),
                                  "run_assembly": run_asm,
                                  "breaker_basis": ("given (Edgar)" if given.get("breaker_a") else
                                                    "125% nameplate - VERIFY MOCP on data plate")})

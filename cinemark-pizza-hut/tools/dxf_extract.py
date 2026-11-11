@@ -1024,6 +1024,13 @@ def extract(path, store=None, catalog_path=None):
         master = master_items.load_master()
         if master:
             from_master(out, store, master)
+    # a store that supplies another product under a master number (GA-263 new area, Edgar 11/10: item 5 is the
+    # Champion UH330B, not the Hobart the DWG block shows): that item is the substitute everywhere downstream
+    subs = (store or {}).get("item_substitutes") or {}
+    for q in out["equipment"]:
+        sub = subs.get(str(q.get("item")))
+        if sub and q["key"]:
+            q["drawn_key"], q["key"] = q["key"], sub["key"]
     stack(out, items)
 
     # block linework: the body outline of every item (placement checks) and, for items with no Revit family,

@@ -1295,7 +1295,9 @@ def utility_rows(doc, layout, takeoff, s):
                      if bad]
             conns.append({"svc": "E-DEVICE" if c["conn"] == "direct" else "E-CORD", "aff": c["height_aff"],
                           "size": "%s-P %sA" % (c["poles"], c["breaker_a"] or "?"),
-                          "desc": "J-BOX, DIRECT CONNECT" if c["conn"] == "direct" else "CORD & PLUG, " + (
+                          "desc": ("J-BOX, DIRECT CONNECT" + (" (%s, N, G)" % ", ".join(
+                              "L%d" % (i + 1) for i in range(int(c["poles"] or 1))) if c.get("neutral") else ""))
+                          if c["conn"] == "direct" else "CORD & PLUG, " + (
                               "RECEPTACLE " + c["receptacle"] if c.get("receptacle") else _receptacle(c["nema"])),
                           "kw": (it.get("elec") or {}).get("kw"), "amps": c["amps"], "v": c["volts"],
                           "ph": c["phase"] or 1,
@@ -1304,7 +1306,9 @@ def utility_rows(doc, layout, takeoff, s):
                               "; " + _wire_text(c) if c.get("wire") else "",
                               "; VERIFY " + ", ".join(flags) if flags else "")})
         plumb = it.get("plumb") or {}
-        fam = _family_pipes(doc, inst, lvl)
+        # a stand-in family's pipe connectors are the other product's (the Champion on the Hobart family): the
+        # rough-in defaults, marked VERIFY, until the item has its own family
+        fam = [] if it.get("rfa_note") else _family_pipes(doc, inst, lvl)
         hand = "7-PS" in (it.get("model") or "")
         for ck, svc in (("hw", "H"), ("cw", "C"), ("waste", "D")):
             if not plumb.get(ck):

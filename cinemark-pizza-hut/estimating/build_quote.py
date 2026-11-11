@@ -223,6 +223,17 @@ def quote_numbers(store, rev="R0", today=None):
     return no, fname
 
 
+def _startup_notes(takeoff):
+    """The catalog's start-up note for each item on the job that has one (the dish machine maker's warranty
+    start-up: Hobart by the local Hobart office)."""
+    import json
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "families.json"),
+              encoding="utf-8") as f:
+        items = json.load(f)["items"]
+    return sorted(set(items[r["key"]]["startup"].rstrip(".") for r in takeoff["schedule"]
+                      if (items.get(r["key"]) or {}).get("startup")))
+
+
 def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", today=None):
     today = today or dt.date.today()
     cust, con, prog = program["customer"], program["contractor"], program["program"]
@@ -343,8 +354,8 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
         "Spirit Services Group crews.",
         "Rough-in per the store's electrical and plumbing rough-in schedules; final connections within %d ft "
         "of each equipment connection point." % program["rough_in_defaults"]["point_of_connection_ft"],
-        "Start-up and commissioning of installed systems; Hobart dish machine start-up by the local Hobart "
-        "service office for warranty.",
+        "Start-up and commissioning of installed systems%s." % "".join(
+            "; " + s for s in _startup_notes(takeoff)),
         "One-year workmanship warranty on SSG-performed installation from date of substantial completion.",
     ])))
     excl = list(EXCLUSIONS)

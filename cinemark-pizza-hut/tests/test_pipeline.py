@@ -325,3 +325,23 @@ def test_more_than_one_panel_and_store_lines():
     store["hvac"] = {"itemized": True}
     e = est.estimate(t, store, program)
     assert e["customer_sections"]["HVAC"] == 2500 + 2 * 100 * (1 + program["rates"]["material_markup"])
+
+
+def test_item_substitute_prices_and_quotes_as_itself():
+    """Edgar 11/10 (GA-263 new area): item 5 is the Champion UH330B, not the Hobart the drawing shows, at HELM's
+    sell; the start-up line names the machine on the job."""
+    from estimating import estimate as est
+    from estimating import build_quote as bq
+    program = json.load(open(os.path.join(ROOT, "config", "program.json"), encoding="utf-8"))
+    takeoff = {"schedule": [{"item": "5", "key": "CHAMPION_UH330B", "qty": 1, "provided_by": "AEQ",
+                             "description": "Dishwasher, Undercounter"}]}
+    store = {"item_substitutes": {"5": {"key": "CHAMPION_UH330B", "mfr": "Champion", "model": "UH330B",
+                                        "category": "Dishwasher, Undercounter", "sell": 10651.42, "net": 9104.71,
+                                        "basis": "HELM"}}}
+    lines, warn = est.equipment_lines(takeoff, program, store)
+    if any("price list not found" in w for w in warn):
+        return                                  # the AutoQuotes export is on Drive, not on every machine
+    assert [(l["item"], l["sell"], l["cost"]) for l in lines] == [("5", 10651.42, 9104.71)]
+    assert "Champion UH330B" in lines[0]["desc"]
+    assert bq._startup_notes(takeoff) == ["Champion dish machine start-up per Champion's warranty requirements"]
+    assert bq._startup_notes({"schedule": [{"key": "HOBART_LXNR"}]})[0].startswith("Hobart dish machine")
