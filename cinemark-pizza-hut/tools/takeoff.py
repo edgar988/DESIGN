@@ -278,9 +278,11 @@ def build(store, catalog, program, layout=None):
                 brk = rcpt_a if poles == 1 else min(brk or rcpt_a, rcpt_a)
             # up from the panel to the ceiling, over, and back down to the rough-in (Edgar)
             # refrigeration plugs at 78" A.F.F. on every job (Edgar); other cords under the counter
-            aff_in = (rd["direct_connect_jbox"] if e.get("conn") == "direct"
-                      else rd.get("receptacle_refrigeration", 78) if it.get("category") == "refrigeration"
-                      else rd["receptacle_cord_under_counter"])
+            # a height Edgar gives for the item (the BIB rack's circuits at 84") over the program defaults
+            aff_in = (e.get("aff_in") or rd["direct_connect_jbox"] if e.get("conn") == "direct"
+                      else e.get("aff_in") or rd.get("receptacle_refrigeration", 78)
+                      if it.get("category") == "refrigeration"
+                      else e.get("aff_in") or rd["receptacle_cord_under_counter"])
             aff_ft = aff_in / 12.0
             up_down = max(0.0, ceil_ft - rt.get("panel_top_ft", 6)) + max(0.0, ceil_ft - aff_ft)
             if src.get("run_lf"):           # a measured home run (Edgar: "about 200 ft")
@@ -292,7 +294,7 @@ def build(store, catalog, program, layout=None):
             else:
                 run = panel_ft + 15 + up_down
             run_asm = src.get("assembly") or "el_branch_lf"
-            for _ in range(qty):
+            for _ in range(qty * int(e.get("circuits") or 1)):     # circuits per unit (the BIB rack: 2)
                 n = ckt_at.get(src_id, 1)
                 circuits.append({"circuit": n, "item": r.get("item"), "key": r["key"],
                                  "volts": e.get("volts"), "phase": e.get("phase"), "amps": e.get("amps"),

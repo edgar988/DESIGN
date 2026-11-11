@@ -1285,12 +1285,16 @@ def utility_rows(doc, layout, takeoff, s):
         inst = doc.GetElement(_eid(q["revit_id"])) if q.get("revit_id") else None
         conns = []
         cs = circuits.get((key, item)) or []
-        for _ in range(int(q.get("stack") or 1)):   # one circuit per unit (a stack: per oven), in drawing order
+        el = it.get("elec") or {}
+        # one circuit per unit (a stack: per oven), in drawing order; an item can carry more (the BIB rack: 2)
+        for _ in range(int(q.get("stack") or 1) * int(el.get("circuits") or 1)):
             if not cs:
                 break
             c = dict(cs.pop(0))
             c["amps"] = c["amps"] or None        # 0 = unknown, not zero amps
-            flags = [f for f, bad in (("AMPS", c["amps"] is None), ("BKR", not c["breaker_a"]),
+            # a general-purpose circuit for equipment not yet chosen (el serves: the BIB rack's carbonator and
+            # chillers) has no nameplate amps to verify
+            flags = [f for f, bad in (("AMPS", c["amps"] is None and not el.get("serves")), ("BKR", not c["breaker_a"]),
                                       ("NEMA", c["conn"] != "direct" and not re.search(r"\d-\d", c["nema"] or "")))
                      if bad]
             conns.append({"svc": "E-DEVICE" if c["conn"] == "direct" else "E-CORD", "aff": c["height_aff"],
@@ -1300,7 +1304,7 @@ def utility_rows(doc, layout, takeoff, s):
                           if c["conn"] == "direct" else "CORD & PLUG, " + (
                               "RECEPTACLE " + c["receptacle"] if c.get("receptacle") else _receptacle(c["nema"])),
                           "kw": (it.get("elec") or {}).get("kw"), "amps": c["amps"], "v": c["volts"],
-                          "ph": c["phase"] or 1,
+                          "ph": c["phase"] or 1, "to": el.get("serves"),     # what the circuit feeds, if not the item
                           "remarks": "%sCKT %s%s%s" % (
                               (c["source_label"] + " ") if c.get("source_label") else "", c["circuit"],
                               "; " + _wire_text(c) if c.get("wire") else "",
@@ -1340,7 +1344,7 @@ def utility_rows(doc, layout, takeoff, s):
         for i, r in enumerate(conns):
             off = (i - (k - 1) / 2.0) * 8.0
 
-            r.update({"item": item, "key": key, "to": label(key, item),
+            r.update({"item": item, "key": key, "to": r.get("to") or label(key, item),
                       "tag": "%s%s.%d" % (r["svc"][0], item, i + 1),
                       "point": _pt([p[0] + t[0] * off, p[1] + t[1] * off]), "normal": n,
                       "wall": bool(q.get("roughin")), "centre": _centre(q), "handle": q["handle"]})
@@ -1815,7 +1819,7 @@ def _panel_mark(doc, v, layout, st):
         doc.Create.NewDetailCurve(v, Line.CreateBound(XYZ(a[0], a[1], 0), XYZ(b[0], b[1], 0)))
     words = src["label"].split()
     half = (len(words) + 1) // 2
-    tn = TextNote.Create(doc, v.Id, XYZ(x1 + 1.0, y0 - 2.5, 0),
+    tn = TextNote.Create(doc, v.Id, XYZ(x1 + 1.0, y0 - 1.25, 0),    # clear of the tag row along the wall below
                          "%s\r%s (%s)" % (" ".join(words[:half]), " ".join(words[half:]), src["short"]),
                          _text_type(doc, '3/32"'))
     ld = tn.AddLeader(TextNoteLeaderTypes.TNLT_STRAIGHT_L)
