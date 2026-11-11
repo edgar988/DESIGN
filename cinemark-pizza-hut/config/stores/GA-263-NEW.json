@@ -23,10 +23,10 @@
   "_existing_items_note": "Edgar 2026-11-10: the Menumaster (ACP MXP22TLT, item 4) is existing: relocated, not supplied.",
   "item_substitutes": {
     "5": {"key": "CHAMPION_UH330B", "mfr": "Champion", "model": "UH330B", "category": "Dishwasher, Undercounter",
-          "sell": 10651.42, "net": 9104.71,
-          "basis": "HELM: sales order line Champion UH330B 10,651.42 sell / 9,104.71 cost (P123 GA); PO26-V74--P123-0268 to Champion via CGA, 8,935.71 per the CGA quote 11/4/2026"}
+          "sell": 9250.00, "net": 9104.71,
+          "basis": "Edgar 11/10: sell $9,250. Cost per HELM 9,104.71 (PO26-V74--P123-0268 to Champion via CGA: UH330B 8,935.71 per the CGA quote 11/4/2026 + liftgate 169.00); the Hobart was 9,510.20 net / 10,651.42 sell"}
   },
-  "_item_substitutes_note": "Edgar 2026-11-10: the dishwasher is the Champion UH330B (HELM: ordered for GA, NJ and TX 11/4, at the Hobart's 10,651.42 sell). Item 5 stays the dish machine's number; the DWG still shows the Hobart block (the Revit family is the Hobart LXnR KCL family as a stand-in).",
+  "_item_substitutes_note": "Edgar 2026-11-10: the dishwasher is the Champion UH330B, ordered in HELM for GA, NJ and TX 11/4, and its sell comes down from the Hobart's 10,651.42 (HELM's sales orders still carry that) to Edgar's $9,250. Item 5 stays the dish machine's number; the DWG still shows the Hobart block (the Revit family is the Hobart LXnR KCL family as a stand-in).",
   "item_overrides": {"5DA98": "X2"},
   "_item_overrides_note": "The hand sink (block 5DA98, 7-PS-65) stays existing X2, relocated, as in R0 (Edgar 10/05: the hand sink is existing); the 11/10 change list adds no new hand sink.",
   "drawn_items": [

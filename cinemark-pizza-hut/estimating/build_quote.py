@@ -199,15 +199,18 @@ def _qty(q, unit):
     return " (%s%s)" % (format(q, ","), unit)
 
 
-def scope_detail(lines):
-    """Customer-safe scope itemization: descriptions + quantities, never prices or hours."""
-    out = []
-    for l in lines:
-        d = l["desc"].replace("&", "&amp;")
-        if out and d[1:2].islower():            # not acronyms: LED, FRP, HVAC
-            d = d[0].lower() + d[1:]
-        out.append(d + _qty(l["qty"], l["unit"]))
-    return "; ".join(out)
+# travel & supervision lines as the customer reads them: what they are, never the hours behind them
+TRAVEL_ITEMS = (("Project management", "Project management, coordination and submittals"),
+                ("Travel labor", "Crew travel"), ("Lodging", "Lodging, per diem and transportation"))
+
+
+def scope_items(sec, lines):
+    """Customer-safe scope itemization, one entry per quote line (Edgar 11/10: itemized per line, not a run-on
+    paragraph): its description and quantity, never prices or hours."""
+    if sec == "TRAVEL & SUPERVISION":
+        return [t for k, t in TRAVEL_ITEMS if any(l["desc"].startswith(k) for l in lines)]
+    return [l["desc"].replace("&", "&amp;") + ("" if l["unit"] == "hr" else _qty(l["qty"], l["unit"]))
+            for l in lines]
 
 
 def _fmt_date(d):
@@ -276,14 +279,14 @@ def build_pdf(path, store, program, takeoff, est, sched, gantt_png, rev="R0", to
     rows = []
     descs = dict((str(r.get("item")), r) for r in takeoff["schedule"])
     for n, sec in enumerate(est["section_order"], 1):
-        detail = (scope_detail(est["sections"][sec]["lines"])
-                  if sec not in ("TRAVEL & SUPERVISION", "EQUIPMENT") else "")
-        head = "<b>%s</b><br/>%s%s" % (
+        head = "<b>%s</b><br/>%s" % (
             SECTION_NAME.get(sec) or sec.title().replace("&", "&amp;").replace("Hvac", "HVAC"),
-            " ".join(section_text(sec, store, est)),
-            ("<br/><font color='#666666'>Includes: %s.</font>" % detail) if detail else "")
+            " ".join(section_text(sec, store, est)))
         if sec != "EQUIPMENT":
+            # the section's price on its header; each item of its scope on a numbered line under it (3.1, 3.2)
             rows.append((head, est["customer_sections"][sec]))
+            for k, item in enumerate(scope_items(sec, est["sections"][sec]["lines"]), 1):
+                rows.append((item, None, "%d.%d" % (n, k)))
             continue
         # AEQ equipment itemized (Edgar): one line per item - quantity, price each, extended
         rows.append((head, None))

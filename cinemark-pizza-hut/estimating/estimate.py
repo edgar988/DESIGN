@@ -130,7 +130,8 @@ def build_lines(takeoff, store, cost_db, rates):
         n_cond = hv.get("condensers", 1)
         n_hvac_ckts = n_cond + (1 if hv.get("exhaust_fan") else 0)
         add("el_branch_lf", hv.get("condenser_circuit_lf", 0) * n_cond, "new circuit to %s" % (
-            "each condensing unit" if n_cond > 1 else "the condensing unit"))
+            "each condensing unit" if n_cond > 1 else "the condensing unit"),
+            desc="Condensing unit circuit%s, EMT and wire" % ("s" if n_cond > 1 else ""))
     else:
         n_hvac_ckts = heat["minisplit_units"] + (1 if hv.get("exhaust_fan") else 0)
     add("el_hvac_circuit", n_hvac_ckts)
@@ -141,8 +142,15 @@ def build_lines(takeoff, store, cost_db, rates):
         by = q.get("plumbing_by_item") or {}
         pl = dict((k, sum((by.get(i) or {}).get(k, 0) for i in only))
                   for k in ("hw", "cw", "waste", "indirect", "supply_lf"))
-    add("pl_supply_conn", pl["hw"] + pl["cw"])
-    add("pl_supply_lf", pl["supply_lf"])
+    if pl["hw"] and not pl["cw"]:                 # say which water it is (the Champion takes cold only)
+        add("pl_supply_conn", pl["hw"], desc="Hot water connection with shutoff")
+    elif pl["cw"] and not pl["hw"]:
+        add("pl_supply_conn", pl["cw"], desc="Cold water connection with shutoff")
+        add("pl_supply_lf", pl["supply_lf"], desc="Domestic cold water piping")
+    else:
+        add("pl_supply_conn", pl["hw"] + pl["cw"])
+    if pl["hw"]:
+        add("pl_supply_lf", pl["supply_lf"])
     add("pl_waste_conn", pl["waste"])
     if plm.get("drain") in ("wall", "existing"):  # NJ / TX: no floor cutting, waste to the existing drain
         add("pl_indirect", pl["indirect"], desc="Indirect waste to the existing %sdrain with air gap" % (
