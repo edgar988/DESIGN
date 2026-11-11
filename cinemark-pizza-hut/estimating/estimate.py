@@ -19,7 +19,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
 SECTION_ORDER = ["GENERAL CONDITIONS", "DEMOLITION", "CONSTRUCTION & FINISHES", "ELECTRICAL",
-                 "PLUMBING", "HVAC", "EQUIPMENT SET & START-UP", "TRAVEL & SUPERVISION", "EQUIPMENT"]
+                 "PLUMBING", "HVAC", "BEVERAGE SYSTEM", "EQUIPMENT SET & START-UP", "TRAVEL & SUPERVISION",
+                 "EQUIPMENT"]
 
 
 def _load(name):

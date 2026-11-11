@@ -194,8 +194,8 @@ def _qty(q, unit):
     q = int(round(q)) if q >= 10 else round(q, 1)
     q = int(q) if float(q).is_integer() else q
     plural = "s" if q != 1 else ""
-    unit = {"ea": "", "LF": " LF", "SF": " SF", "pull": " pull" + plural, "trip": " trip" + plural,
-            "hr": " hr"}.get(unit, " " + unit)
+    unit = {"ea": "", "LF": " LF", "SF": " SF", "hr": " hr"}.get(
+        unit, " " + unit + (plural if unit.isalpha() and unit.islower() else ""))    # 2 trips, 2 runs, 3 circuits
     return " (%s%s)" % (format(q, ","), unit)
 
 

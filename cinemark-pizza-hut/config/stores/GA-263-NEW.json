@@ -132,11 +132,11 @@
     "_site_days_note": "Edgar 11/10: 'the labor seems low - especially supervision compare the other projects'. R0's pinned 4-day job (old room, Edgar 10/05) is dropped: the days on site, and travel & supervision with them, come from the new area's field hours, as on TX-093 and NJ-187."
   },
   "overrides": {
-    "_note": "R0 section sells are Edgar's (10/05); R1 = R0 + the 11/10 change list (ESTIMATE\\26_GA_CINEMARK_263_NEW-AREA_R1-CHANGES_11-10-26_INTERNAL.csv): electrical 28,500 + 17,678.90; equipment set 3,700 + 1,333, + 6,005 for the bag-in-box consolidation (AEQ est, its lines below). Demolition unchanged. Travel & supervision is no longer held at R0's 9,500 (Edgar 11/10: too low): priced from the hours. HVAC is itemized below (Alpine BNR34285 + Edgar's crane and roof numbers + the cores and X-ray).",
+    "_note": "R0 section sells are Edgar's (10/05); R1 = R0 + the 11/10 change list (ESTIMATE\\26_GA_CINEMARK_263_NEW-AREA_R1-CHANGES_11-10-26_INTERNAL.csv): electrical 28,500 + 17,678.90; equipment set 3,700 + 1,333. The beverage consolidation is its own section (BEVERAGE SYSTEM, AEQ est, its lines below). Demolition unchanged. Travel & supervision is no longer held at R0's 9,500 (Edgar 11/10: too low): priced from the hours. HVAC is itemized below (Alpine BNR34285 + Edgar's crane and roof numbers + the cores and X-ray).",
     "section_sell": {
       "DEMOLITION": 2500,
       "ELECTRICAL": 46178.90,
-      "EQUIPMENT SET & START-UP": 11038
+      "EQUIPMENT SET & START-UP": 5033
     }
   },
   "notes": [
@@ -154,7 +154,7 @@
     "spare capacity and breaker spaces at the existing panel in the room (refrigeration and the dish machine, 2-pole 40 A)",
     "the 208 V 3-phase panel across the lobby: spare capacity and four 2- / 3-pole spaces; the route for the home runs (about 200 ft)",
     "the projector booth panel: two circuits for the condensing units; roof access, crane access and a location for the two condensing units",
-    "bag-in-box consolidation: the number of syrup flavors at each concession line unit and the route from the back room to each (about 60 ft assumed)",
+    "beverage consolidation: the route and length from the back room to each concession line unit (about 60 ft assumed), the carbonator and chiller models and their power, and a filtered water supply in the back room",
     "a cold water supply (1/2 in., 25 psi minimum) and an indirect receptor within 3 ft of drain height at the new dish machine location"
   ],
   "scope": {
@@ -171,9 +171,12 @@
     "equipment_priced": true,
     "extra_lines": [
       {"section": "EQUIPMENT SET & START-UP", "desc": "Modify the existing 3-compartment sink: remove legs so the undercounter dish machine fits below, add support", "qty": 1, "unit": "LS", "cost": 400, "sell": 800, "basis": "Edgar 11/10: $800"},
-      {"section": "EQUIPMENT SET & START-UP", "desc": "Bag-in-box consolidation: disconnect the BIB boxes and pumps at the two concession line units, move them to the back-room BIB rack and mount the pumps on a pump board", "qty": 1, "unit": "LS", "hrs": 12, "mat": 450, "basis": "AEQ est - review (Edgar 11/10: consolidate the bag-in-box to the back room from the two line units; no price given): 12 hr, pump board / strut / fittings $450"},
-      {"section": "EQUIPMENT SET & START-UP", "desc": "Syrup lines from the back room to each concession line unit, bundled and supported overhead", "qty": 2, "unit": "run", "hrs": 10, "mat": 450, "basis": "AEQ est - review: about 60 ft per run assumed (route not measured), syrup tubing bundle about $7.50/ft; 10 hr per run"},
-      {"section": "EQUIPMENT SET & START-UP", "desc": "CO2 supply to the pump board; connect at the dispensers, purge, sanitize and set brix", "qty": 1, "unit": "LS", "hrs": 10, "mat": 200, "basis": "AEQ est - review: 10 hr, CO2 line / regulator fittings $200"},
+      {"section": "BEVERAGE SYSTEM", "desc": "Consolidate the two 8-flavor bag-in-box racks at the concession line units into one 16-flavor rack in the back room: move the BIB boxes and pumps, pumps on a pump board", "qty": 1, "unit": "LS", "hrs": 16, "mat": 600, "basis": "AEQ est - review (Edgar 11/10: 8 flavors per rack (2) consolidated into 1 rack with carb and chillers; no price given): 16 pumps at about 1 hr, pump board / strut / manifold fittings $600"},
+      {"section": "BEVERAGE SYSTEM", "desc": "Relocate the carbonator and the chillers to the back room with the rack; reset and reconnect", "qty": 1, "unit": "LS", "hrs": 16, "mat": 300, "basis": "AEQ est - review: carbonator 4 hr, chillers 2 x 6 hr (two assumed, one per line), fittings $300"},
+      {"section": "BEVERAGE SYSTEM", "desc": "Insulated beverage python from the back room to each concession line unit (8 syrup lines and carbonated water each), supported overhead", "qty": 2, "unit": "run", "hrs": 12, "mat": 1200, "basis": "AEQ est - review: about 60 ft per run assumed (route not measured), python about $20/ft; 12 hr per run"},
+      {"section": "BEVERAGE SYSTEM", "desc": "New 120V circuits and receptacles in the back room for the carbonator and chillers", "qty": 3, "unit": "circuit", "hrs": 5.65, "mat": 332.35, "basis": "AEQ est - review: 3 circuits assumed (carbonator + 2 chillers, 120 V 20 A; models not known), each ~30 LF from the room panel at the el_branch_lf / el_rcpt_5_20 / el_brk_1p20 rates"},
+      {"section": "BEVERAGE SYSTEM", "desc": "Filtered water to the carbonator and CO2 to the pump board and carbonator in the back room", "qty": 1, "unit": "LS", "hrs": 6, "mat": 400, "basis": "AEQ est - review: 6 hr, water line / filter tie-in / CO2 regulator fittings $400"},
+      {"section": "BEVERAGE SYSTEM", "desc": "Connect the pythons at the dispensers, purge, sanitize, set brix and carbonation; remove the old racks at the line units", "qty": 1, "unit": "LS", "hrs": 12, "mat": 100, "basis": "AEQ est - review: 2 line units x 6 hr"},
       {"section": "HVAC", "desc": "Ductless heat pump, 3-ton, Blueridge BXS2A36SC0-36WM: outdoor unit and wall-mount head", "qty": 2, "unit": "ea", "mat": 2259.0, "basis": "Alpine BNR34285 11/03/26 ($4,518 for 2)"},
       {"section": "HVAC", "desc": "Line set 3/8 x 5/8, 50 ft (two per unit for about 100 ft)", "qty": 4, "unit": "ea", "mat": 419.99, "basis": "Alpine L04-F50, BNR34285"},
       {"section": "HVAC", "desc": "Communication wire, 55 ft (two per unit)", "qty": 4, "unit": "ea", "mat": 89.99, "basis": "Alpine MW4/55, BNR34285"},
@@ -190,6 +193,7 @@
     "_extra_lines_note": "Lines priced outside the cost database (store-specific). mat / hrs are per unit, marked up like any line; cost + sell are a fixed price per unit. HVAC is these lines only (hvac.itemized).",
     "text": {
       "ELECTRICAL": "Dedicated 208 V home runs, about 200 ft each from the 208 V 3-phase panel across the lobby, sized for 3% voltage drop, for the two conveyor ovens, the Menumaster and the fryer; 120 V circuits from the existing panel in the room for the refrigeration and the dish machine; breakers and receptacles / direct connections per the electrical rough-in schedule. Circuits and disconnects for the two condensing units from the projector booth panel. LED lighting in the kitchen area.",
+      "BEVERAGE SYSTEM": "Consolidate the beverage system in the back room: the two 8-flavor bag-in-box racks at the concession line units into one rack, with the carbonator and chillers; new insulated pythons to the two line units; power, water and CO2 for the rack, carbonator and chillers; purge, sanitize, set brix and carbonation.",
       "HVAC": "Added cooling for the kitchen: two 3-ton ductless split systems (one wall-mount head each), condensing units on the roof set by crane, two new roof penetrations, two concrete cores for the HVAC lines (slab X-rayed first), line sets about 100 ft each, refrigerant charge, condensate drains, controls and start-up."
     }
   }
