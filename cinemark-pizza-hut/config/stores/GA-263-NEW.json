@@ -135,11 +135,12 @@
     "_site_days_note": "Edgar 11/10: 'the labor seems low - especially supervision compare the other projects'. R0's pinned 4-day job (old room, Edgar 10/05) is dropped: the days on site, and travel & supervision with them, come from the new area's field hours, as on TX-093 and NJ-187."
   },
   "overrides": {
-    "_note": "R0 section sells are Edgar's (10/05); R1 = R0 + the 11/10 change list (ESTIMATE\\26_GA_CINEMARK_263_NEW-AREA_R1-CHANGES_11-10-26_INTERNAL.csv): electrical 28,500 + 17,678.90; equipment set 3,700 + 1,333. The beverage consolidation is its own section (BEVERAGE SYSTEM, AEQ est, its lines below). Demolition unchanged. Travel & supervision is no longer held at R0's 9,500 (Edgar 11/10: too low): priced from the hours. HVAC is itemized below (Alpine BNR34285 + Edgar's crane and roof numbers + the cores and X-ray).",
+    "_note": "R0 section sells are Edgar's (10/05); R1 = R0 + the 11/10 change list (ESTIMATE\\26_GA_CINEMARK_263_NEW-AREA_R1-CHANGES_11-10-26_INTERNAL.csv): electrical 28,500 + 17,678.90; equipment set 3,700 + 1,333. The beverage consolidation is its own section (BEVERAGE SYSTEM, AEQ est, its lines below). Demolition unchanged. Travel & supervision is no longer held at R0's 9,500 (Edgar 11/10: too low): priced from the hours (R1, $28,371.10). R2: held at R1's $28,371.10 (Edgar 11/12: hold travel at R1) so adding PH4 does not lower the total. HVAC is itemized below (Alpine BNR34285 + Edgar's crane and roof numbers + the cores and X-ray).",
     "section_sell": {
       "DEMOLITION": 2500,
       "ELECTRICAL": 46178.90,
-      "EQUIPMENT SET & START-UP": 5033
+      "EQUIPMENT SET & START-UP": 5033,
+      "TRAVEL & SUPERVISION": 28371.10
     }
   },
   "notes": [
